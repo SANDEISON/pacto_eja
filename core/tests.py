@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
 from django.test import TestCase
 from django.urls import reverse
 
@@ -17,16 +18,17 @@ class DashboardTests(TestCase):
     def test_regular_user_menu_hides_management_and_system_headers(self):
         response = self.client.get(reverse("dashboard"))
         menu_texts = [item.get("text") or item.get("header") for item in response.context["adminlte_menu_sidebar"]]
-        self.assertEqual(menu_texts, ["Início", "Sair"])
+        self.assertEqual(menu_texts, ["Início", "Meu perfil", "Sair"])
 
     def test_staff_user_sees_management_menu(self):
         self.user.is_staff = True
         self.user.save(update_fields=["is_staff"])
+        self.user.user_permissions.add(Permission.objects.get(codename="view_cadastroeducador"))
         response = self.client.get(reverse("dashboard"))
         menu_texts = [item.get("text") or item.get("header") for item in response.context["adminlte_menu_sidebar"]]
         self.assertEqual(
             menu_texts,
-            ["Início", "GESTÃO", "Formações", "Educadores", "Relatórios", "Sair"],
+            ["Início", "GESTÃO", "Formações", "Educadores", "Relatórios", "Meu perfil", "Sair"],
         )
 
     def test_all_error_pages_render(self):

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Meu perfil | Pacto EJA{% endblock %}
+{% block page_title %}Meu perfil{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Início</a></li><li class="breadcrumb-item active">Meu perfil</li>{% endblock %}
+
+{% block content %}
+<div class="profile-shell">
+  <aside class="profile-summary">
+    <div class="profile-avatar" aria-hidden="true">{{ request.user.first_name|first|default:request.user.username|first|upper }}</div>
+    <h2>{{ request.user.get_full_name|default:request.user.username }}</h2>
+    <p>{{ request.user.email|default:request.user.username }}</p>
+    <span class="profile-status"><i class="bi bi-check-circle-fill"></i> Conta ativa</span>
+    <a class="btn btn-outline-primary w-100" href="{% url 'profile_password_change' %}"><i class="bi bi-key me-1"></i> Alterar senha</a>
+  </aside>
+
+  <form method="post" class="management-card management-form profile-form" novalidate>
+    {% csrf_token %}
+    {% if user_form.non_field_errors or pessoa_form.non_field_errors %}<div class="alert alert-danger m-4 mb-0">Verifique os dados informados.</div>{% endif %}
+    <section class="form-section">
+      <div class="section-heading"><span><i class="bi bi-person"></i></span><div><h2>Dados da conta</h2><p>Nome e e-mail utilizados para acessar o sistema.</p></div></div>
+      <div class="row g-3">
+        {% include "management/_field.html" with field=user_form.full_name column="col-12 col-lg-7" %}
+        {% include "management/_field.html" with field=user_form.email column="col-12 col-lg-5" %}
+      </div>
+    </section>
+    <section class="form-section">
+      <div class="section-heading"><span><i class="bi bi-card-list"></i></span><div><h2>Informações pessoais</h2><p>Complete os dados do seu perfil.</p></div></div>
+      <div class="row g-3">
+        {% include "management/_field.html" with field=pessoa_form.cpf column="col-12 col-md-6" %}
+        {% include "management/_field.html" with field=pessoa_form.data_nascimento column="col-12 col-md-6" %}
+        {% include "management/_field.html" with field=pessoa_form.genero column="col-12 col-md-6" %}
+        {% include "management/_field.html" with field=pessoa_form.estado_civil column="col-12 col-md-6" %}
+        {% include "management/_field.html" with field=pessoa_form.telefone column="col-12" %}
+      </div>
+    </section>
+    <footer class="form-actions"><a class="btn btn-light" href="{% url 'dashboard' %}">Cancelar</a><button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Salvar alterações</button></footer>
+  </form>
+</div>
+{% endblock %}

@@ -4,6 +4,17 @@ def staff_only(request):
     return bool(user and user.is_authenticated and user.is_staff)
 
 
+def educator_management_access(request):
+    """Exibe Educadores somente para a equipe com acesso aos cadastros."""
+    user = getattr(request, "user", None)
+    return bool(
+        user
+        and user.is_authenticated
+        and user.is_staff
+        and user.has_perm("core.view_cadastroeducador")
+    )
+
+
 def management_access(request):
     """Exibe a seção quando o usuário pode consultar usuários ou grupos."""
     user = getattr(request, "user", None)

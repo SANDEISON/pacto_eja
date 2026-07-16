@@ -1,0 +1,19 @@
+{% extends "adminlte/auth/auth-master.html" %}
+{% load static %}
+
+{% block title %}Cadastro concluído | Pacto EJA{% endblock %}
+{% block body_class %}educator-public-page{% endblock %}
+{% block box_class %}educator-page-shell{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/cadastro_educadores.css' %}">{% endblock %}
+
+{% block auth_body %}
+<main class="educator-success-page">
+  <section class="educator-success-card">
+    <div class="success-icon"><i class="bi bi-check-lg"></i></div>
+    <span class="intro-kicker">CADASTRO CONCLUÍDO</span>
+    <h1>Dados salvos com sucesso!</h1>
+    <p>O cadastro do educador foi registrado. Caso uma nova conta tenha sido criada, utilize o e-mail informado e o CPF como senha para entrar.</p>
+    <div class="success-actions"><a class="btn btn-outline-primary" href="{% url 'cadastro_educador' %}">Fazer outro cadastro</a><a class="btn btn-primary" href="{% url 'accounts:signin' %}">Ir para o login</a></div>
+  </section>
+</main>
+{% endblock %}

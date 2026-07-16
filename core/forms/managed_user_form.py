@@ -4,18 +4,7 @@ from django.contrib.auth.models import Group
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 
-
-class BootstrapFormMixin:
-    def _apply_bootstrap_classes(self):
-        for field in self.fields.values():
-            widget = field.widget
-            if isinstance(widget, forms.CheckboxInput):
-                css_class = "form-check-input"
-            elif isinstance(widget, (forms.Select, forms.SelectMultiple)):
-                css_class = "form-select"
-            else:
-                css_class = "form-control"
-            widget.attrs["class"] = f'{widget.attrs.get("class", "")} {css_class}'.strip()
+from .bootstrap_form_mixin import BootstrapFormMixin
 
 
 class ManagedUserForm(BootstrapFormMixin, forms.ModelForm):
@@ -70,18 +59,3 @@ class ManagedUserForm(BootstrapFormMixin, forms.ModelForm):
                 else:
                     self.instance.set_password(password1)
         return cleaned_data
-
-
-class ManagedGroupForm(BootstrapFormMixin, forms.ModelForm):
-    class Meta:
-        model = Group
-        fields = ("name", "permissions")
-        labels = {"name": "Nome", "permissions": "Permissões"}
-        widgets = {"permissions": forms.SelectMultiple(attrs={"size": 14})}
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields["permissions"].queryset = self.fields["permissions"].queryset.select_related(
-            "content_type"
-        ).order_by("content_type__app_label", "content_type__model", "codename")
-        self._apply_bootstrap_classes()

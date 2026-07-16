@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from core.menu import management_access, staff_only
+from core.menu import educator_management_access, management_access, staff_only
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -112,7 +112,7 @@ ADMINLTE = {
         {"text": "Início", "route": "dashboard", "icon": "bi bi-house-door-fill"},
         {"header": "GESTÃO", "can": staff_only},
         {"text": "Formações", "url": "#formacoes", "icon": "bi bi-mortarboard-fill", "can": staff_only},
-        {"text": "Educadores", "url": "#educadores", "icon": "bi bi-people-fill", "can": staff_only},
+        {"text": "Educadores", "route": "educator_list", "icon": "bi bi-people-fill", "can": educator_management_access},
         {"text": "Relatórios", "url": "#relatorios", "icon": "bi bi-bar-chart-fill", "can": staff_only},
         {"header": "SISTEMA", "can": management_access},
         {
@@ -124,6 +124,7 @@ ADMINLTE = {
                 {"text": "Grupos", "route": "group_list", "icon": "bi bi-collection", "can": "auth.view_group"},
             ],
         },
+        {"text": "Meu perfil", "route": "profile", "icon": "bi bi-person-circle"},
         {"text": "Sair", "route": "accounts:logout", "icon": "bi bi-box-arrow-right", "method": "post"},
     ],
 }

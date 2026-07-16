@@ -1,0 +1,77 @@
+{% extends "adminlte/auth/auth-master.html" %}
+{% load static %}
+
+{% block title %}Cadastro de educadores | Pacto EJA{% endblock %}
+{% block body_class %}educator-public-page{% endblock %}
+{% block box_class %}educator-page-shell{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/cadastro_educadores.css' %}">{% endblock %}
+
+{% block auth_body %}
+<main class="educator-layout">
+  <aside class="educator-intro">
+    <a class="educator-brand" href="{% url 'accounts:signin' %}"><img src="{% static 'img/logo.svg' %}" alt="Pacto EJA"><span><strong>Pacto</strong> EJA</span></a>
+    <div class="intro-content">
+      <span class="intro-kicker">PROGRAMA DE FORMAÇÃO</span>
+      <h1>Cadastro de educadores</h1>
+      <p>Registre seus dados de atuação na Educação de Jovens e Adultos.</p>
+      <div class="intro-feature"><i class="bi bi-person-vcard"></i><span><strong>Cadastro rápido</strong><small>Seus dados são localizados automaticamente pelo CPF.</small></span></div>
+      <div class="intro-feature"><i class="bi bi-building-check"></i><span><strong>Escola de atuação</strong><small>Selecione estado, cidade e escola em sequência.</small></span></div>
+    </div>
+  </aside>
+
+  <section class="educator-form-panel">
+    <div class="educator-form-card">
+      <header class="form-heading">
+        <span class="step-badge"><i class="bi bi-pencil-square"></i></span>
+        <div><span>FORMULÁRIO PÚBLICO</span><h2>Cadastro de educadores</h2><p>Os campos com asterisco são obrigatórios.</p></div>
+      </header>
+
+      {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+      <form method="post" id="cadastro-educador-form" novalidate
+            data-cpf-url="{% url 'cadastro_educador_cpf_lookup' %}"
+            data-cidades-url="{% url 'cadastro_educador_cidades' %}"
+            data-escolas-url="{% url 'cadastro_educador_escolas' %}">
+        {% csrf_token %}
+
+        <section class="educator-section">
+          <div class="section-label"><span>1</span><div><h3>Identificação</h3><p>Comece informando o CPF.</p></div></div>
+          <div class="row g-3">
+            {% include "management/_field.html" with field=form.cpf column="col-12 col-md-5" %}
+            <div class="col-12 col-md-7 d-flex align-items-end"><div id="cpf-status" class="lookup-status" aria-live="polite"><i class="bi bi-search"></i><span>Digite o CPF completo para consultar.</span></div></div>
+            {% include "management/_field.html" with field=form.nome_completo column="col-12 col-lg-7" %}
+            {% include "management/_field.html" with field=form.email column="col-12 col-lg-5" %}
+          </div>
+        </section>
+
+        <section class="educator-section">
+          <div class="section-label"><span>2</span><div><h3>Local de atuação</h3><p>Selecione as opções na ordem apresentada.</p></div></div>
+          <div class="row g-3">
+            {% include "management/_field.html" with field=form.estado column="col-12 col-md-5" %}
+            {% include "management/_field.html" with field=form.cidade column="col-12 col-md-7" %}
+            <div class="col-12">
+              <label class="form-label" for="escola-busca">Escola <span class="text-danger">*</span></label>
+              <div class="school-picker">
+                <div class="school-search"><i class="bi bi-search"></i><input class="form-control" type="search" id="escola-busca" placeholder="Digite parte do nome da escola" autocomplete="off" disabled></div>
+                <select class="form-select" id="escola-resultados" disabled><option value="">Selecione primeiro a cidade</option></select>
+              </div>
+              {{ form.escola }}
+              <div class="form-text">A busca exibe até 100 escolas da cidade selecionada.</div>
+              {% for error in form.escola.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+            </div>
+          </div>
+        </section>
+
+        <section class="educator-section">
+          <div class="section-label"><span>3</span><div><h3>Atuação na EJA</h3><p>Informe a função ou caracterização principal das turmas.</p></div></div>
+          <div class="row g-3">
+            {% include "management/_field.html" with field=form.funcao_caracterizacao_turmas column="col-12" %}
+          </div>
+        </section>
+
+        <footer class="educator-actions"><a href="{% url 'accounts:signin' %}" class="btn btn-light">Voltar para o login</a><button class="btn btn-primary" type="submit"><i class="bi bi-check2-circle"></i> Salvar cadastro</button></footer>
+      </form>
+    </div>
+  </section>
+</main>
+<script src="{% static 'js/cadastro_educadores.js' %}"></script>
+{% endblock %}

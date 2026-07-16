@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Educadores | Pacto EJA{% endblock %}
+{% block page_title %}Gerenciar educadores{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Início</a></li><li class="breadcrumb-item active">Educadores</li>{% endblock %}
+
+{% block content %}
+<div class="management-shell">
+  {% include "management/_messages.html" %}
+  <section class="management-card">
+    <header class="management-toolbar">
+      <form method="get" class="management-search">
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <input type="search" name="q" value="{{ search_query }}" placeholder="Pesquisar por nome, CPF, e-mail, cidade ou escola" aria-label="Pesquisar educadores">
+        <button class="btn btn-outline-primary" type="submit">Pesquisar</button>
+      </form>
+      {% if perms.core.add_cadastroeducador %}<a class="btn btn-primary" href="{% url 'educator_create' %}"><i class="bi bi-plus-lg"></i> Adicionar educador</a>{% endif %}
+    </header>
+    <div class="table-responsive">
+      <table class="table management-table align-middle mb-0">
+        <thead><tr><th>Educador</th><th>CPF</th><th>Local de atuação</th><th>Escola</th><th>Função / caracterização</th><th class="text-end">Ações</th></tr></thead>
+        <tbody>
+        {% for educator in educators %}
+          <tr>
+            <td><strong>{{ educator.id_pessoa }}</strong><small class="d-block text-body-secondary">{{ educator.id_pessoa.usuario.email|default:educator.id_pessoa.usuario.username }}</small></td>
+            <td>{{ educator.id_pessoa.cpf|default:"—" }}</td>
+            <td>{{ educator.cidade.nome_cidade }} / {{ educator.estado.sigla }}</td>
+            <td>{{ educator.escola.nome }}</td>
+            <td><span class="badge management-badge">{{ educator.get_funcao_caracterizacao_turmas_display }}</span></td>
+            <td class="text-end text-nowrap">
+              {% if perms.core.change_cadastroeducador %}<a class="btn btn-sm btn-outline-primary" href="{% url 'educator_update' educator.pk %}" title="Editar {{ educator.id_pessoa }}"><i class="bi bi-pencil"></i><span class="visually-hidden">Editar</span></a>{% endif %}
+              {% if perms.core.delete_cadastroeducador %}<a class="btn btn-sm btn-outline-danger" href="{% url 'educator_delete' educator.pk %}" title="Excluir {{ educator.id_pessoa }}"><i class="bi bi-trash"></i><span class="visually-hidden">Excluir</span></a>{% endif %}
+            </td>
+          </tr>
+        {% empty %}<tr><td colspan="6" class="empty-state">Nenhum educador encontrado.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% include "management/_pagination.html" %}
+  </section>
+</div>
+{% endblock %}

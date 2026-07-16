@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% if object %}Editar educador{% else %}Cadastrar educador{% endif %} | Pacto EJA{% endblock %}
+{% block page_title %}{% if object %}Editar educador{% else %}Cadastrar educador{% endif %}{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Início</a></li><li class="breadcrumb-item"><a href="{% url 'educator_list' %}">Educadores</a></li><li class="breadcrumb-item active">{% if object %}Editar{% else %}Cadastrar{% endif %}</li>{% endblock %}
+
+{% block content %}
+<div class="management-shell">
+  <form method="post" class="management-card management-form" id="managed-educator-form" novalidate
+        data-cidades-url="{% url 'cadastro_educador_cidades' %}"
+        data-escolas-url="{% url 'cadastro_educador_escolas' %}">
+    {% csrf_token %}
+    {% include "management/_form_errors.html" %}
+    <div class="form-section">
+      <h2>Educador</h2>
+      <div class="row g-3">
+        {% include "management/_field.html" with field=form.id_pessoa column="col-12" %}
+      </div>
+    </div>
+    <div class="form-section">
+      <h2>Local de atuação</h2>
+      <div class="row g-3">
+        {% include "management/_field.html" with field=form.estado column="col-12 col-md-5" %}
+        {% include "management/_field.html" with field=form.cidade column="col-12 col-md-7" %}
+        <div class="col-12">
+          <label class="form-label" for="managed-escola-busca">Escola <span class="text-danger">*</span></label>
+          <div class="managed-school-picker">
+            <div class="managed-school-search"><i class="bi bi-search"></i><input class="form-control" type="search" id="managed-escola-busca" placeholder="Digite parte do nome da escola" autocomplete="off" disabled></div>
+            <select class="form-select" id="managed-escola-resultados" disabled><option value="">Selecione primeiro a cidade</option></select>
+          </div>
+          {{ form.escola }}
+          <div class="form-text">A busca exibe até 100 escolas da cidade selecionada.</div>
+          {% for error in form.escola.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="form-section">
+      <h2>Atuação na EJA</h2>
+      <div class="row g-3">
+        {% include "management/_field.html" with field=form.funcao_caracterizacao_turmas column="col-12" %}
+      </div>
+    </div>
+    <footer class="form-actions"><a class="btn btn-light" href="{% url 'educator_list' %}">Cancelar</a><button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Salvar</button></footer>
+  </form>
+</div>
+{% endblock %}
+
+{% block page_js %}<script src="{% static 'js/managed_cadastro_educador.js' %}"></script>{% endblock %}

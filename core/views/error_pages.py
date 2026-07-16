@@ -1,6 +1,3 @@
-from datetime import date
-
-from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
 
@@ -12,19 +9,6 @@ ERROR_MESSAGES = {
     500: ("Erro interno", "Ocorreu um problema inesperado. Nossa equipe pode tentar novamente em instantes."),
     503: ("Serviço indisponível", "O serviço está temporariamente indisponível. Tente novamente em alguns minutos."),
 }
-
-
-@login_required
-def dashboard(request):
-    context = {
-        "year": date.today().year,
-        "stats": [
-            {"value": 806, "label": "Educadores em formação", "icon": "bi-people-fill", "color": "info"},
-            {"value": 7, "label": "Formações em andamento", "icon": "bi-mortarboard-fill", "color": "success"},
-            {"value": 11441, "label": "Participações registradas", "icon": "bi-journal-check", "color": "danger"},
-        ],
-    }
-    return render(request, "index.html", context)
 
 
 def error_page(request, status_code, exception=None):
