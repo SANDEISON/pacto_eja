@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard | Pacto EJA{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active" aria-current="page">Início</li>{% endblock %}
+
+{% block content %}
+<section class="dashboard-welcome mb-4" aria-labelledby="welcome-title">
+  <div>
+    <span class="eyebrow">PAINEL DE ACOMPANHAMENTO</span>
+    <h1 id="welcome-title">Olá, {{ request.user.first_name|default:request.user.username }}!</h1>
+    <p>Acompanhe em um só lugar os principais indicadores do Pacto EJA.</p>
+  </div>
+  <div class="welcome-mark" aria-hidden="true"><i class="bi bi-stars"></i></div>
+</section>
+
+<div class="row g-3 mb-4">
+  {% for stat in stats %}
+    <div class="col-12 col-md-6 col-xl-4">
+      <article class="small-box text-bg-{{ stat.color }} dashboard-stat h-100">
+        <div class="inner">
+          <h3>{{ stat.value }}</h3>
+          <p>{{ stat.label }} em {{ year }}</p>
+        </div>
+        <i class="small-box-icon bi {{ stat.icon }}" aria-hidden="true"></i>
+      </article>
+    </div>
+  {% endfor %}
+</div>
+
+<div class="row g-3 align-items-stretch">
+  <div class="col-12 col-xl-5">
+    <article class="card dashboard-card h-100">
+      <div class="card-header border-0">
+        <h2 class="card-title"><i class="bi bi-graph-up-arrow me-2"></i>Participações por mês</h2>
+      </div>
+      <div class="card-body">
+        <div class="chart-wrap" role="img" aria-label="Gráfico ilustrativo de participações mensais">
+          <div class="chart-grid"></div>
+          <svg viewBox="0 0 600 260" preserveAspectRatio="none" aria-hidden="true">
+            <defs><linearGradient id="area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".38"/><stop offset="1" stop-color="#fff" stop-opacity=".02"/></linearGradient></defs>
+            <path class="chart-area" d="M20 230 L115 218 L210 80 L305 55 L400 205 L495 185 L580 190 L580 240 L20 240 Z"/>
+            <polyline points="20,230 115,218 210,80 305,55 400,205 495,185 580,190"/>
+            <g><circle cx="20" cy="230" r="6"/><circle cx="115" cy="218" r="6"/><circle cx="210" cy="80" r="6"/><circle cx="305" cy="55" r="6"/><circle cx="400" cy="205" r="6"/><circle cx="495" cy="185" r="6"/><circle cx="580" cy="190" r="6"/></g>
+          </svg>
+          <div class="chart-labels"><span>Jan</span><span>Fev</span><span>Mar</span><span>Abr</span><span>Mai</span><span>Jun</span><span>Jul</span></div>
+        </div>
+      </div>
+    </article>
+  </div>
+
+  <div class="col-12 col-xl-4">
+    <article class="card dashboard-card h-100">
+      <div class="card-header border-0">
+        <h2 class="card-title"><i class="bi bi-calendar2-event me-2"></i>Próximas atividades</h2>
+      </div>
+      <div class="card-body pt-2">
+        <div class="activity-list">
+          <a href="#" class="activity-item"><time datetime="{{ year }}-08-03"><strong>03</strong><span>AGO</span></time><div><strong>Encontro formativo regional</strong><small>Maceió · 09h</small></div><i class="bi bi-arrow-right"></i></a>
+          <a href="#" class="activity-item"><time datetime="{{ year }}-08-12"><strong>12</strong><span>AGO</span></time><div><strong>Webinário de práticas pedagógicas</strong><small>On-line · 14h</small></div><i class="bi bi-arrow-right"></i></a>
+          <a href="#" class="activity-item"><time datetime="{{ year }}-08-25"><strong>25</strong><span>AGO</span></time><div><strong>Entrega do relatório mensal</strong><small>Ambiente virtual</small></div><i class="bi bi-arrow-right"></i></a>
+        </div>
+      </div>
+    </article>
+  </div>
+
+  <div class="col-12 col-xl-3">
+    <article class="card dashboard-card quick-card h-100">
+      <div class="card-header border-0"><h2 class="card-title"><i class="bi bi-lightning-charge me-2"></i>Acesso rápido</h2></div>
+      <div class="card-body d-grid gap-3">
+        <a class="quick-link" href="#formacoes"><i class="bi bi-mortarboard"></i><span><strong>Formações</strong><small>Consulte suas turmas</small></span></a>
+        <a class="quick-link" href="#relatorios"><i class="bi bi-file-earmark-bar-graph"></i><span><strong>Relatórios</strong><small>Acompanhe resultados</small></span></a>
+        {% if request.user.is_staff %}<a class="quick-link" href="{% url 'admin:index' %}"><i class="bi bi-gear"></i><span><strong>Administração</strong><small>Gerencie o sistema</small></span></a>{% endif %}
+      </div>
+    </article>
+  </div>
+</div>
+{% endblock %}

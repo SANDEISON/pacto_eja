@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}{% if object %}Editar usuário{% else %}Cadastrar usuário{% endif %} | Pacto EJA{% endblock %}
+{% block page_title %}{% if object %}Editar usuário{% else %}Cadastrar usuário{% endif %}{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Início</a></li><li class="breadcrumb-item"><a href="{% url 'user_list' %}">Usuários</a></li><li class="breadcrumb-item active">{% if object %}Editar{% else %}Cadastrar{% endif %}</li>{% endblock %}
+
+{% block content %}
+<div class="management-shell">
+  <form method="post" class="management-card management-form" novalidate>
+    {% csrf_token %}
+    {% include "management/_form_errors.html" %}
+    <div class="form-section">
+      <h2>Dados de acesso</h2>
+      <div class="row g-3">
+        {% include "management/_field.html" with field=form.username column="col-12 col-lg-6" %}
+        {% include "management/_field.html" with field=form.email column="col-12 col-lg-6" %}
+        {% include "management/_field.html" with field=form.password1 column="col-12 col-lg-6" %}
+        {% include "management/_field.html" with field=form.password2 column="col-12 col-lg-6" %}
+      </div>
+    </div>
+    <div class="form-section">
+      <h2>Informações pessoais e acesso</h2>
+      <div class="row g-3">
+        {% include "management/_field.html" with field=form.first_name column="col-12 col-lg-6" %}
+        {% include "management/_field.html" with field=form.last_name column="col-12 col-lg-6" %}
+        {% include "management/_field.html" with field=form.groups column="col-12" %}
+        <div class="col-12 d-flex flex-wrap gap-4">{% include "management/_checkbox.html" with field=form.is_active %}{% include "management/_checkbox.html" with field=form.is_staff %}</div>
+      </div>
+    </div>
+    <footer class="form-actions"><a class="btn btn-light" href="{% url 'user_list' %}">Cancelar</a><button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Salvar</button></footer>
+  </form>
+</div>
+{% endblock %}

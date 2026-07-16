@@ -1,0 +1,2 @@
+Django==6.0.7
+adminlte-django==0.1.1

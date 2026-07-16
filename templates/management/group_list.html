@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Grupos | Pacto EJA{% endblock %}
+{% block page_title %}Gerenciar grupos{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Início</a></li><li class="breadcrumb-item active">Grupos</li>{% endblock %}
+
+{% block content %}
+<div class="management-shell">
+  {% include "management/_messages.html" %}
+  <section class="management-card">
+    <header class="management-toolbar">
+      <form method="get" class="management-search">
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <input type="search" name="q" value="{{ search_query }}" placeholder="Pesquisar grupos" aria-label="Pesquisar grupos">
+        <button class="btn btn-outline-primary" type="submit">Pesquisar</button>
+      </form>
+      {% if perms.auth.add_group %}<a class="btn btn-primary" href="{% url 'group_create' %}"><i class="bi bi-plus-lg"></i> Adicionar grupo</a>{% endif %}
+    </header>
+    <div class="table-responsive">
+      <table class="table management-table align-middle mb-0">
+        <thead><tr><th>Nome</th><th>Permissões</th><th class="text-end">Ações</th></tr></thead>
+        <tbody>
+        {% for group in groups %}
+          <tr>
+            <td><strong>{{ group.name }}</strong></td>
+            <td>{{ group.permissions.count }} permiss{{ group.permissions.count|pluralize:"ão,ões" }}</td>
+            <td class="text-end text-nowrap">
+              {% if perms.auth.change_group %}<a class="btn btn-sm btn-outline-primary" href="{% url 'group_update' group.pk %}" title="Editar {{ group.name }}"><i class="bi bi-pencil"></i><span class="visually-hidden">Editar</span></a>{% endif %}
+              {% if perms.auth.delete_group %}<a class="btn btn-sm btn-outline-danger" href="{% url 'group_delete' group.pk %}" title="Excluir {{ group.name }}"><i class="bi bi-trash"></i><span class="visually-hidden">Excluir</span></a>{% endif %}
+            </td>
+          </tr>
+        {% empty %}<tr><td colspan="3" class="empty-state">Nenhum grupo encontrado.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% include "management/_pagination.html" %}
+  </section>
+</div>
+{% endblock %}

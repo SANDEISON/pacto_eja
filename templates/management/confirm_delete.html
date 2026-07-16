@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Confirmar exclusão | Pacto EJA{% endblock %}
+{% block page_title %}Excluir {{ object_label }}{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Início</a></li><li class="breadcrumb-item active">Confirmar exclusão</li>{% endblock %}
+
+{% block content %}
+<div class="management-shell">
+  <section class="management-card delete-card">
+    <span class="delete-icon"><i class="bi bi-exclamation-triangle"></i></span>
+    <h2>Deseja excluir {{ object }}?</h2>
+    <p>Esta ação não poderá ser desfeita.</p>
+    <form method="post">{% csrf_token %}<a class="btn btn-light" href="{% url cancel_url_name %}">Cancelar</a><button class="btn btn-danger" type="submit"><i class="bi bi-trash"></i> Confirmar exclusão</button></form>
+  </section>
+</div>
+{% endblock %}

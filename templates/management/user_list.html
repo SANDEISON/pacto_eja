@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Usuários | Pacto EJA{% endblock %}
+{% block page_title %}Gerenciar usuários{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Início</a></li><li class="breadcrumb-item active">Usuários</li>{% endblock %}
+
+{% block content %}
+<div class="management-shell">
+  {% include "management/_messages.html" %}
+  <section class="management-card">
+    <header class="management-toolbar">
+      <form method="get" class="management-search">
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <input type="search" name="q" value="{{ search_query }}" placeholder="Pesquisar usuários" aria-label="Pesquisar usuários">
+        <button class="btn btn-outline-primary" type="submit">Pesquisar</button>
+      </form>
+      {% if perms.auth.add_user %}<a class="btn btn-primary" href="{% url 'user_create' %}"><i class="bi bi-plus-lg"></i> Adicionar usuário</a>{% endif %}
+    </header>
+    <div class="table-responsive">
+      <table class="table management-table align-middle mb-0">
+        <thead><tr><th>Usuário</th><th>Nome</th><th>E-mail</th><th>Grupos</th><th>Status</th><th class="text-end">Ações</th></tr></thead>
+        <tbody>
+        {% for managed_user in users %}
+          <tr>
+            <td><strong>{{ managed_user.username }}</strong>{% if managed_user.is_superuser %}<span class="badge text-bg-dark ms-1">Superusuário</span>{% endif %}</td>
+            <td>{{ managed_user.get_full_name|default:"—" }}</td>
+            <td>{{ managed_user.email|default:"—" }}</td>
+            <td>{% for group in managed_user.groups.all %}<span class="badge management-badge">{{ group.name }}</span>{% empty %}—{% endfor %}</td>
+            <td>{% if managed_user.is_active %}<span class="status-pill status-active">Ativo</span>{% else %}<span class="status-pill status-inactive">Inativo</span>{% endif %}</td>
+            <td class="text-end text-nowrap">
+              {% if perms.auth.change_user %}<a class="btn btn-sm btn-outline-primary" href="{% url 'user_update' managed_user.pk %}" title="Editar {{ managed_user.username }}"><i class="bi bi-pencil"></i><span class="visually-hidden">Editar</span></a>{% endif %}
+              {% if perms.auth.delete_user and managed_user != request.user %}<a class="btn btn-sm btn-outline-danger" href="{% url 'user_delete' managed_user.pk %}" title="Excluir {{ managed_user.username }}"><i class="bi bi-trash"></i><span class="visually-hidden">Excluir</span></a>{% endif %}
+            </td>
+          </tr>
+        {% empty %}<tr><td colspan="6" class="empty-state">Nenhum usuário encontrado.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% include "management/_pagination.html" %}
+  </section>
+</div>
+{% endblock %}

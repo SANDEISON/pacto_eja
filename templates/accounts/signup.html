@@ -1,0 +1,23 @@
+{% extends "accounts/auth_base.html" %}
+
+{% block title %}Criar conta | Pacto EJA{% endblock %}
+{% block form_content %}
+<span class="auth-kicker">COMECE AGORA</span>
+<h1>Crie sua conta</h1>
+<p class="auth-subtitle">Preencha os dados para fazer parte do Pacto EJA.</p>
+
+{% if form.non_field_errors %}<div class="alert alert-danger" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+<form method="post" novalidate>
+  {% csrf_token %}
+  {% for field in form %}
+    <div class="auth-field{% if field.errors %} has-error{% endif %}">
+      <i class="bi {% if field.name == 'full_name' %}bi-person{% elif field.name == 'email' %}bi-envelope{% else %}bi-lock{% endif %}" aria-hidden="true"></i>
+      <label class="visually-hidden" for="{{ field.id_for_label }}">{{ field.label }}</label>
+      <input type="{% if field.name == 'email' %}email{% elif 'password' in field.name %}password{% else %}text{% endif %}" name="{{ field.html_name }}" id="{{ field.id_for_label }}" value="{% if field.value and 'password' not in field.name %}{{ field.value }}{% endif %}" placeholder="{% if field.name == 'password1' %}Senha{% elif field.name == 'password2' %}Confirme a senha{% else %}{{ field.label }}{% endif %}" {% if field.field.required %}required{% endif %} autocomplete="{% if field.name == 'email' %}email{% elif field.name == 'full_name' %}name{% else %}new-password{% endif %}">
+    </div>
+    {% for error in field.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+  {% endfor %}
+  <button type="submit" class="auth-submit">Cadastrar <i class="bi bi-arrow-right"></i></button>
+</form>
+<p class="auth-switch">Já tem uma conta? <a href="{% url 'accounts:signin' %}">Entrar</a></p>
+{% endblock %}

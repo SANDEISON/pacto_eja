@@ -1,0 +1,19 @@
+{% extends "adminlte/auth/auth-master.html" %}
+{% load static %}
+
+{% block title %}Erro {{ status_code }} | Pacto EJA{% endblock %}
+{% block body_class %}error-page-custom{% endblock %}
+{% block box_class %}error-shell{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/auth.css' %}">{% endblock %}
+{% block auth_body %}
+<div class="error-content">
+  <div class="error-code">{{ status_code }}</div>
+  <span class="auth-kicker">NÃO FOI POSSÍVEL CONTINUAR</span>
+  <h1>{{ error_title }}</h1>
+  <p>{{ error_message }}</p>
+  <div class="error-actions">
+    <a class="auth-submit" href="{% url 'dashboard' %}"><i class="bi bi-house-door"></i> Ir para o início</a>
+    <button type="button" class="error-back" onclick="history.back()"><i class="bi bi-arrow-left"></i> Voltar</button>
+  </div>
+</div>
+{% endblock %}

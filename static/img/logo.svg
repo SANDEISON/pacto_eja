@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Pacto EJA</title>
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0984e3"/><stop offset="1" stop-color="#16a085"/></linearGradient></defs>
+  <rect width="64" height="64" rx="16" fill="url(#g)"/>
+  <path d="M16 18c7-3 13-1 16 3 3-4 9-6 16-3v28c-7-2-12 0-16 4-4-4-9-6-16-4V18Z" fill="#fff" fill-opacity=".96"/>
+  <path d="M32 22v28M20 25c4-1 7 0 9 2M20 32c4-1 7 0 9 2M44 25c-4-1-7 0-9 2M44 32c-4-1-7 0-9 2" fill="none" stroke="#0984e3" stroke-width="2" stroke-linecap="round"/>
+</svg>

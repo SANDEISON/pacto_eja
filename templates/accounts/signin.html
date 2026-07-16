@@ -1,0 +1,28 @@
+{% extends "accounts/auth_base.html" %}
+
+{% block title %}Entrar | Pacto EJA{% endblock %}
+{% block form_content %}
+<span class="auth-kicker">BOAS-VINDAS</span>
+<h1>Olá!</h1>
+<p class="auth-subtitle">Entre para acessar seu painel.</p>
+
+{% if form.non_field_errors %}<div class="alert alert-danger" role="alert">E-mail ou senha inválidos. Verifique os dados e tente novamente.</div>{% endif %}
+<form method="post" novalidate>
+  {% csrf_token %}
+  {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+  <div class="auth-field">
+    <i class="bi bi-envelope" aria-hidden="true"></i>
+    <label class="visually-hidden" for="{{ form.username.id_for_label }}">E-mail</label>
+    <input type="email" name="{{ form.username.html_name }}" id="{{ form.username.id_for_label }}" value="{{ form.username.value|default:'' }}" placeholder="E-mail" autocomplete="email" required autofocus>
+  </div>
+  {% for error in form.username.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+  <div class="auth-field">
+    <i class="bi bi-lock" aria-hidden="true"></i>
+    <label class="visually-hidden" for="{{ form.password.id_for_label }}">Senha</label>
+    <input type="password" name="{{ form.password.html_name }}" id="{{ form.password.id_for_label }}" placeholder="Senha" autocomplete="current-password" required>
+  </div>
+  {% for error in form.password.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+  <button type="submit" class="auth-submit">Entrar <i class="bi bi-arrow-right"></i></button>
+</form>
+<p class="auth-switch">Ainda não possui uma conta? <a href="{% url 'accounts:signup' %}">Cadastre-se</a></p>
+{% endblock %}

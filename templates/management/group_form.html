@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}{% if object %}Editar grupo{% else %}Cadastrar grupo{% endif %} | Pacto EJA{% endblock %}
+{% block page_title %}{% if object %}Editar grupo{% else %}Cadastrar grupo{% endif %}{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Início</a></li><li class="breadcrumb-item"><a href="{% url 'group_list' %}">Grupos</a></li><li class="breadcrumb-item active">{% if object %}Editar{% else %}Cadastrar{% endif %}</li>{% endblock %}
+
+{% block content %}
+<div class="management-shell">
+  <form method="post" class="management-card management-form" novalidate>
+    {% csrf_token %}
+    {% include "management/_form_errors.html" %}
+    <div class="form-section">
+      <h2>Dados do grupo</h2>
+      <div class="row g-3">
+        {% include "management/_field.html" with field=form.name column="col-12" %}
+        {% include "management/_field.html" with field=form.permissions column="col-12" %}
+      </div>
+    </div>
+    <footer class="form-actions"><a class="btn btn-light" href="{% url 'group_list' %}">Cancelar</a><button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Salvar</button></footer>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "adminlte/auth/auth-master.html" %}
+{% load static %}
+
+{% block box_class %}auth-shell{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/auth.css' %}">{% endblock %}
+
+{% block auth_body %}
+<main class="auth-layout">
+  <section class="auth-visual" aria-label="Apresentação do Pacto EJA">
+    <a class="auth-brand" href="{% url 'accounts:signin' %}">
+      <img src="{% static 'img/logo.svg' %}" alt="Pacto EJA">
+      <span><strong>Pacto</strong> EJA</span>
+    </a>
+    <div class="education-art" aria-hidden="true">
+      <div class="art-orbit orbit-one"></div><div class="art-orbit orbit-two"></div>
+      <div class="art-board"><span></span><span></span><span></span><i class="bi bi-bar-chart-fill"></i></div>
+      <div class="art-person"><div class="person-head"></div><div class="person-body"></div><div class="person-arm"></div></div>
+      <div class="art-desk"></div><div class="art-book"><i class="bi bi-book-fill"></i></div>
+    </div>
+    <div class="auth-copy"><strong>Educação que transforma.</strong><span>Formação, colaboração e resultados para a Educação de Jovens e Adultos.</span></div>
+  </section>
+  <section class="auth-panel">
+    <div class="auth-rings" aria-hidden="true"></div>
+    <div class="auth-form-card">
+      {% block form_content %}{% endblock %}
+    </div>
+  </section>
+</main>
+{% endblock %}
