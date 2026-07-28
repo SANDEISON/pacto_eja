@@ -151,7 +151,7 @@ activemq-data/
 .env
 .envrc
 .venv
-staticfiles/
+#staticfiles/
 env/
 venv/
 ENV/

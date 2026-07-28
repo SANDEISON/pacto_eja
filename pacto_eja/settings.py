@@ -62,9 +62,13 @@ WSGI_APPLICATION = "pacto_eja.wsgi.application"
 ASGI_APPLICATION = "pacto_eja.asgi.application"
 
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'db_pacto_eja',
+        'HOST': 'localhost',
+        'USER': 'postgres',
+        'PASSWORD': '12345678',
+        'PORT': '5432',
     }
 }
 
