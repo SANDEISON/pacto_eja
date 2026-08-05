@@ -1,0 +1,21 @@
+[Unit]
+Description=Pacto EJA (Django/Gunicorn)
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=sandeison
+WorkingDirectory=/home/sandeison/pacto_eja
+EnvironmentFile=/etc/pacto-eja.env
+ExecStart=/home/sandeison/pacto_eja/.venv/bin/gunicorn --workers 3 --bind 0.0.0.0:8080 --access-logfile - --error-logfile - pacto_eja.wsgi:application
+ExecReload=/bin/kill -s HUP $MAINPID
+KillSignal=SIGQUIT
+TimeoutStopSec=30
+Restart=on-failure
+RestartSec=5
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,14 +1,29 @@
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 from core.menu import educator_management_access, management_access, staff_only
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-change-me-in-production")
+INSECURE_DEFAULT_SECRET_KEY = "django-insecure-change-me-in-production"
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", INSECURE_DEFAULT_SECRET_KEY)
 DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() in {"1", "true", "yes"}
+if not DEBUG and SECRET_KEY == INSECURE_DEFAULT_SECRET_KEY:
+    raise ImproperlyConfigured("DJANGO_SECRET_KEY must be set when DJANGO_DEBUG=False")
+
 ALLOWED_HOSTS = [host.strip() for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,testserver").split(",") if host.strip()]
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+
+# Public path used by the STI reverse proxy. The proxy must strip this prefix
+# before forwarding the request to Gunicorn.
+FORCE_SCRIPT_NAME = os.environ.get("DJANGO_FORCE_SCRIPT_NAME", "").rstrip("/") or None
 
 INSTALLED_APPS = [
     "django_components",
@@ -25,6 +40,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -62,13 +78,13 @@ WSGI_APPLICATION = "pacto_eja.wsgi.application"
 ASGI_APPLICATION = "pacto_eja.asgi.application"
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'db_pacto_eja',
-        'HOST': 'localhost',
-        'USER': 'postgres',
-        'PASSWORD': '12345678',
-        'PORT': '5432',
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.environ.get("POSTGRES_DB", "db_pacto_eja"),
+        "HOST": os.environ.get("POSTGRES_HOST", "localhost"),
+        "USER": os.environ.get("POSTGRES_USER", "postgres"),
+        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", ""),
+        "PORT": os.environ.get("POSTGRES_PORT", "5432"),
     }
 }
 
@@ -84,10 +100,21 @@ TIME_ZONE = "America/Maceio"
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = "static/"
+STATIC_URL = f"{FORCE_SCRIPT_NAME}/static/" if FORCE_SCRIPT_NAME else "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 LOGIN_URL = "accounts:signin"
 LOGIN_REDIRECT_URL = "dashboard"
