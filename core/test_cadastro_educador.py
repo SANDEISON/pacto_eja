@@ -39,6 +39,11 @@ class CadastroEducadorPublicoTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Cadastro de educadores")
 
+    def test_home_redirects_to_public_form(self):
+        response = self.client.get(reverse("home"))
+
+        self.assertRedirects(response, reverse("cadastro_educador"))
+
     def test_cities_endpoint_filters_by_state(self):
         response = self.client.get(reverse("cadastro_educador_cidades"), {"estado": self.estado.pk})
 
@@ -51,7 +56,7 @@ class CadastroEducadorPublicoTests(TestCase):
     def test_schools_endpoint_filters_by_city_and_name(self):
         response = self.client.get(
             reverse("cadastro_educador_escolas"),
-            {"cidade": self.cidade.pk, "q": "Municipal"},
+            {"cidade": self.cidade.pk, "q": "Municipal de Teste"},
         )
 
         self.assertEqual(response.status_code, 200)

@@ -8,13 +8,14 @@ Programa de Formação de Educadores construído com Django 6 e o tema oficial D
 py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-$env:POSTGRES_PASSWORD = "sua-senha-local"
 python manage.py migrate
 python manage.py createsuperuser
 python manage.py runserver
 ```
 
-Acesse `http://127.0.0.1:8000/`. O painel exige autenticação; o Django Admin está em `/admin/`.
+Acesse `http://127.0.0.1:8000/` para abrir o cadastro público de educadores. O painel autenticado está em `/painel/` e o Django Admin está em `/admin/`.
+
+As configurações locais são carregadas automaticamente do arquivo `.env`, que não é versionado. Para preparar outro computador, copie `.env.example` para `.env` e preencha a chave Django e a senha local do PostgreSQL.
 
 ## Publicar na VM Debian
 

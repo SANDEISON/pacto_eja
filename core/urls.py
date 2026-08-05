@@ -1,4 +1,5 @@
 from django.urls import path
+from django.views.generic import RedirectView
 
 from . import views
 
@@ -9,7 +10,8 @@ urlpatterns = [
     path("cadastro-educadores/api/cpf/", views.cpf_lookup, name="cadastro_educador_cpf_lookup"),
     path("cadastro-educadores/api/cidades/", views.cidades_por_estado, name="cadastro_educador_cidades"),
     path("cadastro-educadores/api/escolas/", views.escolas_por_cidade, name="cadastro_educador_escolas"),
-    path("", views.dashboard, name="dashboard"),
+    path("", RedirectView.as_view(pattern_name="cadastro_educador", permanent=False), name="home"),
+    path("painel/", views.dashboard, name="dashboard"),
     path("perfil/", views.profile, name="profile"),
     path("perfil/alterar-senha/", views.ProfilePasswordChangeView.as_view(), name="profile_password_change"),
     path("erro/<int:status_code>/", views.error_preview, name="error_preview"),

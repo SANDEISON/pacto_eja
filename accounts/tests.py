@@ -6,7 +6,7 @@ from django.urls import reverse
 class AuthenticationTests(TestCase):
     def test_dashboard_requires_login(self):
         response = self.client.get(reverse("dashboard"))
-        self.assertRedirects(response, f"{reverse('accounts:signin')}?next=/")
+        self.assertRedirects(response, f"{reverse('accounts:signin')}?next={reverse('dashboard')}")
 
     def test_signup_creates_user_and_logs_in(self):
         response = self.client.post(
