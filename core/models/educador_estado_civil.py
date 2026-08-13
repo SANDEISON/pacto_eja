@@ -1,7 +1,7 @@
 from django.db import models
 
 
-class PessoaEstadoCivil(models.TextChoices):
+class EducadorEstadoCivil(models.TextChoices):
     SOLTEIRO = "SOLTEIRO", "Solteiro(a)"
     CASADO = "CASADO", "Casado(a)"
     UNIAO_ESTAVEL = "UNIAO_ESTAVEL", "União estável"

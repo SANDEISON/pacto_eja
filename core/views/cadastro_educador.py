@@ -2,12 +2,12 @@ from django.db import IntegrityError
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods
 
-from ..forms import CadastroEducadorForm
+from ..forms import EducadorEscolaCadastroForm
 
 
 @require_http_methods(["GET", "POST"])
 def cadastro_educador(request):
-    form = CadastroEducadorForm(request.POST or None)
+    form = EducadorEscolaCadastroForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         try:
             form.save_cadastro()

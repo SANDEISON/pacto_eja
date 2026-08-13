@@ -1,7 +1,7 @@
 from django.db import models
 
 
-class PessoaGenero(models.TextChoices):
+class EducadorGenero(models.TextChoices):
     FEMININO = "F", "Feminino"
     MASCULINO = "M", "Masculino"
     NAO_BINARIO = "NB", "Não binário"

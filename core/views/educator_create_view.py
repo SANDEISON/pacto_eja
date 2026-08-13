@@ -2,15 +2,15 @@ from django.contrib import messages
 from django.urls import reverse_lazy
 from django.views.generic import CreateView
 
-from ..forms import ManagedCadastroEducadorForm
-from ..models import CadastroEducador
+from ..forms import EducadorEscolaForm
+from ..models import EducadorEscola
 from .management_permission_mixin import ManagementPermissionMixin
 
 
 class EducatorCreateView(ManagementPermissionMixin, CreateView):
-    model = CadastroEducador
-    permission_required = "core.add_cadastroeducador"
-    form_class = ManagedCadastroEducadorForm
+    model = EducadorEscola
+    permission_required = "core.add_educadorescola"
+    form_class = EducadorEscolaForm
     template_name = "management/educator_form.html"
     success_url = reverse_lazy("educator_list")
 

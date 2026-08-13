@@ -6,14 +6,14 @@
 <h1>Olá!</h1>
 <p class="auth-subtitle">Entre para acessar seu painel.</p>
 
-{% if form.non_field_errors %}<div class="alert alert-danger" role="alert">E-mail ou senha inválidos. Verifique os dados e tente novamente.</div>{% endif %}
+{% if form.non_field_errors %}<div class="alert alert-danger" role="alert">CPF ou senha inválidos. Verifique os dados e tente novamente.</div>{% endif %}
 <form method="post" novalidate>
   {% csrf_token %}
   {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
   <div class="auth-field">
-    <i class="bi bi-envelope" aria-hidden="true"></i>
-    <label class="visually-hidden" for="{{ form.username.id_for_label }}">E-mail</label>
-    <input type="email" name="{{ form.username.html_name }}" id="{{ form.username.id_for_label }}" value="{{ form.username.value|default:'' }}" placeholder="E-mail" autocomplete="email" required autofocus>
+    <i class="bi bi-person-vcard" aria-hidden="true"></i>
+    <label class="visually-hidden" for="{{ form.username.id_for_label }}">CPF</label>
+    <input type="text" name="{{ form.username.html_name }}" id="{{ form.username.id_for_label }}" value="{{ form.username.value|default:'' }}" placeholder="000.000.000-00" autocomplete="username" inputmode="numeric" maxlength="14" required autofocus>
   </div>
   {% for error in form.username.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
   <div class="auth-field">

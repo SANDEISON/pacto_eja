@@ -14,10 +14,7 @@ class Escola(models.Model):
     telefone = models.CharField("telefone", max_length=50, blank=True)
     dependencia_administrativa = models.CharField("dependência administrativa", max_length=50, blank=True)
     categoria_privada = models.CharField("categoria privada", max_length=100, blank=True)
-    porte = models.CharField("porte", max_length=50, blank=True)
     etapas_modalidades_oferecidas = models.TextField("etapas e modalidades oferecidas", blank=True)
-    latitude = models.DecimalField("latitude", max_digits=18, decimal_places=14, null=True, blank=True)
-    longitude = models.DecimalField("longitude", max_digits=18, decimal_places=14, null=True, blank=True)
 
     class Meta:
         verbose_name = "escola"

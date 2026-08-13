@@ -1,14 +1,22 @@
 from django import forms
+from django.db import transaction
 
-from ..models import CadastroEducador, Cidade, Escola, Estado, Pessoa
+from ..models import (
+    Cidade,
+    Educador,
+    EducadorEscola,
+    Escola,
+    Estado,
+    FuncaoEducador,
+)
 from .bootstrap_form_mixin import BootstrapFormMixin
 
 
-class ManagedCadastroEducadorForm(BootstrapFormMixin, forms.ModelForm):
-    id_pessoa = forms.ModelChoiceField(
-        label="Pessoa",
-        queryset=Pessoa.objects.none(),
-        empty_label="Selecione a pessoa",
+class EducadorEscolaForm(BootstrapFormMixin, forms.ModelForm):
+    educador = forms.ModelChoiceField(
+        label="Educador",
+        queryset=Educador.objects.none(),
+        empty_label="Selecione o educador",
     )
     estado = forms.ModelChoiceField(
         label="Estado",
@@ -25,12 +33,9 @@ class ManagedCadastroEducadorForm(BootstrapFormMixin, forms.ModelForm):
         queryset=Escola.objects.none(),
         widget=forms.HiddenInput(),
     )
-
     class Meta:
-        model = CadastroEducador
+        model = EducadorEscola
         fields = (
-            "id_pessoa",
-            "estado",
             "cidade",
             "escola",
             "funcao_caracterizacao_turmas",
@@ -38,13 +43,24 @@ class ManagedCadastroEducadorForm(BootstrapFormMixin, forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["id_pessoa"].queryset = Pessoa.objects.select_related("usuario").order_by(
-            "usuario__first_name",
+        self.fields["educador"].queryset = Educador.objects.select_related("usuario").order_by(
+            "nome_completo",
             "usuario__username",
         )
-        self.fields["id_pessoa"].label_from_instance = self._pessoa_label
+        self.fields["educador"].label_from_instance = self._educador_label
 
-        estado_id = self.data.get("estado") if self.is_bound else self.initial.get("estado") or self.instance.estado_id
+        if self.instance.pk:
+            funcao_educador = FuncaoEducador.objects.filter(
+                educador_escola=self.instance,
+            ).first()
+            if funcao_educador:
+                self.fields["educador"].initial = funcao_educador.educador_id
+
+        estado_id = self.data.get("estado") if self.is_bound else self.initial.get("estado")
+        if not estado_id and self.instance.cidade_id:
+            estado_id = self.instance.cidade.estado_id
+        if estado_id and not self.is_bound:
+            self.fields["estado"].initial = estado_id
         if estado_id and str(estado_id).isdigit():
             self.fields["cidade"].queryset = Cidade.objects.filter(estado_id=estado_id)
             self.fields["cidade"].empty_label = "Selecione a cidade"
@@ -70,19 +86,16 @@ class ManagedCadastroEducadorForm(BootstrapFormMixin, forms.ModelForm):
         self._apply_bootstrap_classes()
 
     @staticmethod
-    def _pessoa_label(pessoa):
-        identificacao = pessoa.cpf or pessoa.usuario.email or pessoa.usuario.username
-        return f"{pessoa} — {identificacao}"
+    def _educador_label(educador):
+        identificacao = educador.cpf or educador.usuario.email or educador.usuario.username
+        return f"{educador} — {identificacao}"
 
     def clean(self):
         cleaned_data = super().clean()
         estado = cleaned_data.get("estado")
         cidade = cleaned_data.get("cidade")
         escola = cleaned_data.get("escola")
-        pessoa = cleaned_data.get("id_pessoa")
-
-        if pessoa and CadastroEducador.objects.filter(id_pessoa=pessoa).exclude(pk=self.instance.pk).exists():
-            self.add_error("id_pessoa", "Esta pessoa já possui um cadastro de educador.")
+        educador = cleaned_data.get("educador")
 
         if estado and cidade and cidade.estado_id != estado.pk:
             self.add_error("cidade", "A cidade selecionada não pertence ao estado informado.")
@@ -92,4 +105,30 @@ class ManagedCadastroEducadorForm(BootstrapFormMixin, forms.ModelForm):
             or escola.sigla_uf != cidade.estado.sigla
         ):
             self.add_error("escola", "A escola selecionada não pertence à cidade informada.")
+        funcao = cleaned_data.get("funcao_caracterizacao_turmas")
+        if educador and cidade and escola and funcao:
+            vinculos_iguais = FuncaoEducador.objects.filter(
+                educador=educador,
+                educador_escola__cidade=cidade,
+                educador_escola__escola=escola,
+                educador_escola__funcao_caracterizacao_turmas=funcao,
+            )
+            if self.instance.pk:
+                vinculos_iguais = vinculos_iguais.exclude(
+                    educador_escola_id=self.instance.pk,
+                )
+            if vinculos_iguais.exists():
+                self.add_error(None, "Este vínculo do educador com a escola já está cadastrado.")
         return cleaned_data
+
+    @transaction.atomic
+    def save(self, commit=True):
+        vinculo = super().save(commit=False)
+        if commit:
+            vinculo.save()
+            FuncaoEducador.objects.update_or_create(
+                educador_escola=vinculo,
+                defaults={"educador": self.cleaned_data["educador"]},
+            )
+            self.save_m2m()
+        return vinculo

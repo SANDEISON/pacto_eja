@@ -4,6 +4,7 @@ from django.contrib.auth.models import Group
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 
+from ..validators import validate_cpf
 from .bootstrap_form_mixin import BootstrapFormMixin
 
 
@@ -26,7 +27,7 @@ class ManagedUserForm(BootstrapFormMixin, forms.ModelForm):
         model = get_user_model()
         fields = ("username", "first_name", "last_name", "email", "is_active", "is_staff", "groups")
         labels = {
-            "username": "Usuário",
+            "username": "CPF",
             "first_name": "Nome",
             "last_name": "Sobrenome",
             "email": "E-mail",
@@ -34,7 +35,10 @@ class ManagedUserForm(BootstrapFormMixin, forms.ModelForm):
             "is_staff": "Acesso à administração",
             "groups": "Grupos",
         }
-        widgets = {"groups": forms.SelectMultiple(attrs={"size": 8})}
+        widgets = {
+            "username": forms.TextInput(attrs={"inputmode": "numeric", "placeholder": "000.000.000-00"}),
+            "groups": forms.SelectMultiple(attrs={"size": 8}),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -43,6 +47,11 @@ class ManagedUserForm(BootstrapFormMixin, forms.ModelForm):
             self.fields["password1"].required = True
             self.fields["password2"].required = True
         self._apply_bootstrap_classes()
+
+    def clean_username(self):
+        cpf = "".join(character for character in self.cleaned_data["username"] if character.isdigit())
+        validate_cpf(cpf)
+        return cpf
 
     def clean(self):
         cleaned_data = super().clean()

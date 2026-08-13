@@ -16,7 +16,7 @@
 
   <form method="post" class="management-card management-form profile-form" novalidate>
     {% csrf_token %}
-    {% if user_form.non_field_errors or pessoa_form.non_field_errors %}<div class="alert alert-danger m-4 mb-0">Verifique os dados informados.</div>{% endif %}
+    {% if user_form.non_field_errors or educador_form.non_field_errors %}<div class="alert alert-danger m-4 mb-0">Verifique os dados informados.</div>{% endif %}
     <section class="form-section">
       <div class="section-heading"><span><i class="bi bi-person"></i></span><div><h2>Dados da conta</h2><p>Nome e e-mail utilizados para acessar o sistema.</p></div></div>
       <div class="row g-3">
@@ -27,11 +27,11 @@
     <section class="form-section">
       <div class="section-heading"><span><i class="bi bi-card-list"></i></span><div><h2>Informações pessoais</h2><p>Complete os dados do seu perfil.</p></div></div>
       <div class="row g-3">
-        {% include "management/_field.html" with field=pessoa_form.cpf column="col-12 col-md-6" %}
-        {% include "management/_field.html" with field=pessoa_form.data_nascimento column="col-12 col-md-6" %}
-        {% include "management/_field.html" with field=pessoa_form.genero column="col-12 col-md-6" %}
-        {% include "management/_field.html" with field=pessoa_form.estado_civil column="col-12 col-md-6" %}
-        {% include "management/_field.html" with field=pessoa_form.telefone column="col-12" %}
+        {% include "management/_field.html" with field=educador_form.cpf column="col-12 col-md-6" %}
+        {% include "management/_field.html" with field=educador_form.data_nascimento column="col-12 col-md-6" %}
+        {% include "management/_field.html" with field=educador_form.genero column="col-12 col-md-6" %}
+        {% include "management/_field.html" with field=educador_form.estado_civil column="col-12 col-md-6" %}
+        {% include "management/_field.html" with field=educador_form.telefone column="col-12" %}
       </div>
     </section>
     <footer class="form-actions"><a class="btn btn-light" href="{% url 'dashboard' %}">Cancelar</a><button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Salvar alterações</button></footer>

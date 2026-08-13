@@ -11,9 +11,9 @@
   {% csrf_token %}
   {% for field in form %}
     <div class="auth-field{% if field.errors %} has-error{% endif %}">
-      <i class="bi {% if field.name == 'full_name' %}bi-person{% elif field.name == 'email' %}bi-envelope{% else %}bi-lock{% endif %}" aria-hidden="true"></i>
+      <i class="bi {% if field.name == 'full_name' %}bi-person{% elif field.name == 'cpf' %}bi-person-vcard{% elif field.name == 'email' %}bi-envelope{% else %}bi-lock{% endif %}" aria-hidden="true"></i>
       <label class="visually-hidden" for="{{ field.id_for_label }}">{{ field.label }}</label>
-      <input type="{% if field.name == 'email' %}email{% elif 'password' in field.name %}password{% else %}text{% endif %}" name="{{ field.html_name }}" id="{{ field.id_for_label }}" value="{% if field.value and 'password' not in field.name %}{{ field.value }}{% endif %}" placeholder="{% if field.name == 'password1' %}Senha{% elif field.name == 'password2' %}Confirme a senha{% else %}{{ field.label }}{% endif %}" {% if field.field.required %}required{% endif %} autocomplete="{% if field.name == 'email' %}email{% elif field.name == 'full_name' %}name{% else %}new-password{% endif %}">
+      <input type="{% if field.name == 'email' %}email{% elif 'password' in field.name %}password{% else %}text{% endif %}" name="{{ field.html_name }}" id="{{ field.id_for_label }}" value="{% if field.value and 'password' not in field.name %}{{ field.value }}{% endif %}" placeholder="{% if field.name == 'password1' %}Senha{% elif field.name == 'password2' %}Confirme a senha{% elif field.name == 'cpf' %}000.000.000-00{% else %}{{ field.label }}{% endif %}" {% if field.field.required %}required{% endif %} {% if field.name == 'cpf' %}inputmode="numeric" maxlength="14"{% endif %} autocomplete="{% if field.name == 'email' %}email{% elif field.name == 'full_name' %}name{% elif field.name == 'cpf' %}username{% else %}new-password{% endif %}">
     </div>
     {% for error in field.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
   {% endfor %}

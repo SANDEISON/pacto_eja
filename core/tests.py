@@ -23,7 +23,7 @@ class DashboardTests(TestCase):
     def test_staff_user_sees_management_menu(self):
         self.user.is_staff = True
         self.user.save(update_fields=["is_staff"])
-        self.user.user_permissions.add(Permission.objects.get(codename="view_cadastroeducador"))
+        self.user.user_permissions.add(Permission.objects.get(codename="view_educadorescola"))
         response = self.client.get(reverse("dashboard"))
         menu_texts = [item.get("text") or item.get("header") for item in response.context["adminlte_menu_sidebar"]]
         self.assertEqual(

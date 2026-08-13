@@ -1,9 +1,11 @@
 import re
 import xml.etree.ElementTree as ET
 import zipfile
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 
 
+# A planilha de origem ainda contém as colunas removidas do modelo. Elas são
+# reconhecidas para validar o cabeçalho, mas não são incluídas nos registros.
 EXPECTED_COLUMNS = (
     "id_escola",
     "nome",
@@ -61,7 +63,7 @@ def _cell_value(cell, shared_strings):
 
 
 def iter_xlsx_rows(path):
-    """Lê a primeira planilha do XLSX em streaming usando apenas a biblioteca padrão."""
+    """Lê a primeira planilha do XLSX em streaming usando a biblioteca padrão."""
     with zipfile.ZipFile(path) as archive:
         shared_strings = _shared_strings(archive)
         with archive.open("xl/worksheets/sheet1.xml") as stream:
@@ -87,25 +89,13 @@ def _integer(value):
     return int(Decimal(str(value)))
 
 
-def _coordinate(value, minimum, maximum):
-    if value in (None, ""):
-        return None
-    try:
-        coordinate = Decimal(str(value))
-    except InvalidOperation as error:
-        raise ValueError(f"Coordenada inválida no Excel: {value!r}") from error
-    for _ in range(18):
-        if minimum <= coordinate <= maximum:
-            return coordinate
-        coordinate /= 10
-    return None
-
-
 def iter_escola_records(path):
     rows = iter_xlsx_rows(path)
     header = next(rows, None)
     if header != EXPECTED_COLUMNS:
-        raise ValueError(f"Colunas inesperadas no Excel. Esperado: {EXPECTED_COLUMNS!r}; recebido: {header!r}")
+        raise ValueError(
+            f"Colunas inesperadas no Excel. Esperado: {EXPECTED_COLUMNS!r}; recebido: {header!r}"
+        )
     for row_number, row in enumerate(rows, start=2):
         if not any(value not in (None, "") for value in row):
             continue
@@ -126,8 +116,5 @@ def iter_escola_records(path):
             "telefone": _text(row[9]),
             "dependencia_administrativa": _text(row[10]),
             "categoria_privada": _text(row[11]),
-            "porte": _text(row[12]),
             "etapas_modalidades_oferecidas": _text(row[13]),
-            "latitude": _coordinate(row[14], Decimal("-35"), Decimal("6")),
-            "longitude": _coordinate(row[15], Decimal("-75"), Decimal("-30")),
         }

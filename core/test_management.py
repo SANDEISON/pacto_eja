@@ -33,7 +33,7 @@ class UserManagementTests(TestCase):
         response = self.client.post(
             reverse("user_create"),
             {
-                "username": "nova@example.com",
+                "username": "529.982.247-25",
                 "first_name": "Nova",
                 "last_name": "Pessoa",
                 "email": "nova@example.com",
@@ -44,7 +44,7 @@ class UserManagementTests(TestCase):
             },
         )
         self.assertRedirects(response, reverse("user_list"))
-        created = User.objects.get(username="nova@example.com")
+        created = User.objects.get(username="52998224725")
         self.assertTrue(created.check_password("SenhaForte2026!"))
         response = self.client.get(reverse("user_list"), {"q": "Nova"})
         self.assertContains(response, "nova@example.com")

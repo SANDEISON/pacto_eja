@@ -16,7 +16,6 @@ class ProfileUserForm(BootstrapFormMixin, forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._original_email = self.instance.email
         self.fields["full_name"].initial = self.instance.get_full_name()
         self._apply_bootstrap_classes()
 
@@ -32,8 +31,6 @@ class ProfileUserForm(BootstrapFormMixin, forms.ModelForm):
         user = super().save(commit=False)
         full_name = self.cleaned_data["full_name"].strip()
         user.first_name, _, user.last_name = full_name.partition(" ")
-        if user.username.lower() == (self._original_email or "").lower():
-            user.username = self.cleaned_data["email"]
         if commit:
             user.save()
         return user

@@ -4,12 +4,12 @@ from django.contrib.auth.views import LoginView, LogoutView
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 
-from .forms import EmailAuthenticationForm, SignUpForm
+from .forms import CPFAuthenticationForm, SignUpForm
 
 
 class SignInView(LoginView):
     template_name = "accounts/signin.html"
-    authentication_form = EmailAuthenticationForm
+    authentication_form = CPFAuthenticationForm
     redirect_authenticated_user = True
 
 

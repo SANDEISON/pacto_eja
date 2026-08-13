@@ -11,7 +11,7 @@ def educator_management_access(request):
         user
         and user.is_authenticated
         and user.is_staff
-        and user.has_perm("core.view_cadastroeducador")
+        and user.has_perm("core.view_educadorescola")
     )
 
 

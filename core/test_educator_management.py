@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import CadastroEducador, Cidade, Escola, Estado
+from .models import Cidade, EducadorEscola, Escola, Estado, FuncaoEducador
 
 
 User = get_user_model()
@@ -27,8 +27,8 @@ class EducatorManagementTests(TestCase):
             first_name="Educador Gerenciado",
             password="senha-segura",
         )
-        cls.educator_user.pessoa.cpf = "52998224725"
-        cls.educator_user.pessoa.save(update_fields=("cpf",))
+        cls.educator_user.educador.cpf = "52998224725"
+        cls.educator_user.educador.save(update_fields=("cpf",))
         cls.estado = Estado.objects.get(sigla="AL")
         cls.cidade = Cidade.objects.get(estado=cls.estado, nome_cidade="Maceió")
         cls.escola = Escola.objects.create(
@@ -37,12 +37,14 @@ class EducatorManagementTests(TestCase):
             id_municipio=cls.cidade.codigo_ibge,
             sigla_uf=cls.estado.sigla,
         )
-        cls.cadastro = CadastroEducador.objects.create(
-            id_pessoa=cls.educator_user.pessoa,
-            estado=cls.estado,
+        cls.cadastro = EducadorEscola.objects.create(
             cidade=cls.cidade,
             escola=cls.escola,
             funcao_caracterizacao_turmas="anos_iniciais_eja",
+        )
+        cls.funcao_educador = FuncaoEducador.objects.create(
+            educador=cls.educator_user.educador,
+            educador_escola=cls.cadastro,
         )
 
     def setUp(self):
@@ -50,7 +52,7 @@ class EducatorManagementTests(TestCase):
 
     def form_data(self, **overrides):
         data = {
-            "id_pessoa": self.educator_user.pessoa.pk,
+            "educador": self.educator_user.educador.pk,
             "estado": self.estado.pk,
             "cidade": self.cidade.pk,
             "escola": self.escola.pk,
@@ -86,20 +88,56 @@ class EducatorManagementTests(TestCase):
         )
         response = self.client.post(
             reverse("educator_create"),
-            self.form_data(id_pessoa=novo_usuario.pessoa.pk),
+            self.form_data(educador=novo_usuario.educador.pk),
         )
 
         self.assertRedirects(response, reverse("educator_list"))
-        self.assertTrue(CadastroEducador.objects.filter(id_pessoa=novo_usuario.pessoa).exists())
+        self.assertTrue(
+            EducadorEscola.objects.filter(
+                funcao_educador__educador=novo_usuario.educador,
+            ).exists()
+        )
 
-    def test_management_rejects_second_registration_for_same_person(self):
-        response = self.client.post(reverse("educator_create"), self.form_data())
+    def test_management_allows_second_registration_for_same_person(self):
+        outra_escola = Escola.objects.create(
+            id_escola=27000003,
+            nome="Segunda Escola de Gestão",
+            id_municipio=self.cidade.codigo_ibge,
+            sigla_uf=self.estado.sigla,
+        )
+        response = self.client.post(
+            reverse("educator_create"),
+            self.form_data(
+                escola=outra_escola.pk,
+                funcao_caracterizacao_turmas="anos_iniciais_eja",
+            ),
+        )
+
+        self.assertRedirects(response, reverse("educator_list"))
+        self.assertEqual(
+            EducadorEscola.objects.filter(
+                funcao_educador__educador=self.educator_user.educador,
+            ).count(),
+            2,
+        )
+        self.assertEqual(
+            FuncaoEducador.objects.filter(educador=self.educator_user.educador).count(),
+            2,
+        )
+
+    def test_management_rejects_exact_duplicate_registration(self):
+        response = self.client.post(
+            reverse("educator_create"),
+            self.form_data(funcao_caracterizacao_turmas="anos_iniciais_eja"),
+        )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Esta pessoa já possui um cadastro de educador.")
-        self.assertEqual(CadastroEducador.objects.filter(id_pessoa=self.educator_user.pessoa).count(), 1)
+        self.assertContains(response, "Este vínculo do educador com a escola já está cadastrado.")
 
     def test_update_educator_registration(self):
+        get_response = self.client.get(reverse("educator_update", args=(self.cadastro.pk,)))
+        self.assertEqual(get_response.context["form"]["estado"].value(), self.estado.pk)
+
         response = self.client.post(
             reverse("educator_update", args=(self.cadastro.pk,)),
             self.form_data(funcao_caracterizacao_turmas="educacao_profissional"),
@@ -107,10 +145,13 @@ class EducatorManagementTests(TestCase):
 
         self.assertRedirects(response, reverse("educator_list"))
         self.cadastro.refresh_from_db()
-        self.assertEqual(self.cadastro.funcao_caracterizacao_turmas, "educacao_profissional")
+        self.assertEqual(
+            self.cadastro.funcao_caracterizacao_turmas,
+            "educacao_profissional",
+        )
 
     def test_delete_educator_registration(self):
         response = self.client.post(reverse("educator_delete", args=(self.cadastro.pk,)))
 
         self.assertRedirects(response, reverse("educator_list"))
-        self.assertFalse(CadastroEducador.objects.filter(pk=self.cadastro.pk).exists())
+        self.assertFalse(EducadorEscola.objects.filter(pk=self.cadastro.pk).exists())

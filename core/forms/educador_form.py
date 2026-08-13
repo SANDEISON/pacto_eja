@@ -1,11 +1,11 @@
 from django import forms
 
-from ..models import Pessoa
+from ..models import Educador
 from ..validators import validate_cpf
 from .bootstrap_form_mixin import BootstrapFormMixin
 
 
-class PessoaForm(BootstrapFormMixin, forms.ModelForm):
+class EducadorForm(BootstrapFormMixin, forms.ModelForm):
     cpf = forms.CharField(
         label="CPF",
         max_length=14,
@@ -14,7 +14,7 @@ class PessoaForm(BootstrapFormMixin, forms.ModelForm):
     )
 
     class Meta:
-        model = Pessoa
+        model = Educador
         fields = ("cpf", "data_nascimento", "genero", "telefone", "estado_civil")
         widgets = {
             "data_nascimento": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),

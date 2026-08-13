@@ -1,14 +1,16 @@
+import json
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import CadastroEducador, Cidade, Escola, Estado, Pessoa
+from .models import Cidade, Educador, EducadorEscola, Escola, Estado, FuncaoEducador
 
 
 User = get_user_model()
 
 
-class CadastroEducadorPublicoTests(TestCase):
+class EducadorEscolaCadastroPublicoTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.estado = Estado.objects.get(sigla="AL")
@@ -25,10 +27,17 @@ class CadastroEducadorPublicoTests(TestCase):
             "cpf": "529.982.247-25",
             "nome_completo": "Maria Educadora da Silva",
             "email": "maria.educadora@example.com",
-            "estado": self.estado.pk,
-            "cidade": self.cidade.pk,
-            "escola": self.escola.pk,
-            "funcao_caracterizacao_turmas": "alfabetizacao_eja",
+            "atuacoes_json": json.dumps([self.assignment_data()]),
+        }
+        data.update(overrides)
+        return data
+
+    def assignment_data(self, **overrides):
+        data = {
+            "estado_id": self.estado.pk,
+            "cidade_id": self.cidade.pk,
+            "escola_id": self.escola.pk,
+            "funcao": "alfabetizacao_eja",
         }
         data.update(overrides)
         return data
@@ -37,7 +46,7 @@ class CadastroEducadorPublicoTests(TestCase):
         response = self.client.get(reverse("cadastro_educador"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Cadastro de educadores")
+        self.assertContains(response, "Cadastro de Participantes")
 
     def test_home_redirects_to_public_form(self):
         response = self.client.get(reverse("home"))
@@ -69,13 +78,56 @@ class CadastroEducadorPublicoTests(TestCase):
         response = self.client.post(reverse("cadastro_educador"), self.registration_data())
 
         self.assertRedirects(response, reverse("cadastro_educador_success"))
-        usuario = User.objects.get(username="maria.educadora@example.com")
-        self.assertEqual(usuario.first_name, "Maria Educadora da Silva")
+        usuario = User.objects.get(username="52998224725")
+        self.assertEqual(usuario.first_name, "Maria")
+        self.assertEqual(usuario.last_name, "Educadora da Silva")
+        self.assertEqual(usuario.get_full_name(), "Maria Educadora da Silva")
+        self.assertEqual(usuario.email, "maria.educadora@example.com")
         self.assertTrue(usuario.check_password("52998224725"))
-        self.assertEqual(usuario.pessoa.cpf, "52998224725")
-        cadastro = CadastroEducador.objects.get(id_pessoa=usuario.pessoa)
+        self.assertEqual(usuario.educador.cpf, "52998224725")
+        self.assertEqual(usuario.educador.nome_completo, "Maria Educadora da Silva")
+        cadastro = EducadorEscola.objects.get(funcao_educador__educador=usuario.educador)
         self.assertEqual(cadastro.cidade, self.cidade)
+        self.assertEqual(cadastro.cidade.estado, self.estado)
         self.assertEqual(cadastro.escola, self.escola)
+
+    def test_single_submission_creates_multiple_school_assignments(self):
+        segunda_escola = Escola.objects.create(
+            id_escola=27000004,
+            nome="Segunda Escola Municipal de Teste",
+            id_municipio=self.cidade.codigo_ibge,
+            sigla_uf=self.estado.sigla,
+        )
+        atuacoes = [
+            self.assignment_data(),
+            self.assignment_data(
+                escola_id=segunda_escola.pk,
+                funcao="ensino_medio",
+            ),
+        ]
+
+        response = self.client.post(
+            reverse("cadastro_educador"),
+            self.registration_data(atuacoes_json=json.dumps(atuacoes)),
+        )
+
+        self.assertRedirects(response, reverse("cadastro_educador_success"))
+        educador = User.objects.get(username="52998224725").educador
+        self.assertEqual(FuncaoEducador.objects.filter(educador=educador).count(), 2)
+        self.assertEqual(
+            EducadorEscola.objects.filter(funcao_educador__educador=educador).count(),
+            2,
+        )
+
+    def test_registration_requires_at_least_one_assignment(self):
+        response = self.client.post(
+            reverse("cadastro_educador"),
+            self.registration_data(atuacoes_json="[]"),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Adicione pelo menos uma atuação antes de salvar o cadastro.")
+        self.assertFalse(User.objects.filter(username="52998224725").exists())
 
     def test_existing_cpf_reuses_user_and_person(self):
         usuario = User.objects.create_user(
@@ -84,9 +136,9 @@ class CadastroEducadorPublicoTests(TestCase):
             first_name="Educador Existente",
             password="senha-segura",
         )
-        pessoa = usuario.pessoa
-        pessoa.cpf = "52998224725"
-        pessoa.save(update_fields=("cpf",))
+        educador = usuario.educador
+        educador.cpf = "52998224725"
+        educador.save(update_fields=("cpf",))
         total_usuarios = User.objects.count()
 
         response = self.client.post(
@@ -96,33 +148,42 @@ class CadastroEducadorPublicoTests(TestCase):
 
         self.assertRedirects(response, reverse("cadastro_educador_success"))
         self.assertEqual(User.objects.count(), total_usuarios)
-        self.assertTrue(CadastroEducador.objects.filter(id_pessoa=pessoa, escola=self.escola).exists())
+        self.assertTrue(
+            EducadorEscola.objects.filter(
+                funcao_educador__educador=educador,
+                escola=self.escola,
+            ).exists()
+        )
         usuario.refresh_from_db()
         self.assertEqual(usuario.first_name, "Educador Existente")
         self.assertEqual(usuario.email, "existente@example.com")
 
-    def test_person_cannot_submit_a_second_registration(self):
+    def test_person_can_submit_a_second_registration(self):
         usuario = User.objects.create_user(
             username="ja.cadastrado@example.com",
             email="ja.cadastrado@example.com",
             first_name="Educador Já Cadastrado",
         )
-        pessoa = usuario.pessoa
-        pessoa.cpf = "52998224725"
-        pessoa.save(update_fields=("cpf",))
-        CadastroEducador.objects.create(
-            id_pessoa=pessoa,
-            estado=self.estado,
+        educador = usuario.educador
+        educador.cpf = "52998224725"
+        educador.save(update_fields=("cpf",))
+        vinculo = EducadorEscola.objects.create(
             cidade=self.cidade,
             escola=self.escola,
             funcao_caracterizacao_turmas="anos_iniciais_eja",
         )
+        FuncaoEducador.objects.create(
+            educador=educador,
+            educador_escola=vinculo,
+        )
 
         response = self.client.post(reverse("cadastro_educador"), self.registration_data())
 
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Esta pessoa já possui um cadastro de educador.")
-        self.assertEqual(CadastroEducador.objects.filter(id_pessoa=pessoa).count(), 1)
+        self.assertRedirects(response, reverse("cadastro_educador_success"))
+        self.assertEqual(
+            EducadorEscola.objects.filter(funcao_educador__educador=educador).count(),
+            2,
+        )
 
     def test_cpf_lookup_returns_saved_person_data(self):
         usuario = User.objects.create_user(
@@ -130,9 +191,9 @@ class CadastroEducadorPublicoTests(TestCase):
             email="consulta@example.com",
             first_name="Pessoa Localizada",
         )
-        pessoa = usuario.pessoa
-        pessoa.cpf = "52998224725"
-        pessoa.save(update_fields=("cpf",))
+        educador = usuario.educador
+        educador.cpf = "52998224725"
+        educador.save(update_fields=("cpf",))
 
         response = self.client.get(reverse("cadastro_educador_cpf_lookup"), {"cpf": "529.982.247-25"})
 
