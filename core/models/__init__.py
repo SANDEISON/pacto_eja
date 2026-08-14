@@ -4,6 +4,7 @@ from .educador import Educador
 from .educador_escola import EducadorEscola
 from .educador_estado_civil import EducadorEstadoCivil
 from .educador_genero import EducadorGenero
+from .endereco import Endereco
 from .escola import Escola
 from .estado import Estado
 from .funcao_caracterizacao_turma import FuncaoCaracterizacaoTurma
@@ -16,6 +17,7 @@ __all__ = [
     "EducadorEscola",
     "EducadorEstadoCivil",
     "EducadorGenero",
+    "Endereco",
     "Escola",
     "Estado",
     "FuncaoCaracterizacaoTurma",

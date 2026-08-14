@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import CorRaca, Educador, EducadorEscola, FuncaoEducador
+from .models import Cidade, CorRaca, Educador, EducadorEscola, Endereco, Estado, FuncaoEducador
 
 
 User = get_user_model()
@@ -25,6 +25,7 @@ class EducadorModelTests(TestCase):
     def test_database_tables_use_educator_names(self):
         self.assertEqual(Educador._meta.db_table, "core_educador")
         self.assertEqual(EducadorEscola._meta.db_table, "core_educadorescola")
+        self.assertEqual(Endereco._meta.db_table, "core_endereco")
         self.assertEqual(FuncaoEducador._meta.db_table, "core_funcaoeducador")
         field_names = {field.name for field in EducadorEscola._meta.get_fields()}
         self.assertNotIn("estado", field_names)
@@ -40,6 +41,8 @@ class EducadorModelTests(TestCase):
 class ProfileViewTests(TestCase):
     def setUp(self):
         self.cor_raca = CorRaca.objects.get(nome="Indígena")
+        self.estado = Estado.objects.get(sigla="AL")
+        self.cidade = Cidade.objects.get(estado=self.estado, nome_cidade="Maceió")
         self.user = User.objects.create_user(
             username="maria@example.com",
             email="maria@example.com",
@@ -64,6 +67,10 @@ class ProfileViewTests(TestCase):
         self.assertContains(response, 'id="id_educador-cor_raca"')
         self.assertContains(response, "Nome social")
         self.assertContains(response, 'id="id_educador-nome_social"')
+        self.assertContains(response, 'id="id_endereco-cep"')
+        self.assertContains(response, 'id="id_endereco-logradouro"')
+        self.assertContains(response, 'id="id_endereco-estado"')
+        self.assertContains(response, 'id="id_endereco-cidade"')
 
     def test_user_can_update_account_and_personal_data(self):
         response = self.client.post(
@@ -78,6 +85,13 @@ class ProfileViewTests(TestCase):
                 "educador-cor_raca": self.cor_raca.pk,
                 "educador-telefone": "(82) 99999-1234",
                 "educador-estado_civil": Educador.EstadoCivil.CASADO,
+                "endereco-cep": "57000-000",
+                "endereco-logradouro": "Avenida Fernandes Lima",
+                "endereco-numero": "1000-A",
+                "endereco-complemento": "Apto. 101",
+                "endereco-bairro": "Farol",
+                "endereco-estado": self.estado.pk,
+                "endereco-cidade": self.cidade.pk,
             },
         )
         self.assertRedirects(response, reverse("profile"))
@@ -91,6 +105,14 @@ class ProfileViewTests(TestCase):
         self.assertEqual(self.user.educador.cpf, "52998224725")
         self.assertEqual(self.user.educador.data_nascimento, date(1990, 5, 12))
         self.assertEqual(self.user.educador.cor_raca, self.cor_raca)
+        endereco = self.user.educador.endereco
+        self.assertEqual(endereco.cep, "57000000")
+        self.assertEqual(endereco.logradouro, "Avenida Fernandes Lima")
+        self.assertEqual(endereco.numero, "1000-A")
+        self.assertEqual(endereco.complemento, "Apto. 101")
+        self.assertEqual(endereco.bairro, "Farol")
+        self.assertEqual(endereco.cidade, self.cidade)
+        self.assertEqual(endereco.uf, "AL")
 
     def test_invalid_cpf_and_future_birth_date_are_rejected(self):
         response = self.client.post(

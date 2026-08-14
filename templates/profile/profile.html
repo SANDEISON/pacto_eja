@@ -14,9 +14,9 @@
     <a class="btn btn-outline-primary w-100" href="{% url 'profile_password_change' %}"><i class="bi bi-key me-1"></i> Alterar senha</a>
   </aside>
 
-  <form method="post" class="management-card management-form profile-form" novalidate>
+  <form method="post" class="management-card management-form profile-form" novalidate data-cidades-url="{% url 'cadastro_educador_cidades' %}">
     {% csrf_token %}
-    {% if user_form.non_field_errors or educador_form.non_field_errors %}<div class="alert alert-danger m-4 mb-0">Verifique os dados informados.</div>{% endif %}
+    {% if user_form.non_field_errors or educador_form.non_field_errors or endereco_form.non_field_errors %}<div class="alert alert-danger m-4 mb-0">Verifique os dados informados.</div>{% endif %}
     <section class="profile-account-section">
       <div class="profile-account-heading"><i class="bi bi-person-vcard"></i><div><h2>Dados da conta</h2><p>Consulte e atualize as informações disponíveis no seu perfil.</p></div></div>
 
@@ -47,7 +47,16 @@
           </div>
 
           <div class="tab-pane fade" id="address-pane" role="tabpanel" aria-labelledby="address-tab" tabindex="0">
-            <div class="profile-tab-empty"><i class="bi bi-geo-alt"></i><strong>Endereço</strong><p>Esta área está preparada para receber os dados de endereço futuramente.</p></div>
+            <div class="profile-tab-heading"><h3>Endereço</h3><p>Informe seu endereço residencial.</p></div>
+            <div class="row g-3">
+              {% include "management/_field.html" with field=endereco_form.cep column="col-12 col-md-4" %}
+              {% include "management/_field.html" with field=endereco_form.logradouro column="col-12 col-md-8" %}
+              {% include "management/_field.html" with field=endereco_form.numero column="col-12 col-md-4" %}
+              {% include "management/_field.html" with field=endereco_form.complemento column="col-12 col-md-8" %}
+              {% include "management/_field.html" with field=endereco_form.bairro column="col-12 col-md-6" %}
+              {% include "management/_field.html" with field=endereco_form.estado column="col-12 col-md-2" %}
+              {% include "management/_field.html" with field=endereco_form.cidade column="col-12 col-md-4" %}
+            </div>
           </div>
 
           <div class="tab-pane fade" id="contact-pane" role="tabpanel" aria-labelledby="contact-tab" tabindex="0">
@@ -68,6 +77,33 @@
 {% block page_js %}
 <script>
   document.addEventListener("DOMContentLoaded", function () {
+    const profileForm = document.querySelector(".profile-form");
+    const stateSelect = document.getElementById("id_endereco-estado");
+    const citySelect = document.getElementById("id_endereco-cidade");
+
+    if (profileForm && stateSelect && citySelect) {
+      stateSelect.addEventListener("change", async function () {
+        citySelect.value = "";
+        citySelect.disabled = true;
+        citySelect.innerHTML = '<option value="">Buscando municípios...</option>';
+        if (!stateSelect.value) {
+          citySelect.innerHTML = '<option value="">Selecione primeiro a UF</option>';
+          citySelect.disabled = false;
+          return;
+        }
+        try {
+          const response = await fetch(`${profileForm.dataset.cidadesUrl}?estado=${encodeURIComponent(stateSelect.value)}`, {
+            headers: { "X-Requested-With": "XMLHttpRequest" },
+          });
+          const data = await response.json();
+          citySelect.innerHTML = '<option value="">Selecione o município</option>';
+          data.results.forEach(item => citySelect.add(new Option(item.nome_cidade, item.id)));
+        } finally {
+          citySelect.disabled = false;
+        }
+      });
+    }
+
     const invalidFeedback = document.querySelector(".profile-tab-content .invalid-feedback");
     const invalidPane = invalidFeedback?.closest(".tab-pane");
     if (!invalidPane || typeof bootstrap === "undefined") return;
