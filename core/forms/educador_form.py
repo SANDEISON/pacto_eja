@@ -15,7 +15,7 @@ class EducadorForm(BootstrapFormMixin, forms.ModelForm):
 
     class Meta:
         model = Educador
-        fields = ("cpf", "data_nascimento", "genero", "telefone", "estado_civil")
+        fields = ("nome_social", "cpf", "data_nascimento", "genero", "cor_raca", "telefone", "estado_civil")
         widgets = {
             "data_nascimento": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
             "telefone": forms.TextInput(attrs={"type": "tel", "placeholder": "(00) 00000-0000"}),
@@ -24,6 +24,7 @@ class EducadorForm(BootstrapFormMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["data_nascimento"].input_formats = ["%Y-%m-%d"]
+        self.fields["cor_raca"].empty_label = "Selecione a cor/raça"
         self._apply_bootstrap_classes()
 
     def clean_cpf(self):

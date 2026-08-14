@@ -18,6 +18,7 @@ class Educador(models.Model):
         verbose_name="usuário",
     )
     nome_completo = models.CharField("nome completo", max_length=150, blank=True)
+    nome_social = models.CharField("nome social", max_length=150, blank=True)
     cpf = models.CharField("CPF", max_length=11, unique=True, null=True, blank=True, validators=[validate_cpf])
     data_nascimento = models.DateField("data de nascimento", null=True, blank=True, validators=[validate_birth_date])
     genero = models.CharField("gênero", max_length=2, choices=EducadorGenero.choices, blank=True)

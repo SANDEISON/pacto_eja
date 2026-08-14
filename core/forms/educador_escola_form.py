@@ -39,6 +39,7 @@ class EducadorEscolaForm(BootstrapFormMixin, forms.ModelForm):
             "cidade",
             "escola",
             "funcao_caracterizacao_turmas",
+            "tempo_atuacao",
         )
 
     def __init__(self, *args, **kwargs):

@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import Educador, EducadorEscola, FuncaoEducador
+from .models import CorRaca, Educador, EducadorEscola, FuncaoEducador
 
 
 User = get_user_model()
@@ -39,6 +39,7 @@ class EducadorModelTests(TestCase):
 
 class ProfileViewTests(TestCase):
     def setUp(self):
+        self.cor_raca = CorRaca.objects.get(nome="Indígena")
         self.user = User.objects.create_user(
             username="maria@example.com",
             email="maria@example.com",
@@ -52,15 +53,29 @@ class ProfileViewTests(TestCase):
         response = self.client.get(reverse("profile"))
         self.assertRedirects(response, f"{reverse('accounts:signin')}?next={reverse('profile')}")
 
+    def test_profile_displays_account_tabs(self):
+        response = self.client.get(reverse("profile"))
+
+        self.assertContains(response, "Pessoais")
+        self.assertContains(response, "Formação")
+        self.assertContains(response, "Endereço")
+        self.assertContains(response, "Contatos")
+        self.assertContains(response, "Cor/raça")
+        self.assertContains(response, 'id="id_educador-cor_raca"')
+        self.assertContains(response, "Nome social")
+        self.assertContains(response, 'id="id_educador-nome_social"')
+
     def test_user_can_update_account_and_personal_data(self):
         response = self.client.post(
             reverse("profile"),
             {
                 "user-full_name": "Maria da Silva",
                 "user-email": "maria.silva@example.com",
+                "educador-nome_social": "Maria Silva",
                 "educador-cpf": "529.982.247-25",
                 "educador-data_nascimento": "1990-05-12",
                 "educador-genero": Educador.Genero.FEMININO,
+                "educador-cor_raca": self.cor_raca.pk,
                 "educador-telefone": "(82) 99999-1234",
                 "educador-estado_civil": Educador.EstadoCivil.CASADO,
             },
@@ -72,8 +87,10 @@ class ProfileViewTests(TestCase):
         self.assertEqual(self.user.email, "maria.silva@example.com")
         self.assertEqual(self.user.username, "maria@example.com")
         self.assertEqual(self.user.educador.nome_completo, "Maria da Silva")
+        self.assertEqual(self.user.educador.nome_social, "Maria Silva")
         self.assertEqual(self.user.educador.cpf, "52998224725")
         self.assertEqual(self.user.educador.data_nascimento, date(1990, 5, 12))
+        self.assertEqual(self.user.educador.cor_raca, self.cor_raca)
 
     def test_invalid_cpf_and_future_birth_date_are_rejected(self):
         response = self.client.post(
@@ -81,9 +98,11 @@ class ProfileViewTests(TestCase):
             {
                 "user-full_name": "Maria",
                 "user-email": "maria@example.com",
+                "educador-nome_social": "",
                 "educador-cpf": "111.111.111-11",
                 "educador-data_nascimento": (date.today() + timedelta(days=1)).isoformat(),
                 "educador-genero": "",
+                "educador-cor_raca": "",
                 "educador-telefone": "",
                 "educador-estado_civil": "",
             },

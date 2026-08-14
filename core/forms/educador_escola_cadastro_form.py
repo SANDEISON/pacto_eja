@@ -6,6 +6,7 @@ from django.db import transaction
 
 from ..models import (
     Cidade,
+    CorRaca,
     Educador,
     EducadorEscola,
     Escola,
@@ -13,7 +14,7 @@ from ..models import (
     FuncaoCaracterizacaoTurma,
     FuncaoEducador,
 )
-from ..validators import validate_cpf
+from ..validators import validate_birth_date, validate_cpf
 from .bootstrap_form_mixin import BootstrapFormMixin
 
 
@@ -34,6 +35,24 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
         ),
     )
     email = forms.EmailField(label="E-mail", required=False, widget=forms.EmailInput(attrs={"autocomplete": "email"}))
+    data_nascimento = forms.DateField(
+        label="Data de nascimento",
+        required=False,
+        validators=(validate_birth_date,),
+        widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+        input_formats=("%Y-%m-%d",),
+    )
+    cor_raca = forms.ModelChoiceField(
+        label="Cor/raça",
+        queryset=CorRaca.objects.all(),
+        empty_label="Selecione a cor/raça",
+        required=False,
+    )
+    genero = forms.ChoiceField(
+        label="Gênero",
+        choices=(("", "Selecione o gênero"), *Educador.Genero.choices),
+        required=False,
+    )
     estado = forms.ModelChoiceField(
         label="Estado",
         queryset=Estado.objects.all(),
@@ -55,6 +74,11 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
     funcao_caracterizacao_turmas = forms.ChoiceField(
         label="Atuação",
         choices=(("", "Selecione a função"), *FuncaoCaracterizacaoTurma.choices),
+        required=False,
+    )
+    tempo_atuacao = forms.ChoiceField(
+        label="Tempo de atuação",
+        choices=(("", "Selecione o tempo de atuação"), *EducadorEscola.TempoAtuacao.choices),
         required=False,
     )
     atuacoes_json = forms.CharField(required=False, widget=forms.HiddenInput())
@@ -149,6 +173,7 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
         cidades = Cidade.objects.select_related("estado").in_bulk(cidade_ids)
         escolas = Escola.objects.in_bulk(escola_ids)
         funcoes_validas = {choice[0] for choice in FuncaoCaracterizacaoTurma.choices}
+        tempos_atuacao_validos = {choice[0] for choice in EducadorEscola.TempoAtuacao.choices}
         atuacoes = []
         chaves = set()
 
@@ -157,7 +182,14 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
             cidade = cidades.get(int(item["cidade_id"]))
             escola = escolas.get(int(item["escola_id"]))
             funcao = item.get("funcao", "")
-            if not estado or not cidade or not escola or funcao not in funcoes_validas:
+            tempo_atuacao = item.get("tempo_atuacao", "")
+            if (
+                not estado
+                or not cidade
+                or not escola
+                or funcao not in funcoes_validas
+                or tempo_atuacao not in tempos_atuacao_validos
+            ):
                 self.add_error(None, "Há uma atuação com informações inválidas.")
                 continue
             if cidade.estado_id != estado.pk:
@@ -185,7 +217,14 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
             ).exists():
                 self.add_error(None, f"A atuação em {escola.nome} já está cadastrada para este educador.")
                 continue
-            atuacoes.append({"cidade": cidade, "escola": escola, "funcao": funcao})
+            atuacoes.append(
+                {
+                    "cidade": cidade,
+                    "escola": escola,
+                    "funcao": funcao,
+                    "tempo_atuacao": tempo_atuacao,
+                }
+            )
 
         return atuacoes
 
@@ -209,12 +248,18 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
             educador.nome_completo = nome_completo
             educador.save(update_fields=("cpf", "nome_completo"))
 
+        educador.cor_raca = self.cleaned_data.get("cor_raca")
+        educador.genero = self.cleaned_data.get("genero", "")
+        educador.data_nascimento = self.cleaned_data.get("data_nascimento")
+        educador.save(update_fields=("cor_raca", "genero", "data_nascimento"))
+
         vinculos = []
         for atuacao in self.cleaned_data["atuacoes"]:
             vinculo = EducadorEscola.objects.create(
                 cidade=atuacao["cidade"],
                 escola=atuacao["escola"],
                 funcao_caracterizacao_turmas=atuacao["funcao"],
+                tempo_atuacao=atuacao["tempo_atuacao"],
             )
             FuncaoEducador.objects.create(
                 educador=educador,

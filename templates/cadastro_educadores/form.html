@@ -38,8 +38,11 @@
           <div class="row g-3">
             {% include "management/_field.html" with field=form.cpf column="col-12 col-md-5" %}
             <div class="col-12 col-md-7 d-flex align-items-end"><div id="cpf-status" class="lookup-status" aria-live="polite"><i class="bi bi-search"></i><span>Digite o CPF completo para consultar.</span></div></div>
-            {% include "management/_field.html" with field=form.nome_completo column="col-12 col-lg-7" %}
-            {% include "management/_field.html" with field=form.email column="col-12 col-lg-5" %}
+            {% include "management/_field.html" with field=form.nome_completo column="col-12" %}
+            {% include "management/_field.html" with field=form.data_nascimento column="col-12 col-md-5" %}
+            {% include "management/_field.html" with field=form.email column="col-12 col-md-7" %}
+            {% include "management/_field.html" with field=form.cor_raca column="col-12 col-md-6" %}
+            {% include "management/_field.html" with field=form.genero column="col-12 col-md-6" %}
           </div>
         </section>
 
@@ -50,6 +53,7 @@
             <div class="assignment-editor-heading"><i class="bi bi-plus-circle"></i><strong id="assignment-editor-title">Adicionar atuação</strong></div>
           <div class="row g-3">
             {% include "management/_field.html" with field=form.funcao_caracterizacao_turmas column="col-12" required_override=True %}
+            {% include "management/_field.html" with field=form.tempo_atuacao column="col-12" required_override=True %}
             {% include "management/_field.html" with field=form.estado column="col-12 col-md-5" required_override=True %}
             {% include "management/_field.html" with field=form.cidade column="col-12 col-md-7" required_override=True %}
             <div class="col-12">
@@ -88,5 +92,5 @@
     </div>
   </section>
 </main>
-<script src="{% static 'js/cadastro_educadores.js' %}?v=20260813-1"></script>
+<script src="{% static 'js/cadastro_educadores.js' %}?v=20260814-4"></script>
 {% endblock %}

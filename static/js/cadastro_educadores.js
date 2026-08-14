@@ -5,6 +5,9 @@
   const cpfInput = document.getElementById("id_cpf");
   const nameInput = document.getElementById("id_nome_completo");
   const emailInput = document.getElementById("id_email");
+  const birthDateInput = document.getElementById("id_data_nascimento");
+  const corRacaSelect = document.getElementById("id_cor_raca");
+  const genderSelect = document.getElementById("id_genero");
   const cpfStatus = document.getElementById("cpf-status");
   const stateSelect = document.getElementById("id_estado");
   const citySelect = document.getElementById("id_cidade");
@@ -13,6 +16,7 @@
   const schoolResults = document.getElementById("escola-resultados");
   const schoolToggle = document.querySelector(".school-combobox-toggle");
   const functionSelect = document.getElementById("id_funcao_caracterizacao_turmas");
+  const experienceTimeSelect = document.getElementById("id_tempo_atuacao");
   const assignmentsInput = document.getElementById("id_atuacoes_json");
   const assignmentsList = document.getElementById("assignment-list");
   const assignmentsCount = document.getElementById("assignment-count");
@@ -62,6 +66,9 @@
       if (data.exists) {
         nameInput.value = data.nome_completo;
         emailInput.value = data.email;
+        birthDateInput.value = data.data_nascimento || "";
+        corRacaSelect.value = data.cor_raca_id ? String(data.cor_raca_id) : "";
+        genderSelect.value = data.genero || "";
         nameInput.readOnly = true;
         emailInput.readOnly = true;
         form.dataset.existingPerson = "true";
@@ -71,7 +78,7 @@
           : "Pessoa localizada. Os dados foram preenchidos.";
         setCpfStatus("success", "bi-check-circle-fill", message);
       } else {
-        if (wasExisting) { nameInput.value = ""; emailInput.value = ""; }
+        if (wasExisting) { nameInput.value = ""; emailInput.value = ""; birthDateInput.value = ""; corRacaSelect.value = ""; genderSelect.value = ""; }
         nameInput.readOnly = false;
         emailInput.readOnly = false;
         form.dataset.existingPerson = "false";
@@ -216,7 +223,8 @@
     const selectedState = stateSelect.selectedOptions[0];
     const selectedCity = citySelect.selectedOptions[0];
     const selectedFunction = functionSelect.selectedOptions[0];
-    if (!stateSelect.value || !citySelect.value || !schoolInput.value || !functionSelect.value) return null;
+    const selectedExperienceTime = experienceTimeSelect.selectedOptions[0];
+    if (!stateSelect.value || !citySelect.value || !schoolInput.value || !functionSelect.value || !experienceTimeSelect.value) return null;
     return {
       estado_id: stateSelect.value,
       estado_nome: selectedState?.text || "",
@@ -226,6 +234,8 @@
       escola_nome: schoolInput.dataset.selectedLabel || "",
       funcao: functionSelect.value,
       funcao_nome: selectedFunction?.text || "",
+      tempo_atuacao: experienceTimeSelect.value,
+      tempo_atuacao_nome: selectedExperienceTime?.text || "",
     };
   }
 
@@ -266,7 +276,7 @@
       location.textContent = `${item.cidade_nome} — ${item.estado_nome}`;
       const role = document.createElement("span");
       role.className = "assignment-role";
-      role.textContent = item.funcao_nome;
+      role.textContent = `${item.funcao_nome} · ${item.tempo_atuacao_nome}`;
       content.append(title, location, role);
 
       const actions = document.createElement("div");
@@ -288,6 +298,7 @@
     citySelect.disabled = false;
     resetSchool("Selecione primeiro a cidade");
     functionSelect.value = "";
+    experienceTimeSelect.value = "";
     editorTitle.textContent = "Adicionar atuação";
     addAssignmentButton.innerHTML = '<i class="bi bi-plus-lg"></i> Adicionar atuação';
     cancelAssignmentButton.classList.add("d-none");
@@ -297,7 +308,7 @@
   function addOrUpdateAssignment() {
     const item = currentAssignment();
     if (!item) {
-      setEditorError("Selecione estado, cidade, escola e função antes de adicionar.");
+      setEditorError("Selecione atuação, tempo de atuação, estado, cidade e escola antes de adicionar.");
       return;
     }
     if (editingIndex === null && assignments.length >= 20) {
@@ -332,6 +343,7 @@
     schoolSearch.value = item.escola_nome;
     closeSchoolOptions();
     functionSelect.value = item.funcao;
+    experienceTimeSelect.value = item.tempo_atuacao;
     editorTitle.textContent = "Editar atuação";
     addAssignmentButton.innerHTML = '<i class="bi bi-check-lg"></i> Atualizar atuação';
     cancelAssignmentButton.classList.remove("d-none");

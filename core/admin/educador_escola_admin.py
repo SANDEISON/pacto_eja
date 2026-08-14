@@ -11,6 +11,7 @@ class EducadorEscolaAdmin(admin.ModelAdmin):
         "cidade",
         "escola",
         "funcao_caracterizacao_turmas",
+        "tempo_atuacao",
         "criado_em",
     )
     search_fields = (
@@ -19,7 +20,7 @@ class EducadorEscolaAdmin(admin.ModelAdmin):
         "funcao_educador__educador__usuario__email",
         "escola__nome",
     )
-    list_filter = ("cidade__estado", "funcao_caracterizacao_turmas", "criado_em")
+    list_filter = ("cidade__estado", "funcao_caracterizacao_turmas", "tempo_atuacao", "criado_em")
     list_select_related = ("funcao_educador__educador__usuario", "cidade__estado", "escola")
     autocomplete_fields = ("cidade", "escola")
     readonly_fields = ("criado_em",)

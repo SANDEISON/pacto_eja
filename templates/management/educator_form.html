@@ -39,6 +39,7 @@
       <h2>Atuação na EJA</h2>
       <div class="row g-3">
         {% include "management/_field.html" with field=form.funcao_caracterizacao_turmas column="col-12" %}
+        {% include "management/_field.html" with field=form.tempo_atuacao column="col-12" %}
       </div>
     </div>
     <footer class="form-actions"><a class="btn btn-light" href="{% url 'educator_list' %}">Cancelar</a><button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Salvar</button></footer>
