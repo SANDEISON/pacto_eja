@@ -12,8 +12,8 @@
     <div class="success-icon"><i class="bi bi-check-lg"></i></div>
     <span class="intro-kicker">CADASTRO CONCLUÍDO</span>
     <h1>Dados salvos com sucesso!</h1>
-    <p>O cadastro do educador foi registrado. Caso uma nova conta tenha sido criada, utilize o e-mail informado e o CPF como senha para entrar.</p>
-    <div class="success-actions"><a class="btn btn-outline-primary" href="{% url 'cadastro_educador' %}">Fazer outro cadastro</a><a class="btn btn-primary" href="{% url 'accounts:signin' %}">Ir para o login</a></div>
+    <p>O cadastro foi concluído. Caso queira acessar o sistema, utilize o CPF como usuário e senha.</p>
+    <div class="success-actions"><a class="btn btn-primary" href="{% url 'accounts:signin' %}">Fazer login</a></div>
   </section>
 </main>
 {% endblock %}
