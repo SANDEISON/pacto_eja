@@ -11,6 +11,7 @@
   const schoolInput = document.getElementById("id_escola");
   const schoolSearch = document.getElementById("escola-busca");
   const schoolResults = document.getElementById("escola-resultados");
+  const schoolToggle = document.querySelector(".school-combobox-toggle");
   const functionSelect = document.getElementById("id_funcao_caracterizacao_turmas");
   const assignmentsInput = document.getElementById("id_atuacoes_json");
   const assignmentsList = document.getElementById("assignment-list");
@@ -22,6 +23,9 @@
   const submitButton = form.querySelector('button[type="submit"]');
   let cpfTimer;
   let schoolTimer;
+  let schoolOptions = [];
+  let activeSchoolIndex = -1;
+  let schoolRequestId = 0;
   let editingIndex = null;
   let assignments = parseAssignments();
 
@@ -84,37 +88,104 @@
   }
 
   function resetSchool(message) {
+    schoolRequestId += 1;
     schoolInput.value = "";
     schoolInput.dataset.selectedLabel = "";
     schoolSearch.value = "";
     schoolSearch.disabled = !citySelect.value;
-    schoolResults.disabled = !citySelect.value;
-    schoolResults.innerHTML = `<option value="">${message}</option>`;
+    schoolSearch.placeholder = message;
+    schoolToggle.disabled = !citySelect.value;
+    schoolOptions = [];
+    activeSchoolIndex = -1;
+    renderSchoolMessage(message);
+    closeSchoolOptions();
   }
+
+  function openSchoolOptions() {
+    if (schoolSearch.disabled) return;
+    schoolResults.hidden = false;
+    schoolSearch.setAttribute("aria-expanded", "true");
+  }
+
+  function closeSchoolOptions() {
+    schoolResults.hidden = true;
+    schoolSearch.setAttribute("aria-expanded", "false");
+    activeSchoolIndex = -1;
+  }
+
+  function renderSchoolMessage(message) {
+    schoolResults.replaceChildren();
+    const status = document.createElement("div");
+    status.className = "school-option-status";
+    status.textContent = message;
+    schoolResults.appendChild(status);
+  }
+
+  function selectSchool(option) {
+    schoolInput.value = String(option.id_escola);
+    schoolInput.dataset.selectedLabel = option.nome;
+    schoolSearch.value = option.nome;
+    schoolSearch.removeAttribute("aria-activedescendant");
+    closeSchoolOptions();
+  }
+
+  function setActiveSchool(index) {
+    const options = Array.from(schoolResults.querySelectorAll("[role='option']"));
+    if (!options.length) return;
+    activeSchoolIndex = (index + options.length) % options.length;
+    options.forEach((option, optionIndex) => option.classList.toggle("is-active", optionIndex === activeSchoolIndex));
+    const activeOption = options[activeSchoolIndex];
+    schoolSearch.setAttribute("aria-activedescendant", activeOption.id);
+    activeOption.scrollIntoView({ block: "nearest" });
+  }
+
   function populateSchools(results) {
     const selected = schoolInput.value;
     const selectedLabel = schoolInput.dataset.selectedLabel;
-    schoolResults.innerHTML = '<option value="">Selecione a escola</option>';
-    if (selected && selectedLabel && !results.some(item => String(item.id_escola) === selected)) {
-      schoolResults.add(new Option(selectedLabel, selected, true, true));
+    schoolOptions = results.slice();
+    if (selected && selectedLabel && !schoolOptions.some(item => String(item.id_escola) === selected)) {
+      schoolOptions.unshift({ id_escola: selected, nome: selectedLabel });
     }
-    results.forEach(item => schoolResults.add(new Option(item.nome, item.id_escola, false, String(item.id_escola) === selected)));
-    if (!results.length && !selected) schoolResults.innerHTML = '<option value="">Nenhuma escola encontrada</option>';
+    if (selected && selectedLabel) schoolSearch.value = selectedLabel;
+    schoolResults.replaceChildren();
+    if (!schoolOptions.length) {
+      renderSchoolMessage("Nenhuma escola encontrada");
+      openSchoolOptions();
+      return;
+    }
+    schoolOptions.forEach((item, index) => {
+      const option = document.createElement("button");
+      option.type = "button";
+      option.className = "school-option";
+      option.id = `escola-opcao-${index}`;
+      option.setAttribute("role", "option");
+      option.setAttribute("aria-selected", String(String(item.id_escola) === selected));
+      option.textContent = item.nome;
+      option.addEventListener("mousedown", event => event.preventDefault());
+      option.addEventListener("click", () => selectSchool(item));
+      schoolResults.appendChild(option);
+    });
+    openSchoolOptions();
   }
   async function loadSchools() {
     if (!citySelect.value) return;
-    schoolResults.disabled = true;
-    schoolResults.innerHTML = '<option value="">Buscando escolas...</option>';
+    const requestId = ++schoolRequestId;
+    schoolSearch.placeholder = "Digite para buscar uma escola";
+    schoolToggle.disabled = true;
+    renderSchoolMessage("Buscando escolas...");
+    openSchoolOptions();
     try {
       const url = `${form.dataset.escolasUrl}?cidade=${encodeURIComponent(citySelect.value)}&q=${encodeURIComponent(schoolSearch.value)}`;
       const response = await fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } });
       const data = await response.json();
+      if (requestId !== schoolRequestId) return;
       populateSchools(data.results || []);
     } finally {
-      schoolResults.disabled = false;
+      if (requestId === schoolRequestId) schoolToggle.disabled = false;
     }
   }
   async function loadCities() {
+    citySelect.value = "";
     resetSchool("Selecione primeiro a cidade");
     citySelect.disabled = true;
     citySelect.innerHTML = '<option value="">Buscando cidades...</option>';
@@ -144,7 +215,6 @@
   function currentAssignment() {
     const selectedState = stateSelect.selectedOptions[0];
     const selectedCity = citySelect.selectedOptions[0];
-    const selectedSchool = schoolResults.selectedOptions[0];
     const selectedFunction = functionSelect.selectedOptions[0];
     if (!stateSelect.value || !citySelect.value || !schoolInput.value || !functionSelect.value) return null;
     return {
@@ -153,7 +223,7 @@
       cidade_id: citySelect.value,
       cidade_nome: selectedCity?.text || "",
       escola_id: schoolInput.value,
-      escola_nome: selectedSchool?.text || schoolInput.dataset.selectedLabel || "",
+      escola_nome: schoolInput.dataset.selectedLabel || "",
       funcao: functionSelect.value,
       funcao_nome: selectedFunction?.text || "",
     };
@@ -256,9 +326,11 @@
     schoolInput.value = String(item.escola_id);
     schoolInput.dataset.selectedLabel = item.escola_nome;
     schoolSearch.disabled = false;
-    schoolResults.disabled = false;
+    schoolSearch.value = "";
+    schoolToggle.disabled = false;
     await loadSchools();
-    schoolResults.value = String(item.escola_id);
+    schoolSearch.value = item.escola_nome;
+    closeSchoolOptions();
     functionSelect.value = item.funcao;
     editorTitle.textContent = "Editar atuação";
     addAssignmentButton.innerHTML = '<i class="bi bi-check-lg"></i> Atualizar atuação';
@@ -273,10 +345,40 @@
   });
   stateSelect.addEventListener("change", loadCities);
   citySelect.addEventListener("change", function () { resetSchool("Buscando escolas..."); loadSchools(); });
-  schoolSearch.addEventListener("input", function () { clearTimeout(schoolTimer); schoolTimer = setTimeout(loadSchools, 300); });
-  schoolResults.addEventListener("change", function () {
-    schoolInput.value = schoolResults.value;
-    schoolInput.dataset.selectedLabel = schoolResults.selectedOptions[0]?.text || "";
+  schoolSearch.addEventListener("focus", function () {
+    if (schoolResults.childElementCount) openSchoolOptions();
+  });
+  schoolSearch.addEventListener("input", function () {
+    if (schoolSearch.value !== schoolInput.dataset.selectedLabel) {
+      schoolInput.value = "";
+      schoolInput.dataset.selectedLabel = "";
+    }
+    clearTimeout(schoolTimer);
+    schoolTimer = setTimeout(loadSchools, 300);
+  });
+  schoolSearch.addEventListener("keydown", function (event) {
+    const optionCount = schoolResults.querySelectorAll("[role='option']").length;
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      openSchoolOptions();
+      setActiveSchool(activeSchoolIndex + (event.key === "ArrowDown" ? 1 : -1));
+    } else if (event.key === "Enter" && activeSchoolIndex >= 0) {
+      event.preventDefault();
+      selectSchool(schoolOptions[activeSchoolIndex]);
+    } else if (event.key === "Escape") {
+      closeSchoolOptions();
+    } else if (!optionCount) {
+      activeSchoolIndex = -1;
+    }
+  });
+  schoolToggle.addEventListener("click", function () {
+    if (schoolResults.hidden) {
+      schoolSearch.focus();
+      loadSchools();
+    } else closeSchoolOptions();
+  });
+  document.addEventListener("click", function (event) {
+    if (!event.target.closest(".school-combobox")) closeSchoolOptions();
   });
   addAssignmentButton.addEventListener("click", addOrUpdateAssignment);
   cancelAssignmentButton.addEventListener("click", clearEditor);
@@ -310,7 +412,7 @@
   if (digits(cpfInput.value).length === 11) lookupCpf();
   if (citySelect.value) {
     schoolSearch.disabled = false;
-    schoolResults.disabled = false;
+    schoolToggle.disabled = false;
     loadSchools();
   }
   renderAssignments();

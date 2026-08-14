@@ -4,7 +4,7 @@
 {% block title %}Cadastro de Participantes | Pacto EJA{% endblock %}
 {% block body_class %}educator-public-page{% endblock %}
 {% block box_class %}educator-page-shell{% endblock %}
-{% block extra_css %}<link rel="stylesheet" href="{% static 'css/cadastro_educadores.css' %}?v=20260805-2">{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/cadastro_educadores.css' %}?v=20260813-1">{% endblock %}
 
 {% block auth_body %}
 <main class="educator-layout">
@@ -55,8 +55,12 @@
             <div class="col-12">
               <label class="form-label" for="escola-busca">Escola <span class="text-danger">*</span></label>
               <div class="school-picker">
-                <div class="school-search"><i class="bi bi-search"></i><input class="form-control" type="search" id="escola-busca" placeholder="Digite parte do nome da escola" autocomplete="off" disabled></div>
-                <select class="form-select" id="escola-resultados" disabled><option value="">Selecione primeiro a cidade</option></select>
+                <div class="school-combobox">
+                  <i class="bi bi-search school-combobox-search"></i>
+                  <input class="form-control" type="search" id="escola-busca" placeholder="Selecione primeiro a cidade" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="escola-resultados" disabled>
+                  <button class="school-combobox-toggle" type="button" aria-label="Exibir escolas" tabindex="-1" disabled><i class="bi bi-chevron-down"></i></button>
+                  <div class="school-options" id="escola-resultados" role="listbox" hidden></div>
+                </div>
               </div>
               {{ form.escola }}
               <div class="form-text">A busca exibe até 100 escolas da cidade selecionada.</div>
@@ -84,5 +88,5 @@
     </div>
   </section>
 </main>
-<script src="{% static 'js/cadastro_educadores.js' %}?v=20260805-2"></script>
+<script src="{% static 'js/cadastro_educadores.js' %}?v=20260813-1"></script>
 {% endblock %}

@@ -28,6 +28,14 @@ class Educador(models.Model):
         validators=[RegexValidator(r"^\+?[0-9()\s.-]{8,20}$", "Informe um telefone válido.")],
     )
     estado_civil = models.CharField("estado civil", max_length=20, choices=EducadorEstadoCivil.choices, blank=True)
+    cor_raca = models.ForeignKey(
+        "CorRaca",
+        on_delete=models.PROTECT,
+        related_name="educadores",
+        verbose_name="cor/raça",
+        null=True,
+        blank=True,
+    )
 
     class Meta:
         db_table = "core_educador"
