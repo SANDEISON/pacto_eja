@@ -4,7 +4,7 @@
 {% block title %}Cadastro de Participantes | Pacto EJA{% endblock %}
 {% block body_class %}educator-public-page{% endblock %}
 {% block box_class %}educator-page-shell{% endblock %}
-{% block extra_css %}<link rel="stylesheet" href="{% static 'css/cadastro_educadores.css' %}?v=20260813-1">{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/cadastro_educadores.css' %}?v=20260819-1">{% endblock %}
 
 {% block auth_body %}
 <main class="educator-layout">
@@ -52,6 +52,7 @@
           <div class="assignment-editor">
             <div class="assignment-editor-heading"><i class="bi bi-plus-circle"></i><strong id="assignment-editor-title">Adicionar atuação</strong></div>
           <div class="row g-3">
+            {% include "management/_field.html" with field=form.funcao column="col-12" required_override=True %}
             {% include "management/_field.html" with field=form.funcao_caracterizacao_turmas column="col-12" required_override=True %}
             {% include "management/_field.html" with field=form.tempo_atuacao column="col-12" required_override=True %}
             {% include "management/_field.html" with field=form.estado column="col-12 col-md-5" required_override=True %}
@@ -92,5 +93,5 @@
     </div>
   </section>
 </main>
-<script src="{% static 'js/cadastro_educadores.js' %}?v=20260814-4"></script>
+<script src="{% static 'js/cadastro_educadores.js' %}?v=20260819-1"></script>
 {% endblock %}

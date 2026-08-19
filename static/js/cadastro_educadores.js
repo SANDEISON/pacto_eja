@@ -15,7 +15,8 @@
   const schoolSearch = document.getElementById("escola-busca");
   const schoolResults = document.getElementById("escola-resultados");
   const schoolToggle = document.querySelector(".school-combobox-toggle");
-  const functionSelect = document.getElementById("id_funcao_caracterizacao_turmas");
+  const functionSelect = document.getElementById("id_funcao");
+  const assignmentTypeSelect = document.getElementById("id_funcao_caracterizacao_turmas");
   const experienceTimeSelect = document.getElementById("id_tempo_atuacao");
   const assignmentsInput = document.getElementById("id_atuacoes_json");
   const assignmentsList = document.getElementById("assignment-list");
@@ -216,15 +217,16 @@
   }
 
   function assignmentKey(item) {
-    return `${item.cidade_id}:${item.escola_id}:${item.funcao}`;
+    return `${item.cidade_id}:${item.escola_id}:${item.funcao}:${item.funcao_caracterizacao_turmas}`;
   }
 
   function currentAssignment() {
     const selectedState = stateSelect.selectedOptions[0];
     const selectedCity = citySelect.selectedOptions[0];
     const selectedFunction = functionSelect.selectedOptions[0];
+    const selectedAssignmentType = assignmentTypeSelect.selectedOptions[0];
     const selectedExperienceTime = experienceTimeSelect.selectedOptions[0];
-    if (!stateSelect.value || !citySelect.value || !schoolInput.value || !functionSelect.value || !experienceTimeSelect.value) return null;
+    if (!stateSelect.value || !citySelect.value || !schoolInput.value || !functionSelect.value || !assignmentTypeSelect.value || !experienceTimeSelect.value) return null;
     return {
       estado_id: stateSelect.value,
       estado_nome: selectedState?.text || "",
@@ -234,6 +236,8 @@
       escola_nome: schoolInput.dataset.selectedLabel || "",
       funcao: functionSelect.value,
       funcao_nome: selectedFunction?.text || "",
+      funcao_caracterizacao_turmas: assignmentTypeSelect.value,
+      funcao_caracterizacao_turmas_nome: selectedAssignmentType?.text || "",
       tempo_atuacao: experienceTimeSelect.value,
       tempo_atuacao_nome: selectedExperienceTime?.text || "",
     };
@@ -276,7 +280,7 @@
       location.textContent = `${item.cidade_nome} — ${item.estado_nome}`;
       const role = document.createElement("span");
       role.className = "assignment-role";
-      role.textContent = `${item.funcao_nome} · ${item.tempo_atuacao_nome}`;
+      role.textContent = `${item.funcao_nome} · ${item.funcao_caracterizacao_turmas_nome} · ${item.tempo_atuacao_nome}`;
       content.append(title, location, role);
 
       const actions = document.createElement("div");
@@ -298,6 +302,7 @@
     citySelect.disabled = false;
     resetSchool("Selecione primeiro a cidade");
     functionSelect.value = "";
+    assignmentTypeSelect.value = "";
     experienceTimeSelect.value = "";
     editorTitle.textContent = "Adicionar atuação";
     addAssignmentButton.innerHTML = '<i class="bi bi-plus-lg"></i> Adicionar atuação';
@@ -308,7 +313,7 @@
   function addOrUpdateAssignment() {
     const item = currentAssignment();
     if (!item) {
-      setEditorError("Selecione atuação, tempo de atuação, estado, cidade e escola antes de adicionar.");
+      setEditorError("Selecione função, atuação, tempo de atuação, estado, cidade e escola antes de adicionar.");
       return;
     }
     if (editingIndex === null && assignments.length >= 20) {
@@ -343,6 +348,7 @@
     schoolSearch.value = item.escola_nome;
     closeSchoolOptions();
     functionSelect.value = item.funcao;
+    assignmentTypeSelect.value = item.funcao_caracterizacao_turmas;
     experienceTimeSelect.value = item.tempo_atuacao;
     editorTitle.textContent = "Editar atuação";
     addAssignmentButton.innerHTML = '<i class="bi bi-check-lg"></i> Atualizar atuação';

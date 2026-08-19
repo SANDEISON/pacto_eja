@@ -42,7 +42,8 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
             "estado_id": self.estado.pk,
             "cidade_id": self.cidade.pk,
             "escola_id": self.escola.pk,
-            "funcao": "alfabetizacao_eja",
+            "funcao": EducadorEscola.Funcao.FORMADOR_PACTO_ANOS_INICIAIS,
+            "funcao_caracterizacao_turmas": "alfabetizacao_eja",
             "tempo_atuacao": "4_6_anos",
         }
         data.update(overrides)
@@ -62,6 +63,9 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         self.assertContains(response, "Masculino")
         self.assertContains(response, "Não binário")
         self.assertContains(response, 'id="id_tempo_atuacao"')
+        self.assertContains(response, 'id="id_funcao"')
+        self.assertContains(response, "Formador(a) do Pacto | Anos Iniciais")
+        self.assertContains(response, "Convidado(a) estrangeiro(a)")
         self.assertContains(response, "0-3 anos")
         self.assertContains(response, "4-6 anos")
         self.assertContains(response, "Mais de 6 anos")
@@ -111,6 +115,7 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         self.assertEqual(cadastro.cidade, self.cidade)
         self.assertEqual(cadastro.cidade.estado, self.estado)
         self.assertEqual(cadastro.escola, self.escola)
+        self.assertEqual(cadastro.funcao, EducadorEscola.Funcao.FORMADOR_PACTO_ANOS_INICIAIS)
         self.assertEqual(cadastro.tempo_atuacao, "4_6_anos")
 
     def test_single_submission_creates_multiple_school_assignments(self):
@@ -124,7 +129,7 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
             self.assignment_data(),
             self.assignment_data(
                 escola_id=segunda_escola.pk,
-                funcao="ensino_medio",
+                funcao_caracterizacao_turmas="ensino_medio",
             ),
         ]
 
@@ -154,6 +159,19 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
     def test_registration_rejects_assignment_without_experience_time(self):
         atuacao = self.assignment_data()
         atuacao.pop("tempo_atuacao")
+
+        response = self.client.post(
+            reverse("cadastro_educador"),
+            self.registration_data(atuacoes_json=json.dumps([atuacao])),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Há uma atuação com informações inválidas.")
+        self.assertFalse(User.objects.filter(username="52998224725").exists())
+
+    def test_registration_rejects_assignment_without_function(self):
+        atuacao = self.assignment_data()
+        atuacao.pop("funcao")
 
         response = self.client.post(
             reverse("cadastro_educador"),

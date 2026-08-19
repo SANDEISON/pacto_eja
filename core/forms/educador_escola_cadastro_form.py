@@ -71,9 +71,14 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
         widget=forms.HiddenInput(),
         required=False,
     )
+    funcao = forms.ChoiceField(
+        label="Função",
+        choices=(("", "Selecione a função"), *EducadorEscola.Funcao.choices),
+        required=False,
+    )
     funcao_caracterizacao_turmas = forms.ChoiceField(
         label="Atuação",
-        choices=(("", "Selecione a função"), *FuncaoCaracterizacaoTurma.choices),
+        choices=(("", "Selecione a Atuação"), *FuncaoCaracterizacaoTurma.choices),
         required=False,
     )
     tempo_atuacao = forms.ChoiceField(
@@ -172,7 +177,8 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
         estados = Estado.objects.in_bulk(estado_ids)
         cidades = Cidade.objects.select_related("estado").in_bulk(cidade_ids)
         escolas = Escola.objects.in_bulk(escola_ids)
-        funcoes_validas = {choice[0] for choice in FuncaoCaracterizacaoTurma.choices}
+        funcoes_validas = {choice[0] for choice in EducadorEscola.Funcao.choices}
+        atuacoes_validas = {choice[0] for choice in FuncaoCaracterizacaoTurma.choices}
         tempos_atuacao_validos = {choice[0] for choice in EducadorEscola.TempoAtuacao.choices}
         atuacoes = []
         chaves = set()
@@ -182,12 +188,14 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
             cidade = cidades.get(int(item["cidade_id"]))
             escola = escolas.get(int(item["escola_id"]))
             funcao = item.get("funcao", "")
+            atuacao = item.get("funcao_caracterizacao_turmas", "")
             tempo_atuacao = item.get("tempo_atuacao", "")
             if (
                 not estado
                 or not cidade
                 or not escola
                 or funcao not in funcoes_validas
+                or atuacao not in atuacoes_validas
                 or tempo_atuacao not in tempos_atuacao_validos
             ):
                 self.add_error(None, "Há uma atuação com informações inválidas.")
@@ -203,7 +211,7 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
                 self.add_error(None, "Uma das escolas não pertence à cidade informada.")
                 continue
 
-            chave = (cidade.pk, escola.pk, funcao)
+            chave = (cidade.pk, escola.pk, funcao, atuacao)
             if chave in chaves:
                 self.add_error(None, "A lista contém uma atuação duplicada.")
                 continue
@@ -213,7 +221,8 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
                 educador=educador,
                 educador_escola__cidade=cidade,
                 educador_escola__escola=escola,
-                educador_escola__funcao_caracterizacao_turmas=funcao,
+                educador_escola__funcao=funcao,
+                educador_escola__funcao_caracterizacao_turmas=atuacao,
             ).exists():
                 self.add_error(None, f"A atuação em {escola.nome} já está cadastrada para este educador.")
                 continue
@@ -222,6 +231,7 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
                     "cidade": cidade,
                     "escola": escola,
                     "funcao": funcao,
+                    "funcao_caracterizacao_turmas": atuacao,
                     "tempo_atuacao": tempo_atuacao,
                 }
             )
@@ -258,7 +268,8 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
             vinculo = EducadorEscola.objects.create(
                 cidade=atuacao["cidade"],
                 escola=atuacao["escola"],
-                funcao_caracterizacao_turmas=atuacao["funcao"],
+                funcao=atuacao["funcao"],
+                funcao_caracterizacao_turmas=atuacao["funcao_caracterizacao_turmas"],
                 tempo_atuacao=atuacao["tempo_atuacao"],
             )
             FuncaoEducador.objects.create(
