@@ -14,22 +14,22 @@
     <a class="btn btn-outline-primary w-100" href="{% url 'profile_password_change' %}"><i class="bi bi-key me-1"></i> Alterar senha</a>
   </aside>
 
-  <form method="post" class="management-card management-form profile-form" novalidate data-cidades-url="{% url 'cadastro_educador_cidades' %}">
+  <form method="post" id="profile-form" class="management-card management-form profile-form" novalidate data-cidades-url="{% url 'cadastro_educador_cidades' %}">
     {% csrf_token %}
-    {% if user_form.non_field_errors or educador_form.non_field_errors or endereco_form.non_field_errors %}<div class="alert alert-danger m-4 mb-0">Verifique os dados informados.</div>{% endif %}
+    {% if user_form.non_field_errors or educador_form.non_field_errors or endereco_form.non_field_errors or formacao_formset.non_form_errors %}<div class="alert alert-danger m-4 mb-0">Verifique os dados informados.</div>{% endif %}
     <section class="profile-account-section">
       <div class="profile-account-heading"><i class="bi bi-person-vcard"></i><div><h2>Dados da conta</h2><p>Consulte e atualize as informações disponíveis no seu perfil.</p></div></div>
 
       <div class="profile-tabs-card">
         <ul class="nav profile-tabs" id="profile-tabs" role="tablist">
-          <li class="nav-item" role="presentation"><button class="nav-link active" id="personal-tab" data-bs-toggle="tab" data-bs-target="#personal-pane" type="button" role="tab" aria-controls="personal-pane" aria-selected="true"><i class="bi bi-person"></i><span>Pessoais</span></button></li>
-          <li class="nav-item" role="presentation"><button class="nav-link" id="education-tab" data-bs-toggle="tab" data-bs-target="#education-pane" type="button" role="tab" aria-controls="education-pane" aria-selected="false"><i class="bi bi-mortarboard"></i><span>Formação</span></button></li>
+          <li class="nav-item" role="presentation"><button class="nav-link{% if active_profile_tab != 'education' %} active{% endif %}" id="personal-tab" data-bs-toggle="tab" data-bs-target="#personal-pane" type="button" role="tab" aria-controls="personal-pane" aria-selected="{% if active_profile_tab != 'education' %}true{% else %}false{% endif %}"><i class="bi bi-person"></i><span>Pessoais</span></button></li>
+          <li class="nav-item" role="presentation"><button class="nav-link{% if active_profile_tab == 'education' %} active{% endif %}" id="education-tab" data-bs-toggle="tab" data-bs-target="#education-pane" type="button" role="tab" aria-controls="education-pane" aria-selected="{% if active_profile_tab == 'education' %}true{% else %}false{% endif %}"><i class="bi bi-mortarboard"></i><span>Formação</span></button></li>
           <li class="nav-item" role="presentation"><button class="nav-link" id="address-tab" data-bs-toggle="tab" data-bs-target="#address-pane" type="button" role="tab" aria-controls="address-pane" aria-selected="false"><i class="bi bi-geo-alt"></i><span>Endereço</span></button></li>
           <li class="nav-item" role="presentation"><button class="nav-link" id="contact-tab" data-bs-toggle="tab" data-bs-target="#contact-pane" type="button" role="tab" aria-controls="contact-pane" aria-selected="false"><i class="bi bi-telephone"></i><span>Contatos</span></button></li>
         </ul>
 
         <div class="tab-content profile-tab-content" id="profile-tab-content">
-          <div class="tab-pane fade show active" id="personal-pane" role="tabpanel" aria-labelledby="personal-tab" tabindex="0">
+          <div class="tab-pane{% if active_profile_tab != 'education' %} active{% endif %}" id="personal-pane" role="tabpanel" aria-labelledby="personal-tab" tabindex="0">
             <div class="profile-tab-heading"><h3>Informações pessoais</h3><p>Dados de identificação associados à sua conta.</p></div>
             <div class="row g-3">
               {% include "management/_field.html" with field=user_form.full_name column="col-12" %}
@@ -42,11 +42,22 @@
             </div>
           </div>
 
-          <div class="tab-pane fade" id="education-pane" role="tabpanel" aria-labelledby="education-tab" tabindex="0">
-            <div class="profile-tab-empty"><i class="bi bi-mortarboard"></i><strong>Formação</strong><p>Esta área está preparada para receber os dados de formação futuramente.</p></div>
+          <div class="tab-pane{% if active_profile_tab == 'education' %} active{% endif %}" id="education-pane" role="tabpanel" aria-labelledby="education-tab" tabindex="0">
+            <div class="profile-tab-heading formation-heading"><div><h3>Formação acadêmica</h3><p>Adicione seus cursos e mantenha o histórico de formação atualizado.</p></div><a class="btn btn-primary btn-sm" id="add-formation" href="{% url 'profile' %}?adicionar_formacao=1#education-pane"><i class="bi bi-plus-lg"></i> Adicionar formação</a></div>
+            {{ formacao_formset.management_form }}
+            {% if formacao_formset.non_form_errors %}<div class="invalid-feedback d-block mb-3">{{ formacao_formset.non_form_errors }}</div>{% endif %}
+            <div class="formation-records-block" id="formation-records-block" aria-label="Registros de formações" tabindex="0">
+              <div class="formation-list" id="formation-list">
+                {% for formacao_form in formacao_formset %}
+                  {% include "profile/_formacao_form.html" with form=formacao_form %}
+                {% endfor %}
+                <div class="formation-empty{% if formacao_formset.forms %} d-none{% endif %}" id="formation-empty"><i class="bi bi-mortarboard"></i><strong>Nenhuma formação cadastrada</strong><p>Use o botão “Adicionar formação” para começar.</p></div>
+              </div>
+            </div>
+            <template id="formation-empty-form">{% include "profile/_formacao_form.html" with form=formacao_formset.empty_form %}</template>
           </div>
 
-          <div class="tab-pane fade" id="address-pane" role="tabpanel" aria-labelledby="address-tab" tabindex="0">
+          <div class="tab-pane" id="address-pane" role="tabpanel" aria-labelledby="address-tab" tabindex="0">
             <div class="profile-tab-heading"><h3>Endereço</h3><p>Informe seu endereço residencial.</p></div>
             <div class="row g-3">
               {% include "management/_field.html" with field=endereco_form.cep column="col-12 col-md-4" %}
@@ -59,7 +70,7 @@
             </div>
           </div>
 
-          <div class="tab-pane fade" id="contact-pane" role="tabpanel" aria-labelledby="contact-tab" tabindex="0">
+          <div class="tab-pane" id="contact-pane" role="tabpanel" aria-labelledby="contact-tab" tabindex="0">
             <div class="profile-tab-heading"><h3>Contatos</h3><p>Informações utilizadas para comunicação com você.</p></div>
             <div class="row g-3">
               {% include "management/_field.html" with field=user_form.email column="col-12" %}
@@ -76,7 +87,7 @@
 
 {% block page_js %}
 <script>
-  document.addEventListener("DOMContentLoaded", function () {
+  function initializeProfilePage() {
     const profileForm = document.querySelector(".profile-form");
     const stateSelect = document.getElementById("id_endereco-estado");
     const citySelect = document.getElementById("id_endereco-cidade");
@@ -104,11 +115,172 @@
       });
     }
 
+    const formationList = document.getElementById("formation-list");
+    const formationTemplate = document.getElementById("formation-empty-form");
+    const totalFormationForms = document.getElementById("id_formacao-TOTAL_FORMS");
+    const addFormationButton = document.getElementById("add-formation");
+    const formationEmpty = document.getElementById("formation-empty");
+    const formationRecordsBlock = document.getElementById("formation-records-block");
+
+    function registerFormationModal(card) {
+      const modalElement = card?.querySelector("[data-formation-modal]");
+      if (!modalElement) return;
+      card._formationModal = modalElement;
+      modalElement._formationCard = card;
+      modalElement.querySelectorAll("input, select, textarea").forEach(field => field.setAttribute("form", "profile-form"));
+      document.body.appendChild(modalElement);
+    }
+
+    formationList?.querySelectorAll("[data-formation-form]").forEach(registerFormationModal);
+
+    function selectedText(card, fieldName, fallback) {
+      const select = card.querySelector(`select[name$="-${fieldName}"]`);
+      return select?.selectedOptions[0]?.value ? select.selectedOptions[0].text : fallback;
+    }
+
+    function updateFormationCard(card) {
+      const fields = card._formationModal || card;
+      const course = fields.querySelector('input[name$="-nome_curso"]')?.value.trim();
+      const institution = fields.querySelector('input[name$="-instituicao"]')?.value.trim();
+      const startYear = fields.querySelector('input[name$="-ano_inicio"]')?.value.trim();
+      const completionYear = fields.querySelector('input[name$="-ano_conclusao"]')?.value.trim();
+      const title = card.querySelector(".formation-card-title");
+      const institutionLabel = card.querySelector(".formation-card-institution");
+      const level = card.querySelector("[data-formation-level]");
+      const status = card.querySelector("[data-formation-status]");
+      const period = card.querySelector("[data-formation-period]");
+      const editButton = card.querySelector("[data-edit-formation]");
+      const removeButton = card.querySelector("[data-remove-formation]");
+      if (title) title.textContent = course || "Nova formação";
+      if (institutionLabel) institutionLabel.textContent = institution || "Instituição não informada";
+      if (level) level.textContent = selectedText(fields, "nivel", "Nível não informado");
+      if (status) status.textContent = selectedText(fields, "situacao", "Situação não informada");
+      if (period) period.textContent = startYear ? `${startYear} — ${completionYear || "Atual"}` : "Período não informado";
+      if (editButton) editButton.setAttribute("aria-label", `Editar ${course || "formação"}`);
+      if (removeButton) removeButton.setAttribute("aria-label", `Excluir ${course || "formação"}`);
+    }
+
+    function updateFormationList() {
+      const visibleCards = Array.from(formationList?.querySelectorAll("[data-formation-form]:not(.is-removed):not(.is-pending)") || []);
+      visibleCards.forEach(updateFormationCard);
+      formationEmpty?.classList.toggle("d-none", visibleCards.length > 0);
+      requestAnimationFrame(() => {
+        if (!formationRecordsBlock) return;
+        formationRecordsBlock.classList.toggle("has-scroll", formationRecordsBlock.scrollHeight > formationRecordsBlock.clientHeight + 1);
+      });
+    }
+
+    function showFormationModal(card) {
+      const modalElement = card?._formationModal || card?.querySelector("[data-formation-modal]");
+      if (modalElement && typeof bootstrap !== "undefined") {
+        bootstrap.Modal.getOrCreateInstance(modalElement).show();
+      }
+    }
+
+    if (addFormationButton && formationList && formationTemplate && totalFormationForms) {
+      addFormationButton.addEventListener("click", function (event) {
+        event.preventDefault();
+        const index = Number(totalFormationForms.value);
+        const markup = formationTemplate.innerHTML.replace(/__prefix__/g, String(index));
+        formationList.insertAdjacentHTML("beforeend", markup);
+        totalFormationForms.value = String(index + 1);
+        const card = formationList.querySelector(`[data-formation-form]:last-of-type`);
+        registerFormationModal(card);
+        updateFormationList();
+        showFormationModal(card);
+      });
+    }
+
+    formationList?.addEventListener("click", function (event) {
+      const editButton = event.target.closest("[data-edit-formation]");
+      if (editButton) {
+        event.preventDefault();
+        showFormationModal(editButton.closest("[data-formation-form]"));
+        return;
+      }
+
+      const removeButton = event.target.closest("[data-remove-formation]");
+      if (!removeButton) return;
+      const card = removeButton.closest("[data-formation-form]");
+      const deleteInput = card.querySelector('input[name$="-DELETE"]');
+      if (deleteInput) deleteInput.checked = true;
+      card.classList.add("is-removed");
+      updateFormationList();
+    });
+
+    document.addEventListener("click", function (event) {
+      const saveButton = event.target.closest("[data-save-formation]");
+      if (!saveButton) return;
+      const modalElement = saveButton.closest("[data-formation-modal]");
+      const card = modalElement._formationCard;
+      const requiredFields = Array.from(modalElement.querySelectorAll("input[required], select[required]"));
+      const invalidField = requiredFields.find(field => !field.checkValidity());
+      if (invalidField) {
+        invalidField.reportValidity();
+        return;
+      }
+      card.classList.remove("is-pending");
+      modalElement.dataset.committed = "true";
+      const modalTitle = modalElement.querySelector("[data-formation-modal-title]");
+      const saveLabel = modalElement.querySelector("[data-save-formation-label]");
+      if (modalTitle) modalTitle.textContent = "Editar formação";
+      if (saveLabel) saveLabel.textContent = "Atualizar formação";
+      updateFormationCard(card);
+      updateFormationList();
+      bootstrap.Modal.getOrCreateInstance(modalElement).hide();
+    });
+
+    document.addEventListener("show.bs.modal", function (event) {
+      const modalElement = event.target;
+      if (!modalElement.matches("[data-formation-modal]")) return;
+      modalElement.dataset.committed = "false";
+      modalElement._formationSnapshot = Array.from(modalElement.querySelectorAll("input, select, textarea")).map(field => ({
+        field,
+        value: field.type === "checkbox" ? field.checked : field.value,
+      }));
+    });
+
+    document.addEventListener("hidden.bs.modal", function (event) {
+      const modalElement = event.target;
+      if (!modalElement.matches("[data-formation-modal]")) return;
+      const card = modalElement._formationCard;
+      if (modalElement.dataset.committed === "true") return;
+      if (card.classList.contains("is-pending")) {
+        const deleteInput = card.querySelector('input[name$="-DELETE"]');
+        if (deleteInput) deleteInput.checked = true;
+        card.classList.add("is-removed");
+      } else {
+        (modalElement._formationSnapshot || []).forEach(({ field, value }) => {
+          if (field.type === "checkbox") field.checked = value;
+          else field.value = value;
+        });
+        updateFormationCard(card);
+      }
+      updateFormationList();
+    });
+
+    updateFormationList();
+    if (formationRecordsBlock && typeof ResizeObserver !== "undefined") {
+      new ResizeObserver(updateFormationList).observe(formationRecordsBlock);
+    }
+
     const invalidFeedback = document.querySelector(".profile-tab-content .invalid-feedback");
     const invalidPane = invalidFeedback?.closest(".tab-pane");
-    if (!invalidPane || typeof bootstrap === "undefined") return;
-    const trigger = document.querySelector(`[data-bs-target="#${invalidPane.id}"]`);
-    if (trigger) bootstrap.Tab.getOrCreateInstance(trigger).show();
-  });
+    if (invalidPane && typeof bootstrap !== "undefined") {
+      const trigger = document.querySelector(`[data-bs-target="#${invalidPane.id}"]`);
+      if (trigger) bootstrap.Tab.getOrCreateInstance(trigger).show();
+    }
+
+    const formationError = document.querySelector("[data-formation-modal] .invalid-feedback");
+    const formationWithErrors = formationError?.closest("[data-formation-modal]")?._formationCard;
+    const pendingFormation = formationList?.querySelector("[data-formation-form].is-pending:not(.is-removed)");
+    showFormationModal(formationWithErrors || pendingFormation);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initializeProfilePage, { once: true });
+  } else {
+    initializeProfilePage();
+  }
 </script>
 {% endblock %}

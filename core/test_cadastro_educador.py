@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import Cidade, CorRaca, Educador, EducadorEscola, Escola, Estado, FuncaoEducador
+from .models import Cidade, CorRaca, Educador, EducadorEscola, Endereco, Escola, Estado, FuncaoEducador
 
 
 User = get_user_model()
@@ -32,6 +32,13 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
             "data_nascimento": "1990-05-12",
             "cor_raca": self.cor_raca.pk,
             "genero": Educador.Genero.FEMININO,
+            "endereco_cep": "57000-000",
+            "endereco_logradouro": "Avenida Fernandes Lima",
+            "endereco_numero": "1000",
+            "endereco_complemento": "Sala 10",
+            "endereco_bairro": "Farol",
+            "endereco_estado": self.estado.pk,
+            "endereco_cidade": self.cidade.pk,
             "atuacoes_json": json.dumps([self.assignment_data()]),
         }
         data.update(overrides)
@@ -59,6 +66,11 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         self.assertContains(response, 'id="id_cor_raca"')
         self.assertContains(response, 'id="id_genero"')
         self.assertContains(response, 'id="id_data_nascimento"')
+        self.assertContains(response, "Endereço")
+        self.assertContains(response, 'id="id_endereco_cep"')
+        self.assertContains(response, 'id="id_endereco_logradouro"')
+        self.assertContains(response, 'id="id_endereco_estado"')
+        self.assertContains(response, 'id="id_endereco_cidade"')
         self.assertContains(response, "Feminino")
         self.assertContains(response, "Masculino")
         self.assertContains(response, "Não binário")
@@ -111,12 +123,40 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         self.assertEqual(usuario.educador.cor_raca, self.cor_raca)
         self.assertEqual(usuario.educador.genero, Educador.Genero.FEMININO)
         self.assertEqual(usuario.educador.data_nascimento, date(1990, 5, 12))
+        endereco = usuario.educador.endereco
+        self.assertEqual(endereco.cep, "57000000")
+        self.assertEqual(endereco.logradouro, "Avenida Fernandes Lima")
+        self.assertEqual(endereco.numero, "1000")
+        self.assertEqual(endereco.complemento, "Sala 10")
+        self.assertEqual(endereco.bairro, "Farol")
+        self.assertEqual(endereco.cidade, self.cidade)
         cadastro = EducadorEscola.objects.get(funcao_educador__educador=usuario.educador)
         self.assertEqual(cadastro.cidade, self.cidade)
         self.assertEqual(cadastro.cidade.estado, self.estado)
         self.assertEqual(cadastro.escola, self.escola)
         self.assertEqual(cadastro.funcao, EducadorEscola.Funcao.FORMADOR_PACTO_ANOS_INICIAIS)
         self.assertEqual(cadastro.tempo_atuacao, "4_6_anos")
+
+    def test_registration_requires_complete_address(self):
+        data = self.registration_data()
+        address_fields = (
+            "endereco_cep",
+            "endereco_logradouro",
+            "endereco_numero",
+            "endereco_complemento",
+            "endereco_bairro",
+            "endereco_estado",
+            "endereco_cidade",
+        )
+        for field_name in address_fields:
+            data.pop(field_name)
+
+        response = self.client.post(reverse("cadastro_educador"), data)
+
+        self.assertEqual(response.status_code, 200)
+        for field_name in address_fields:
+            self.assertFormError(response.context["form"], field_name, "Este campo é obrigatório.")
+        self.assertFalse(User.objects.filter(username="52998224725").exists())
 
     def test_single_submission_creates_multiple_school_assignments(self):
         segunda_escola = Escola.objects.create(
@@ -145,6 +185,10 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
             EducadorEscola.objects.filter(funcao_educador__educador=educador).count(),
             2,
         )
+        self.assertEqual(Endereco.objects.filter(educador=educador).count(), 1)
+        educador.endereco.refresh_from_db()
+        self.assertEqual(educador.endereco.logradouro, "Avenida Fernandes Lima")
+        self.assertEqual(educador.endereco.numero, "1000")
 
     def test_registration_requires_at_least_one_assignment(self):
         response = self.client.post(
@@ -223,6 +267,7 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         self.assertEqual(usuario.email, "existente@example.com")
         educador.refresh_from_db()
         self.assertEqual(educador.cor_raca, self.cor_raca)
+        self.assertEqual(educador.endereco.cep, "57000000")
 
     def test_person_can_submit_a_second_registration(self):
         usuario = User.objects.create_user(
@@ -236,6 +281,15 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         educador.genero = Educador.Genero.NAO_BINARIO
         educador.data_nascimento = date(1985, 8, 20)
         educador.save(update_fields=("cpf", "cor_raca", "genero", "data_nascimento"))
+        Endereco.objects.create(
+            educador=educador,
+            cep="57000000",
+            logradouro="Rua do Cadastro",
+            numero="20",
+            complemento="Casa",
+            bairro="Centro",
+            cidade=self.cidade,
+        )
         vinculo = EducadorEscola.objects.create(
             cidade=self.cidade,
             escola=self.escola,
@@ -253,6 +307,10 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
             EducadorEscola.objects.filter(funcao_educador__educador=educador).count(),
             2,
         )
+        self.assertEqual(Endereco.objects.filter(educador=educador).count(), 1)
+        educador.endereco.refresh_from_db()
+        self.assertEqual(educador.endereco.logradouro, "Avenida Fernandes Lima")
+        self.assertEqual(educador.endereco.numero, "1000")
 
     def test_cpf_lookup_returns_saved_person_data(self):
         usuario = User.objects.create_user(

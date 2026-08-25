@@ -4,6 +4,7 @@ from .educador_escola_admin import EducadorEscolaAdmin
 from .endereco_admin import EnderecoAdmin
 from .escola_admin import EscolaAdmin
 from .estado_admin import EstadoAdmin
+from .formacao_admin import FormacaoAdmin
 from .funcao_educador_admin import FuncaoEducadorAdmin
 
 __all__ = [
@@ -13,5 +14,6 @@ __all__ = [
     "EnderecoAdmin",
     "EscolaAdmin",
     "EstadoAdmin",
+    "FormacaoAdmin",
     "FuncaoEducadorAdmin",
 ]

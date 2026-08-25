@@ -1,0 +1,51 @@
+<article class="formation-card{% if not form.instance.pk and not form.is_bound %} is-pending{% endif %}" data-formation-form>
+  {{ form.id }}
+  <span class="d-none">{{ form.DELETE }}</span>
+
+  <div class="formation-card-content">
+    <span class="formation-card-icon" aria-hidden="true"><i class="bi bi-mortarboard"></i></span>
+    <div class="formation-card-details">
+      <strong class="formation-card-title">{{ form.nome_curso.value|default:"Nova formação" }}</strong>
+      <span class="formation-card-institution">{{ form.instituicao.value|default:"Instituição não informada" }}</span>
+      <div class="formation-card-meta">
+        <span data-formation-level>Nível não informado</span>
+        <span data-formation-status>Situação não informada</span>
+        <span data-formation-period>Período não informado</span>
+      </div>
+    </div>
+    <div class="formation-card-actions">
+      <button class="btn btn-sm btn-outline-primary" type="button" data-edit-formation data-bs-toggle="modal" data-bs-target="#formation-modal-{{ form.prefix }}" aria-label="Editar {{ form.nome_curso.value|default:'formação' }}"><i class="bi bi-pencil-square"></i> Editar</button>
+      <button class="btn btn-sm btn-outline-danger" type="button" data-remove-formation aria-label="Excluir {{ form.nome_curso.value|default:'formação' }}"><i class="bi bi-trash"></i> Excluir</button>
+    </div>
+  </div>
+
+  <div class="modal fade formation-modal" id="formation-modal-{{ form.prefix }}" tabindex="-1" aria-labelledby="formation-modal-title-{{ form.prefix }}" aria-hidden="true" data-formation-modal>
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div>
+            <h2 class="modal-title fs-5" id="formation-modal-title-{{ form.prefix }}" data-formation-modal-title>{% if form.instance.pk %}Editar formação{% else %}Adicionar formação{% endif %}</h2>
+            <p>Preencha os dados da sua formação acadêmica.</p>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          {% if form.non_field_errors %}<div class="alert alert-danger py-2">{{ form.non_field_errors }}</div>{% endif %}
+          <div class="row g-3">
+            {% include "management/_field.html" with field=form.nivel column="col-12 col-md-6" %}
+            {% include "management/_field.html" with field=form.situacao column="col-12 col-md-6" %}
+            {% include "management/_field.html" with field=form.nome_curso column="col-12" %}
+            {% include "management/_field.html" with field=form.instituicao column="col-12" %}
+            {% include "management/_field.html" with field=form.modalidade column="col-12 col-md-4" %}
+            {% include "management/_field.html" with field=form.ano_inicio column="col-12 col-md-4" %}
+            {% include "management/_field.html" with field=form.ano_conclusao column="col-12 col-md-4" %}
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" data-save-formation><i class="bi bi-check-lg"></i> <span data-save-formation-label>{% if form.instance.pk %}Atualizar formação{% else %}Adicionar à lista{% endif %}</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</article>

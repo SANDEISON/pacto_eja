@@ -9,6 +9,7 @@ from ..models import (
     CorRaca,
     Educador,
     EducadorEscola,
+    Endereco,
     Escola,
     Estado,
     FuncaoCaracterizacaoTurma,
@@ -52,6 +53,43 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
         label="Gênero",
         choices=(("", "Selecione o gênero"), *Educador.Genero.choices),
         required=False,
+    )
+    endereco_cep = forms.CharField(
+        label="CEP",
+        max_length=9,
+        widget=forms.TextInput(
+            attrs={
+                "inputmode": "numeric",
+                "placeholder": "00000-000",
+                "autocomplete": "postal-code",
+            }
+        ),
+    )
+    endereco_logradouro = forms.CharField(
+        label="Rua/Av.",
+        max_length=150,
+        widget=forms.TextInput(attrs={"autocomplete": "address-line1"}),
+    )
+    endereco_numero = forms.CharField(
+        label="Número",
+        max_length=20,
+        widget=forms.TextInput(attrs={"autocomplete": "address-line2"}),
+    )
+    endereco_complemento = forms.CharField(
+        label="Complemento",
+        max_length=100,
+        widget=forms.TextInput(attrs={"autocomplete": "address-line3"}),
+    )
+    endereco_bairro = forms.CharField(label="Bairro", max_length=100)
+    endereco_estado = forms.ModelChoiceField(
+        label="UF",
+        queryset=Estado.objects.all(),
+        empty_label="Selecione a UF",
+    )
+    endereco_cidade = forms.ModelChoiceField(
+        label="Município",
+        queryset=Cidade.objects.none(),
+        empty_label="Selecione primeiro a UF",
     )
     estado = forms.ModelChoiceField(
         label="Estado",
@@ -99,6 +137,13 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
             self.fields["cidade"].queryset = Cidade.objects.filter(estado_id=estado_id)
             self.fields["cidade"].empty_label = "Selecione a cidade"
 
+        endereco_estado_id = (
+            self.data.get("endereco_estado") if self.is_bound else self.initial.get("endereco_estado")
+        )
+        if endereco_estado_id and str(endereco_estado_id).isdigit():
+            self.fields["endereco_cidade"].queryset = Cidade.objects.filter(estado_id=endereco_estado_id)
+            self.fields["endereco_cidade"].empty_label = "Selecione o município"
+
         cidade_id = self.data.get("cidade") if self.is_bound else self.initial.get("cidade")
         cidade = (
             Cidade.objects.filter(pk=cidade_id).select_related("estado").first()
@@ -125,6 +170,12 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
         self.educador_encontrado = Educador.objects.select_related("usuario").filter(cpf=cpf).first()
         return cpf
 
+    def clean_endereco_cep(self):
+        cep = "".join(character for character in self.cleaned_data["endereco_cep"] if character.isdigit())
+        if len(cep) != 8:
+            raise forms.ValidationError("Informe um CEP válido com 8 números.")
+        return cep
+
     def clean(self):
         cleaned_data = super().clean()
         educador = self.educador_encontrado
@@ -149,6 +200,11 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
 
         atuacoes = self._clean_atuacoes(cleaned_data.get("atuacoes_json"), educador)
         cleaned_data["atuacoes"] = atuacoes
+
+        endereco_estado = cleaned_data.get("endereco_estado")
+        endereco_cidade = cleaned_data.get("endereco_cidade")
+        if endereco_estado and endereco_cidade and endereco_cidade.estado_id != endereco_estado.pk:
+            self.add_error("endereco_cidade", "O município selecionado não pertence à UF informada.")
 
         return cleaned_data
 
@@ -262,6 +318,18 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
         educador.genero = self.cleaned_data.get("genero", "")
         educador.data_nascimento = self.cleaned_data.get("data_nascimento")
         educador.save(update_fields=("cor_raca", "genero", "data_nascimento"))
+
+        Endereco.objects.update_or_create(
+            educador=educador,
+            defaults={
+                "cep": self.cleaned_data["endereco_cep"],
+                "logradouro": self.cleaned_data["endereco_logradouro"].strip(),
+                "numero": self.cleaned_data["endereco_numero"].strip(),
+                "complemento": self.cleaned_data["endereco_complemento"].strip(),
+                "bairro": self.cleaned_data["endereco_bairro"].strip(),
+                "cidade": self.cleaned_data["endereco_cidade"],
+            },
+        )
 
         vinculos = []
         for atuacao in self.cleaned_data["atuacoes"]:

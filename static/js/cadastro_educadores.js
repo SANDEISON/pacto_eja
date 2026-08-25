@@ -8,6 +8,13 @@
   const birthDateInput = document.getElementById("id_data_nascimento");
   const corRacaSelect = document.getElementById("id_cor_raca");
   const genderSelect = document.getElementById("id_genero");
+  const addressCepInput = document.getElementById("id_endereco_cep");
+  const addressStreetInput = document.getElementById("id_endereco_logradouro");
+  const addressNumberInput = document.getElementById("id_endereco_numero");
+  const addressComplementInput = document.getElementById("id_endereco_complemento");
+  const addressDistrictInput = document.getElementById("id_endereco_bairro");
+  const addressStateSelect = document.getElementById("id_endereco_estado");
+  const addressCitySelect = document.getElementById("id_endereco_cidade");
   const cpfStatus = document.getElementById("cpf-status");
   const stateSelect = document.getElementById("id_estado");
   const citySelect = document.getElementById("id_cidade");
@@ -48,6 +55,20 @@
     const number = digits(value);
     return number.replace(/^(\d{3})(\d)/, "$1.$2").replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3").replace(/\.(\d{3})(\d)/, ".$1-$2");
   }
+  function maskCep(value) {
+    const number = value.replace(/\D/g, "").slice(0, 8);
+    return number.replace(/^(\d{5})(\d)/, "$1-$2");
+  }
+  function clearAddress() {
+    addressCepInput.value = "";
+    addressStreetInput.value = "";
+    addressNumberInput.value = "";
+    addressComplementInput.value = "";
+    addressDistrictInput.value = "";
+    addressStateSelect.value = "";
+    addressCitySelect.innerHTML = '<option value="">Selecione primeiro a UF</option>';
+    addressCitySelect.disabled = false;
+  }
   function setCpfStatus(kind, icon, message) {
     cpfStatus.className = "lookup-status" + (kind ? ` is-${kind}` : "");
     cpfStatus.innerHTML = `<i class="bi ${icon}"></i><span>${message}</span>`;
@@ -79,7 +100,7 @@
           : "Pessoa localizada. Os dados foram preenchidos.";
         setCpfStatus("success", "bi-check-circle-fill", message);
       } else {
-        if (wasExisting) { nameInput.value = ""; emailInput.value = ""; birthDateInput.value = ""; corRacaSelect.value = ""; genderSelect.value = ""; }
+        if (wasExisting) { nameInput.value = ""; emailInput.value = ""; birthDateInput.value = ""; corRacaSelect.value = ""; genderSelect.value = ""; clearAddress(); }
         nameInput.readOnly = false;
         emailInput.readOnly = false;
         form.dataset.existingPerson = "false";
@@ -208,6 +229,26 @@
       data.results.forEach(item => citySelect.add(new Option(item.nome_cidade, item.id)));
     } finally {
       citySelect.disabled = false;
+    }
+  }
+
+  async function loadAddressCities(selectedCity = "") {
+    addressCitySelect.value = "";
+    addressCitySelect.disabled = true;
+    addressCitySelect.innerHTML = '<option value="">Buscando municípios...</option>';
+    if (!addressStateSelect.value) {
+      addressCitySelect.innerHTML = '<option value="">Selecione primeiro a UF</option>';
+      addressCitySelect.disabled = false;
+      return;
+    }
+    try {
+      const response = await fetch(`${form.dataset.cidadesUrl}?estado=${encodeURIComponent(addressStateSelect.value)}`, { headers: { "X-Requested-With": "XMLHttpRequest" } });
+      const data = await response.json();
+      addressCitySelect.innerHTML = '<option value="">Selecione o município</option>';
+      data.results.forEach(item => addressCitySelect.add(new Option(item.nome_cidade, item.id)));
+      addressCitySelect.value = selectedCity ? String(selectedCity) : "";
+    } finally {
+      addressCitySelect.disabled = false;
     }
   }
 
@@ -361,6 +402,8 @@
     clearTimeout(cpfTimer);
     cpfTimer = setTimeout(lookupCpf, 350);
   });
+  addressCepInput.addEventListener("input", function () { addressCepInput.value = maskCep(addressCepInput.value); });
+  addressStateSelect.addEventListener("change", function () { loadAddressCities(); });
   stateSelect.addEventListener("change", loadCities);
   citySelect.addEventListener("change", function () { resetSchool("Buscando escolas..."); loadSchools(); });
   schoolSearch.addEventListener("focus", function () {
@@ -427,6 +470,7 @@
   });
 
   cpfInput.value = maskCpf(cpfInput.value);
+  addressCepInput.value = maskCep(addressCepInput.value);
   if (digits(cpfInput.value).length === 11) lookupCpf();
   if (citySelect.value) {
     schoolSearch.disabled = false;

@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import Cidade, CorRaca, Educador, EducadorEscola, Endereco, Estado, FuncaoEducador
+from .models import Cidade, CorRaca, Educador, EducadorEscola, Endereco, Estado, Formacao, FuncaoEducador
 
 
 User = get_user_model()
@@ -26,6 +26,7 @@ class EducadorModelTests(TestCase):
         self.assertEqual(Educador._meta.db_table, "core_educador")
         self.assertEqual(EducadorEscola._meta.db_table, "core_educadorescola")
         self.assertEqual(Endereco._meta.db_table, "core_endereco")
+        self.assertEqual(Formacao._meta.db_table, "core_formacao")
         self.assertEqual(FuncaoEducador._meta.db_table, "core_funcaoeducador")
         field_names = {field.name for field in EducadorEscola._meta.get_fields()}
         self.assertNotIn("estado", field_names)
@@ -71,6 +72,153 @@ class ProfileViewTests(TestCase):
         self.assertContains(response, 'id="id_endereco-logradouro"')
         self.assertContains(response, 'id="id_endereco-estado"')
         self.assertContains(response, 'id="id_endereco-cidade"')
+        self.assertContains(response, 'id="id_formacao-TOTAL_FORMS"')
+        self.assertContains(response, 'id="add-formation"')
+        self.assertContains(response, 'id="formation-records-block"')
+        self.assertContains(response, 'aria-label="Registros de formações"')
+        self.assertContains(response, 'href="/perfil/?adicionar_formacao=1#education-pane"')
+        self.assertContains(response, 'id="formation-modal-formacao-__prefix__"')
+        self.assertContains(response, 'data-save-formation-label')
+        self.assertContains(response, "Adicionar à lista")
+        self.assertContains(response, 'data-edit-formation')
+        self.assertContains(response, 'data-remove-formation')
+        self.assertContains(response, 'class="nav-link active" id="personal-tab"')
+        self.assertContains(response, 'class="tab-pane active" id="personal-pane"')
+
+    def profile_data(self, **overrides):
+        data = {
+            "user-full_name": "Maria",
+            "user-email": "maria@example.com",
+            "educador-nome_social": "",
+            "educador-cpf": "",
+            "educador-data_nascimento": "",
+            "educador-genero": "",
+            "educador-cor_raca": "",
+            "educador-telefone": "",
+            "educador-estado_civil": "",
+        }
+        data.update(overrides)
+        return data
+
+    def test_user_can_add_multiple_formations(self):
+        response = self.client.post(
+            reverse("profile"),
+            self.profile_data(
+                **{
+                    "formacao-TOTAL_FORMS": "2",
+                    "formacao-INITIAL_FORMS": "0",
+                    "formacao-MIN_NUM_FORMS": "0",
+                    "formacao-MAX_NUM_FORMS": "1000",
+                    "formacao-0-nivel": Formacao.Nivel.GRADUACAO_LICENCIATURA,
+                    "formacao-0-nome_curso": "Pedagogia",
+                    "formacao-0-instituicao": "Universidade Federal de Alagoas",
+                    "formacao-0-situacao": Formacao.Situacao.CONCLUIDO,
+                    "formacao-0-modalidade": Formacao.Modalidade.PRESENCIAL,
+                    "formacao-0-ano_inicio": "2010",
+                    "formacao-0-ano_conclusao": "2014",
+                    "formacao-1-nivel": Formacao.Nivel.MESTRADO,
+                    "formacao-1-nome_curso": "Educação",
+                    "formacao-1-instituicao": "Universidade Federal da Paraíba",
+                    "formacao-1-situacao": Formacao.Situacao.CURSANDO,
+                    "formacao-1-modalidade": Formacao.Modalidade.PRESENCIAL,
+                    "formacao-1-ano_inicio": "2025",
+                    "formacao-1-ano_conclusao": "",
+                }
+            ),
+        )
+
+        self.assertRedirects(response, reverse("profile"))
+        formacoes = self.user.educador.formacoes.all()
+        self.assertEqual(formacoes.count(), 2)
+        self.assertTrue(formacoes.filter(nome_curso="Pedagogia", ano_conclusao=2014).exists())
+        self.assertTrue(formacoes.filter(nome_curso="Educação", situacao=Formacao.Situacao.CURSANDO).exists())
+
+    def test_add_formation_button_has_server_fallback(self):
+        response = self.client.get(f'{reverse("profile")}?adicionar_formacao=1')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="id_formacao-0-nivel"')
+        self.assertContains(response, 'id="formation-modal-formacao-0"')
+        self.assertContains(response, 'data-formation-modal-title')
+        self.assertContains(response, 'name="formacao-TOTAL_FORMS" value="1"')
+        self.assertContains(response, 'class="nav-link active" id="education-tab"')
+        self.assertContains(response, 'class="tab-pane active" id="education-pane"')
+        self.assertNotContains(response, "Seu perfil foi atualizado com sucesso.")
+        self.assertFalse(self.user.educador.formacoes.exists())
+
+    def test_user_can_update_and_remove_formations(self):
+        pedagogia = Formacao.objects.create(
+            educador=self.user.educador,
+            nivel=Formacao.Nivel.GRADUACAO_LICENCIATURA,
+            nome_curso="Pedagogia",
+            instituicao="UFAL",
+            situacao=Formacao.Situacao.CONCLUIDO,
+            modalidade=Formacao.Modalidade.PRESENCIAL,
+            ano_inicio=2010,
+            ano_conclusao=2014,
+        )
+        especializacao = Formacao.objects.create(
+            educador=self.user.educador,
+            nivel=Formacao.Nivel.ESPECIALIZACAO,
+            nome_curso="Educação de Jovens e Adultos",
+            instituicao="UFPB",
+            situacao=Formacao.Situacao.CONCLUIDO,
+            ano_inicio=2018,
+            ano_conclusao=2019,
+        )
+
+        response = self.client.post(
+            reverse("profile"),
+            self.profile_data(
+                **{
+                    "formacao-TOTAL_FORMS": "2",
+                    "formacao-INITIAL_FORMS": "2",
+                    "formacao-MIN_NUM_FORMS": "0",
+                    "formacao-MAX_NUM_FORMS": "1000",
+                    "formacao-0-id": pedagogia.pk,
+                    "formacao-0-nivel": Formacao.Nivel.GRADUACAO_LICENCIATURA,
+                    "formacao-0-nome_curso": "Licenciatura em Pedagogia",
+                    "formacao-0-instituicao": "UFAL",
+                    "formacao-0-situacao": Formacao.Situacao.CONCLUIDO,
+                    "formacao-0-modalidade": Formacao.Modalidade.PRESENCIAL,
+                    "formacao-0-ano_inicio": "2010",
+                    "formacao-0-ano_conclusao": "2014",
+                    "formacao-1-id": especializacao.pk,
+                    "formacao-1-DELETE": "on",
+                }
+            ),
+        )
+
+        self.assertRedirects(response, reverse("profile"))
+        pedagogia.refresh_from_db()
+        self.assertEqual(pedagogia.nome_curso, "Licenciatura em Pedagogia")
+        self.assertFalse(Formacao.objects.filter(pk=especializacao.pk).exists())
+
+    def test_completed_formation_requires_valid_completion_year(self):
+        response = self.client.post(
+            reverse("profile"),
+            self.profile_data(
+                **{
+                    "formacao-TOTAL_FORMS": "1",
+                    "formacao-INITIAL_FORMS": "0",
+                    "formacao-MIN_NUM_FORMS": "0",
+                    "formacao-MAX_NUM_FORMS": "1000",
+                    "formacao-0-nivel": Formacao.Nivel.GRADUACAO_LICENCIATURA,
+                    "formacao-0-nome_curso": "Pedagogia",
+                    "formacao-0-instituicao": "UFAL",
+                    "formacao-0-situacao": Formacao.Situacao.CONCLUIDO,
+                    "formacao-0-modalidade": Formacao.Modalidade.PRESENCIAL,
+                    "formacao-0-ano_inicio": "2020",
+                    "formacao-0-ano_conclusao": "2019",
+                }
+            ),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "não pode ser anterior ao ano de início")
+        self.assertContains(response, 'class="nav-link active" id="education-tab"')
+        self.assertContains(response, 'class="tab-pane active" id="education-pane"')
+        self.assertFalse(self.user.educador.formacoes.exists())
 
     def test_user_can_update_account_and_personal_data(self):
         response = self.client.post(

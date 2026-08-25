@@ -7,6 +7,7 @@ from .educador_genero import EducadorGenero
 from .endereco import Endereco
 from .escola import Escola
 from .estado import Estado
+from .formacao import Formacao
 from .funcao_caracterizacao_turma import FuncaoCaracterizacaoTurma
 from .funcao_educador import FuncaoEducador
 
@@ -20,6 +21,7 @@ __all__ = [
     "Endereco",
     "Escola",
     "Estado",
+    "Formacao",
     "FuncaoCaracterizacaoTurma",
     "FuncaoEducador",
 ]

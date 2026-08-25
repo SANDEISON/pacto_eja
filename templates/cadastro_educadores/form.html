@@ -4,15 +4,14 @@
 {% block title %}Cadastro de Participantes | Pacto EJA{% endblock %}
 {% block body_class %}educator-public-page{% endblock %}
 {% block box_class %}educator-page-shell{% endblock %}
-{% block extra_css %}<link rel="stylesheet" href="{% static 'css/cadastro_educadores.css' %}?v=20260819-1">{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/cadastro_educadores.css' %}?v=20260825-3">{% endblock %}
 
 {% block auth_body %}
 <main class="educator-layout">
   <aside class="educator-intro">
-    <a class="educator-brand" href="{% url 'accounts:signin' %}"><img src="{% static 'img/logo.svg' %}" alt="Pacto EJA"><span><strong>Pacto</strong> EJA</span></a>
+    <a class="educator-brand" href="{% url 'accounts:signin' %}" aria-label="Ir para a página de entrada"><img src="{% static 'img/ufpb-unesco-eja.png' %}" alt="Universidade Federal da Paraíba e Cátedra UNESCO de Educação de Jovens e Adultos"></a>
     <div class="intro-content">
-      <span class="intro-kicker">PROGRAMA DE FORMAÇÃO</span>
-      <h1>Cadastro de Participantes</h1>
+      <h1>Participantes</h1>
       <p>Registre seus dados de atuação na Educação de Jovens e Adultos.</p>
       <div class="intro-feature"><i class="bi bi-person-vcard"></i><span><strong>Cadastro rápido</strong><small>Seus dados são localizados automaticamente pelo CPF.</small></span></div>
       <div class="intro-feature"><i class="bi bi-building-check"></i><span><strong>Escola de atuação</strong><small>Selecione estado, cidade e escola em sequência.</small></span></div>
@@ -43,6 +42,14 @@
             {% include "management/_field.html" with field=form.email column="col-12 col-md-7" %}
             {% include "management/_field.html" with field=form.cor_raca column="col-12 col-md-6" %}
             {% include "management/_field.html" with field=form.genero column="col-12 col-md-6" %}
+            <div class="col-12"><div class="identification-subheading"><i class="bi bi-geo-alt"></i><div><h4>Endereço</h4><p>Informe seu endereço residencial completo.</p></div></div></div>
+            {% include "management/_field.html" with field=form.endereco_cep column="col-12 col-md-4" %}
+            {% include "management/_field.html" with field=form.endereco_logradouro column="col-12 col-md-8" %}
+            {% include "management/_field.html" with field=form.endereco_numero column="col-12 col-md-4" %}
+            {% include "management/_field.html" with field=form.endereco_complemento column="col-12 col-md-8" %}
+            {% include "management/_field.html" with field=form.endereco_bairro column="col-12 col-md-6" %}
+            {% include "management/_field.html" with field=form.endereco_estado column="col-12 col-md-2" %}
+            {% include "management/_field.html" with field=form.endereco_cidade column="col-12 col-md-4" %}
           </div>
         </section>
 
@@ -93,5 +100,5 @@
     </div>
   </section>
 </main>
-<script src="{% static 'js/cadastro_educadores.js' %}?v=20260819-1"></script>
+<script src="{% static 'js/cadastro_educadores.js' %}?v=20260825-1"></script>
 {% endblock %}
