@@ -9,6 +9,10 @@ class CorRacaModelTests(TestCase):
     def test_model_is_registered_in_admin(self):
         self.assertIn(CorRaca, admin.site._registry)
 
+        model_admin = admin.site._registry[CorRaca]
+        self.assertEqual(model_admin.list_display, ("id", "nome"))
+        self.assertEqual(model_admin.ordering, ("id",))
+
     def test_migration_creates_initial_values(self):
         self.assertSetEqual(
             set(CorRaca.objects.values_list("nome", flat=True)),
