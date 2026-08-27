@@ -82,6 +82,13 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         self.assertContains(response, "4-6 anos")
         self.assertContains(response, "Mais de 6 anos")
 
+    def test_cor_raca_options_are_ordered_by_id(self):
+        response = self.client.get(reverse("cadastro_educador"))
+
+        queryset = response.context["form"].fields["cor_raca"].queryset
+        ids = list(queryset.values_list("id", flat=True))
+        self.assertEqual(ids, sorted(ids))
+
     def test_home_redirects_to_public_form(self):
         response = self.client.get(reverse("home"))
 

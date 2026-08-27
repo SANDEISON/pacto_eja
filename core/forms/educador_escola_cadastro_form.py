@@ -45,7 +45,7 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
     )
     cor_raca = forms.ModelChoiceField(
         label="Cor/raça",
-        queryset=CorRaca.objects.all(),
+        queryset=CorRaca.objects.order_by("id"),
         empty_label="Selecione a cor/raça",
         required=False,
     )
