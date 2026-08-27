@@ -1,3 +1,4 @@
+from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
@@ -5,6 +6,9 @@ from .models import CorRaca, Educador
 
 
 class CorRacaModelTests(TestCase):
+    def test_model_is_registered_in_admin(self):
+        self.assertIn(CorRaca, admin.site._registry)
+
     def test_migration_creates_initial_values(self):
         self.assertSetEqual(
             set(CorRaca.objects.values_list("nome", flat=True)),

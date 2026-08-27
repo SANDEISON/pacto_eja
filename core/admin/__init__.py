@@ -1,4 +1,5 @@
 from .cidade_admin import CidadeAdmin
+from .cor_raca_admin import CorRacaAdmin
 from .educador_admin import EducadorAdmin
 from .educador_escola_admin import EducadorEscolaAdmin
 from .endereco_admin import EnderecoAdmin
@@ -9,6 +10,7 @@ from .funcao_educador_admin import FuncaoEducadorAdmin
 
 __all__ = [
     "CidadeAdmin",
+    "CorRacaAdmin",
     "EducadorAdmin",
     "EducadorEscolaAdmin",
     "EnderecoAdmin",
