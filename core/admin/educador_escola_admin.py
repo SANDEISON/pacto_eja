@@ -21,7 +21,7 @@ class EducadorEscolaAdmin(admin.ModelAdmin):
         "escola__nome",
     )
     list_filter = ("cidade__estado", "funcao_caracterizacao_turmas", "tempo_atuacao", "criado_em")
-    list_select_related = ("funcao_educador__educador__usuario", "cidade__estado", "escola")
+    list_select_related = ("funcao_educador__educador__usuario", "cidade__estado", "escola", "funcao", "funcao_caracterizacao_turmas")
     autocomplete_fields = ("cidade", "escola")
     readonly_fields = ("criado_em",)
 

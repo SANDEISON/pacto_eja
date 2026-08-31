@@ -1,9 +1,11 @@
 from .dashboard import dashboard
+from .catalog_management import CatalogCreateView, CatalogDeleteView, CatalogListView, CatalogUpdateView
 from .error_pages import error_400, error_403, error_404, error_500, error_preview
 from .educator_create_view import EducatorCreateView
 from .educator_delete_view import EducatorDeleteView
 from .educator_list_view import EducatorListView
 from .educator_update_view import EducatorUpdateView
+from .educator_profile_update import educator_profile_update
 from .escolas_por_cidade import escolas_por_cidade
 from .group_create_view import GroupCreateView
 from .group_delete_view import GroupDeleteView
@@ -22,6 +24,10 @@ __all__ = [
     "cidades_por_estado",
     "cpf_lookup",
     "dashboard",
+    "CatalogCreateView",
+    "CatalogDeleteView",
+    "CatalogListView",
+    "CatalogUpdateView",
     "error_400",
     "error_403",
     "error_404",
@@ -31,6 +37,7 @@ __all__ = [
     "EducatorDeleteView",
     "EducatorListView",
     "EducatorUpdateView",
+    "educator_profile_update",
     "escolas_por_cidade",
     "GroupCreateView",
     "GroupDeleteView",

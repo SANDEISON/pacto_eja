@@ -5,7 +5,10 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import Cidade, CorRaca, Educador, EducadorEscola, Endereco, Escola, Estado, FuncaoEducador
+from .models import (
+    Cidade, CorRaca, Educador, EducadorEscola, EducadorGenero, Endereco,
+    Escola, Estado, Funcao, FuncaoCaracterizacaoTurma, FuncaoEducador,
+)
 
 
 User = get_user_model()
@@ -23,6 +26,12 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
             sigla_uf=cls.estado.sigla,
         )
         cls.cor_raca = CorRaca.objects.get(nome="Pardo")
+        cls.genero_feminino = EducadorGenero.objects.get(codigo="feminino")
+        cls.genero_nao_binario = EducadorGenero.objects.get(codigo="nao_binario")
+        cls.funcao = Funcao.objects.get(codigo="formador_pacto_anos_iniciais")
+        cls.alfabetizacao = FuncaoCaracterizacaoTurma.objects.get(codigo="alfabetizacao_eja")
+        cls.anos_iniciais = FuncaoCaracterizacaoTurma.objects.get(codigo="anos_iniciais_eja")
+        cls.ensino_medio = FuncaoCaracterizacaoTurma.objects.get(codigo="ensino_medio")
 
     def registration_data(self, **overrides):
         data = {
@@ -31,7 +40,7 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
             "email": "maria.educadora@example.com",
             "data_nascimento": "1990-05-12",
             "cor_raca": self.cor_raca.pk,
-            "genero": Educador.Genero.FEMININO,
+            "genero": self.genero_feminino.pk,
             "endereco_cep": "57000-000",
             "endereco_logradouro": "Avenida Fernandes Lima",
             "endereco_numero": "1000",
@@ -49,8 +58,8 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
             "estado_id": self.estado.pk,
             "cidade_id": self.cidade.pk,
             "escola_id": self.escola.pk,
-            "funcao": EducadorEscola.Funcao.FORMADOR_PACTO_ANOS_INICIAIS,
-            "funcao_caracterizacao_turmas": "alfabetizacao_eja",
+            "funcao": self.funcao.pk,
+            "funcao_caracterizacao_turmas": self.alfabetizacao.pk,
             "tempo_atuacao": "4_6_anos",
         }
         data.update(overrides)
@@ -128,7 +137,7 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         self.assertEqual(usuario.educador.cpf, "52998224725")
         self.assertEqual(usuario.educador.nome_completo, "Maria Educadora da Silva")
         self.assertEqual(usuario.educador.cor_raca, self.cor_raca)
-        self.assertEqual(usuario.educador.genero, Educador.Genero.FEMININO)
+        self.assertEqual(usuario.educador.genero, self.genero_feminino)
         self.assertEqual(usuario.educador.data_nascimento, date(1990, 5, 12))
         endereco = usuario.educador.endereco
         self.assertEqual(endereco.cep, "57000000")
@@ -141,7 +150,7 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         self.assertEqual(cadastro.cidade, self.cidade)
         self.assertEqual(cadastro.cidade.estado, self.estado)
         self.assertEqual(cadastro.escola, self.escola)
-        self.assertEqual(cadastro.funcao, EducadorEscola.Funcao.FORMADOR_PACTO_ANOS_INICIAIS)
+        self.assertEqual(cadastro.funcao, self.funcao)
         self.assertEqual(cadastro.tempo_atuacao, "4_6_anos")
 
     def test_registration_requires_complete_address(self):
@@ -176,7 +185,7 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
             self.assignment_data(),
             self.assignment_data(
                 escola_id=segunda_escola.pk,
-                funcao_caracterizacao_turmas="ensino_medio",
+                funcao_caracterizacao_turmas=self.ensino_medio.pk,
             ),
         ]
 
@@ -285,7 +294,7 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         educador = usuario.educador
         educador.cpf = "52998224725"
         educador.cor_raca = self.cor_raca
-        educador.genero = Educador.Genero.NAO_BINARIO
+        educador.genero = self.genero_nao_binario
         educador.data_nascimento = date(1985, 8, 20)
         educador.save(update_fields=("cpf", "cor_raca", "genero", "data_nascimento"))
         Endereco.objects.create(
@@ -300,7 +309,7 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         vinculo = EducadorEscola.objects.create(
             cidade=self.cidade,
             escola=self.escola,
-            funcao_caracterizacao_turmas="anos_iniciais_eja",
+            funcao_caracterizacao_turmas=self.anos_iniciais,
         )
         FuncaoEducador.objects.create(
             educador=educador,
@@ -328,7 +337,7 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         educador = usuario.educador
         educador.cpf = "52998224725"
         educador.cor_raca = self.cor_raca
-        educador.genero = Educador.Genero.NAO_BINARIO
+        educador.genero = self.genero_nao_binario
         educador.data_nascimento = date(1985, 8, 20)
         educador.save(update_fields=("cpf", "cor_raca", "genero", "data_nascimento"))
 
@@ -344,7 +353,7 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
                 "nome_completo": "Pessoa Localizada",
                 "email": "consulta@example.com",
                 "cor_raca_id": self.cor_raca.pk,
-                "genero": Educador.Genero.NAO_BINARIO,
+                "genero": self.genero_nao_binario.pk,
                 "data_nascimento": "1985-08-20",
             },
         )

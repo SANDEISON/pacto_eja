@@ -26,7 +26,7 @@
             <td>{{ educator.funcao_educador.educador.cpf|default:"—" }}</td>
             <td>{{ educator.cidade.nome_cidade }} / {{ educator.cidade.estado.sigla }}</td>
             <td>{{ educator.escola.nome }}</td>
-            <td><span class="badge management-badge">{{ educator.get_funcao_caracterizacao_turmas_display }}</span></td>
+            <td><span class="badge management-badge">{{ educator.funcao_caracterizacao_turmas }}</span></td>
             <td class="text-end text-nowrap">
               {% if perms.core.change_educadorescola %}<a class="btn btn-sm btn-outline-primary" href="{% url 'educator_update' educator.pk %}" title="Editar {{ educator.funcao_educador.educador }}"><i class="bi bi-pencil"></i><span class="visually-hidden">Editar</span></a>{% endif %}
               {% if perms.core.delete_educadorescola %}<a class="btn btn-sm btn-outline-danger" href="{% url 'educator_delete' educator.pk %}" title="Excluir {{ educator.funcao_educador.educador }}"><i class="bi bi-trash"></i><span class="visually-hidden">Excluir</span></a>{% endif %}

@@ -8,8 +8,12 @@ from .endereco import Endereco
 from .escola import Escola
 from .estado import Estado
 from .formacao import Formacao
+from .funcao import Funcao
 from .funcao_caracterizacao_turma import FuncaoCaracterizacaoTurma
 from .funcao_educador import FuncaoEducador
+from .modalidade import Modalidade
+from .nivel import Nivel
+from .situacao import Situacao
 
 __all__ = [
     "Cidade",
@@ -22,6 +26,10 @@ __all__ = [
     "Escola",
     "Estado",
     "Formacao",
+    "Funcao",
     "FuncaoCaracterizacaoTurma",
     "FuncaoEducador",
+    "Modalidade",
+    "Nivel",
+    "Situacao",
 ]

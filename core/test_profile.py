@@ -4,7 +4,11 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import Cidade, CorRaca, Educador, EducadorEscola, Endereco, Estado, Formacao, FuncaoEducador
+from .models import (
+    Cidade, CorRaca, Educador, EducadorEscola, EducadorEstadoCivil,
+    EducadorGenero, Endereco, Estado, Formacao, FuncaoEducador, Modalidade,
+    Nivel, Situacao,
+)
 
 
 User = get_user_model()
@@ -44,6 +48,14 @@ class ProfileViewTests(TestCase):
         self.cor_raca = CorRaca.objects.get(nome="Indígena")
         self.estado = Estado.objects.get(sigla="AL")
         self.cidade = Cidade.objects.get(estado=self.estado, nome_cidade="Maceió")
+        self.genero_feminino = EducadorGenero.objects.get(codigo="feminino")
+        self.estado_civil_casado = EducadorEstadoCivil.objects.get(codigo="casado")
+        self.graduacao_licenciatura = Nivel.objects.get(codigo="graduacao_licenciatura")
+        self.especializacao = Nivel.objects.get(codigo="especializacao")
+        self.mestrado = Nivel.objects.get(codigo="mestrado")
+        self.cursando = Situacao.objects.get(codigo="cursando")
+        self.concluido = Situacao.objects.get(codigo="concluido")
+        self.presencial = Modalidade.objects.get(codigo="presencial")
         self.user = User.objects.create_user(
             username="maria@example.com",
             email="maria@example.com",
@@ -109,18 +121,18 @@ class ProfileViewTests(TestCase):
                     "formacao-INITIAL_FORMS": "0",
                     "formacao-MIN_NUM_FORMS": "0",
                     "formacao-MAX_NUM_FORMS": "1000",
-                    "formacao-0-nivel": Formacao.Nivel.GRADUACAO_LICENCIATURA,
+                    "formacao-0-nivel": self.graduacao_licenciatura.pk,
                     "formacao-0-nome_curso": "Pedagogia",
                     "formacao-0-instituicao": "Universidade Federal de Alagoas",
-                    "formacao-0-situacao": Formacao.Situacao.CONCLUIDO,
-                    "formacao-0-modalidade": Formacao.Modalidade.PRESENCIAL,
+                    "formacao-0-situacao": self.concluido.pk,
+                    "formacao-0-modalidade": self.presencial.pk,
                     "formacao-0-ano_inicio": "2010",
                     "formacao-0-ano_conclusao": "2014",
-                    "formacao-1-nivel": Formacao.Nivel.MESTRADO,
+                    "formacao-1-nivel": self.mestrado.pk,
                     "formacao-1-nome_curso": "Educação",
                     "formacao-1-instituicao": "Universidade Federal da Paraíba",
-                    "formacao-1-situacao": Formacao.Situacao.CURSANDO,
-                    "formacao-1-modalidade": Formacao.Modalidade.PRESENCIAL,
+                    "formacao-1-situacao": self.cursando.pk,
+                    "formacao-1-modalidade": self.presencial.pk,
                     "formacao-1-ano_inicio": "2025",
                     "formacao-1-ano_conclusao": "",
                 }
@@ -131,7 +143,7 @@ class ProfileViewTests(TestCase):
         formacoes = self.user.educador.formacoes.all()
         self.assertEqual(formacoes.count(), 2)
         self.assertTrue(formacoes.filter(nome_curso="Pedagogia", ano_conclusao=2014).exists())
-        self.assertTrue(formacoes.filter(nome_curso="Educação", situacao=Formacao.Situacao.CURSANDO).exists())
+        self.assertTrue(formacoes.filter(nome_curso="Educação", situacao=self.cursando).exists())
 
     def test_add_formation_button_has_server_fallback(self):
         response = self.client.get(f'{reverse("profile")}?adicionar_formacao=1')
@@ -149,20 +161,20 @@ class ProfileViewTests(TestCase):
     def test_user_can_update_and_remove_formations(self):
         pedagogia = Formacao.objects.create(
             educador=self.user.educador,
-            nivel=Formacao.Nivel.GRADUACAO_LICENCIATURA,
+            nivel=self.graduacao_licenciatura,
             nome_curso="Pedagogia",
             instituicao="UFAL",
-            situacao=Formacao.Situacao.CONCLUIDO,
-            modalidade=Formacao.Modalidade.PRESENCIAL,
+            situacao=self.concluido,
+            modalidade=self.presencial,
             ano_inicio=2010,
             ano_conclusao=2014,
         )
         especializacao = Formacao.objects.create(
             educador=self.user.educador,
-            nivel=Formacao.Nivel.ESPECIALIZACAO,
+            nivel=self.especializacao,
             nome_curso="Educação de Jovens e Adultos",
             instituicao="UFPB",
-            situacao=Formacao.Situacao.CONCLUIDO,
+            situacao=self.concluido,
             ano_inicio=2018,
             ano_conclusao=2019,
         )
@@ -176,11 +188,11 @@ class ProfileViewTests(TestCase):
                     "formacao-MIN_NUM_FORMS": "0",
                     "formacao-MAX_NUM_FORMS": "1000",
                     "formacao-0-id": pedagogia.pk,
-                    "formacao-0-nivel": Formacao.Nivel.GRADUACAO_LICENCIATURA,
+                    "formacao-0-nivel": self.graduacao_licenciatura.pk,
                     "formacao-0-nome_curso": "Licenciatura em Pedagogia",
                     "formacao-0-instituicao": "UFAL",
-                    "formacao-0-situacao": Formacao.Situacao.CONCLUIDO,
-                    "formacao-0-modalidade": Formacao.Modalidade.PRESENCIAL,
+                    "formacao-0-situacao": self.concluido.pk,
+                    "formacao-0-modalidade": self.presencial.pk,
                     "formacao-0-ano_inicio": "2010",
                     "formacao-0-ano_conclusao": "2014",
                     "formacao-1-id": especializacao.pk,
@@ -203,11 +215,11 @@ class ProfileViewTests(TestCase):
                     "formacao-INITIAL_FORMS": "0",
                     "formacao-MIN_NUM_FORMS": "0",
                     "formacao-MAX_NUM_FORMS": "1000",
-                    "formacao-0-nivel": Formacao.Nivel.GRADUACAO_LICENCIATURA,
+                    "formacao-0-nivel": self.graduacao_licenciatura.pk,
                     "formacao-0-nome_curso": "Pedagogia",
                     "formacao-0-instituicao": "UFAL",
-                    "formacao-0-situacao": Formacao.Situacao.CONCLUIDO,
-                    "formacao-0-modalidade": Formacao.Modalidade.PRESENCIAL,
+                    "formacao-0-situacao": self.concluido.pk,
+                    "formacao-0-modalidade": self.presencial.pk,
                     "formacao-0-ano_inicio": "2020",
                     "formacao-0-ano_conclusao": "2019",
                 }
@@ -229,10 +241,10 @@ class ProfileViewTests(TestCase):
                 "educador-nome_social": "Maria Silva",
                 "educador-cpf": "529.982.247-25",
                 "educador-data_nascimento": "1990-05-12",
-                "educador-genero": Educador.Genero.FEMININO,
+                "educador-genero": self.genero_feminino.pk,
                 "educador-cor_raca": self.cor_raca.pk,
                 "educador-telefone": "(82) 99999-1234",
-                "educador-estado_civil": Educador.EstadoCivil.CASADO,
+                "educador-estado_civil": self.estado_civil_casado.pk,
                 "endereco-cep": "57000-000",
                 "endereco-logradouro": "Avenida Fernandes Lima",
                 "endereco-numero": "1000-A",

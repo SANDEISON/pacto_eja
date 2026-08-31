@@ -25,4 +25,5 @@ class EducatorListView(ManagementPermissionMixin, SearchableListMixin, ListView)
             "funcao_educador__educador__usuario",
             "cidade__estado",
             "escola",
+            "funcao_caracterizacao_turmas",
         )

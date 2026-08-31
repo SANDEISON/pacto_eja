@@ -16,11 +16,23 @@ def educator_management_access(request):
 
 
 def management_access(request):
-    """Exibe a seção quando o usuário pode consultar usuários ou grupos."""
+    """Exibe a seção quando o usuário pode consultar algum cadastro administrativo."""
     user = getattr(request, "user", None)
     return bool(
         user
         and user.is_authenticated
         and user.is_staff
-        and (user.has_perm("auth.view_user") or user.has_perm("auth.view_group"))
+        and any(
+            user.has_perm(permission)
+            for permission in (
+                "core.view_cidade",
+                "core.view_corraca",
+                "core.view_educador",
+                "core.view_escola",
+                "core.view_estado",
+                "core.view_nivel",
+                "core.view_modalidade",
+                "core.view_situacao",
+            )
+        )
     )

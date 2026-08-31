@@ -1,11 +1,8 @@
-from django.db import models
+from .opcao_dominio import OpcaoDominio
 
 
-class EducadorEstadoCivil(models.TextChoices):
-    SOLTEIRO = "SOLTEIRO", "Solteiro(a)"
-    CASADO = "CASADO", "Casado(a)"
-    UNIAO_ESTAVEL = "UNIAO_ESTAVEL", "União estável"
-    SEPARADO = "SEPARADO", "Separado(a)"
-    DIVORCIADO = "DIVORCIADO", "Divorciado(a)"
-    VIUVO = "VIUVO", "Viúvo(a)"
-    OUTRO = "OUTRO", "Outro"
+class EducadorEstadoCivil(OpcaoDominio):
+    class Meta(OpcaoDominio.Meta):
+        db_table = "core_educador_estado_civil"
+        verbose_name = "estado civil do educador"
+        verbose_name_plural = "estados civis dos educadores"

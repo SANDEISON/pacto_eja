@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}{{ catalog.title }} | Pacto EJA{% endblock %}
+{% block page_title %}Gerenciar {{ catalog.title|lower }}{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Início</a></li><li class="breadcrumb-item active">{{ catalog.title }}</li>{% endblock %}
+
+{% block content %}
+<div class="management-shell">
+  {% include "management/_messages.html" %}
+  <section class="management-card">
+    <header class="management-toolbar">
+      <form method="get" class="management-search">
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <input type="search" name="q" value="{{ search_query }}" placeholder="Pesquisar {{ catalog.title|lower }}" aria-label="Pesquisar {{ catalog.title|lower }}">
+        <button class="btn btn-outline-primary" type="submit">Pesquisar</button>
+      </form>
+      {% if can_add %}<a class="btn btn-primary" href="{% url 'catalog_create' catalog_key %}"><i class="bi bi-plus-lg"></i> Adicionar {{ catalog.singular }}</a>{% endif %}
+    </header>
+    <div class="table-responsive">
+      <table class="table management-table align-middle mb-0">
+        <thead><tr>{% for column in table_columns %}<th>{{ column }}</th>{% endfor %}<th class="text-end">Ações</th></tr></thead>
+        <tbody>
+        {% for row in table_rows %}
+          <tr>
+            {% for cell in row.cells %}<td>{% if forloop.first %}<strong>{{ cell }}</strong>{% else %}{{ cell }}{% endif %}</td>{% endfor %}
+            <td class="text-end text-nowrap">
+              {% if can_change %}<a class="btn btn-sm btn-outline-primary" href="{% url 'catalog_update' catalog_key row.object.pk %}" title="Editar {{ row.object }}"><i class="bi bi-pencil"></i><span class="visually-hidden">Editar</span></a>{% endif %}
+              {% if can_delete %}<a class="btn btn-sm btn-outline-danger" href="{% url 'catalog_delete' catalog_key row.object.pk %}" title="Excluir {{ row.object }}"><i class="bi bi-trash"></i><span class="visually-hidden">Excluir</span></a>{% endif %}
+            </td>
+          </tr>
+        {% empty %}<tr><td colspan="{{ table_columns|length|add:1 }}" class="empty-state">Nenhum registro encontrado.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% include "management/_pagination.html" %}
+  </section>
+</div>
+{% endblock %}

@@ -3,14 +3,7 @@ from django.core.validators import RegexValidator
 from django.db import models
 
 from ..validators import validate_birth_date, validate_cpf
-from .educador_estado_civil import EducadorEstadoCivil
-from .educador_genero import EducadorGenero
-
-
 class Educador(models.Model):
-    Genero = EducadorGenero
-    EstadoCivil = EducadorEstadoCivil
-
     usuario = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -21,14 +14,28 @@ class Educador(models.Model):
     nome_social = models.CharField("nome social", max_length=150, blank=True)
     cpf = models.CharField("CPF", max_length=11, unique=True, null=True, blank=True, validators=[validate_cpf])
     data_nascimento = models.DateField("data de nascimento", null=True, blank=True, validators=[validate_birth_date])
-    genero = models.CharField("gênero", max_length=2, choices=EducadorGenero.choices, blank=True)
+    genero = models.ForeignKey(
+        "EducadorGenero",
+        on_delete=models.PROTECT,
+        related_name="educadores",
+        verbose_name="gênero",
+        null=True,
+        blank=True,
+    )
     telefone = models.CharField(
         "telefone",
         max_length=20,
         blank=True,
         validators=[RegexValidator(r"^\+?[0-9()\s.-]{8,20}$", "Informe um telefone válido.")],
     )
-    estado_civil = models.CharField("estado civil", max_length=20, choices=EducadorEstadoCivil.choices, blank=True)
+    estado_civil = models.ForeignKey(
+        "EducadorEstadoCivil",
+        on_delete=models.PROTECT,
+        related_name="educadores",
+        verbose_name="estado civil",
+        null=True,
+        blank=True,
+    )
     cor_raca = models.ForeignKey(
         "CorRaca",
         on_delete=models.PROTECT,

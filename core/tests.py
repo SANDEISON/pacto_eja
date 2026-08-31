@@ -15,6 +15,14 @@ class DashboardTests(TestCase):
         self.assertTemplateUsed(response, "index.html")
         self.assertContains(response, "PAINEL DE ACOMPANHAMENTO", html=False)
 
+    def test_header_home_and_brand_link_to_system_dashboard(self):
+        response = self.client.get(reverse("dashboard"))
+        dashboard_url = reverse("dashboard")
+        self.assertContains(response, f'href="{dashboard_url}" class="nav-link"')
+        self.assertContains(response, f'href="{dashboard_url}" class="brand-link"')
+        self.assertNotContains(response, 'href="/" class="nav-link"')
+        self.assertNotContains(response, 'href="/" class="brand-link"')
+
     def test_regular_user_menu_hides_management_and_system_headers(self):
         response = self.client.get(reverse("dashboard"))
         menu_texts = [item.get("text") or item.get("header") for item in response.context["adminlte_menu_sidebar"]]

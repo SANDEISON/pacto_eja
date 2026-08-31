@@ -13,7 +13,7 @@ class FuncaoEducadorAdmin(admin.ModelAdmin):
         "educador_escola__escola__nome",
     )
     list_filter = ("educador_escola__funcao_caracterizacao_turmas",)
-    list_select_related = ("educador__usuario", "educador_escola__escola")
+    list_select_related = ("educador__usuario", "educador_escola__escola", "educador_escola__funcao_caracterizacao_turmas")
     autocomplete_fields = ("educador", "educador_escola")
 
     @admin.display(
@@ -21,4 +21,4 @@ class FuncaoEducadorAdmin(admin.ModelAdmin):
         ordering="educador_escola__funcao_caracterizacao_turmas",
     )
     def funcao_caracterizacao_turmas(self, obj):
-        return obj.educador_escola.get_funcao_caracterizacao_turmas_display()
+        return obj.educador_escola.funcao_caracterizacao_turmas

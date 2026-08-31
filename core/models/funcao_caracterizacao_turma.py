@@ -1,10 +1,8 @@
-from django.db import models
+from .opcao_dominio import OpcaoDominio
 
 
-class FuncaoCaracterizacaoTurma(models.TextChoices):
-    ALFABETIZACAO_EJA = "alfabetizacao_eja", "Alfabetização EJA"
-    ANOS_INICIAIS_EJA = "anos_iniciais_eja", "Anos Iniciais EJA"
-    ANOS_FINAIS_EJA = "anos_finais_eja", "Anos Finais EJA"
-    ENSINO_MEDIO = "ensino_medio", "Ensino Médio"
-    EDUCACAO_ESPECIAL = "educacao_especial", "Educação Especial"
-    EDUCACAO_PROFISSIONAL = "educacao_profissional", "Educação Profissional"
+class FuncaoCaracterizacaoTurma(OpcaoDominio):
+    class Meta(OpcaoDominio.Meta):
+        db_table = "core_funcao_caracterizacao_turma"
+        verbose_name = "função e caracterização da turma"
+        verbose_name_plural = "funções e caracterizações das turmas"

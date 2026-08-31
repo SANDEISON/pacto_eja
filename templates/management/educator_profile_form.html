@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Editar educador | Pacto EJA{% endblock %}
+{% block page_title %}Editar educador{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Início</a></li><li class="breadcrumb-item"><a href="{% url 'educator_model_list' %}">Educadores</a></li><li class="breadcrumb-item active">Editar</li>{% endblock %}
+
+{% block content %}
+<div class="management-shell">
+  <form method="post" class="management-card management-form" novalidate data-cidades-url="{% url 'cadastro_educador_cidades' %}">
+    {% csrf_token %}
+    {% if user_form.non_field_errors or educador_form.non_field_errors or endereco_form.non_field_errors or formacao_formset.non_form_errors %}<div class="alert alert-danger m-4 mb-0">Verifique os dados informados.</div>{% endif %}
+
+    <div class="form-section">
+      <h2>Dados da conta</h2>
+      <div class="row g-3">
+        {% include "management/_field.html" with field=user_form.full_name column="col-12 col-md-8" %}
+        {% include "management/_field.html" with field=user_form.email column="col-12 col-md-4" %}
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h2>Dados pessoais</h2>
+      <div class="row g-3">
+        {% include "management/_field.html" with field=educador_form.nome_social column="col-12" %}
+        {% include "management/_field.html" with field=educador_form.cpf column="col-12 col-md-4" %}
+        {% include "management/_field.html" with field=educador_form.data_nascimento column="col-12 col-md-4" %}
+        {% include "management/_field.html" with field=educador_form.genero column="col-12 col-md-4" %}
+        {% include "management/_field.html" with field=educador_form.cor_raca column="col-12 col-md-4" %}
+        {% include "management/_field.html" with field=educador_form.estado_civil column="col-12 col-md-4" %}
+        {% include "management/_field.html" with field=educador_form.telefone column="col-12 col-md-4" %}
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h2>Endereço</h2>
+      <div class="row g-3">
+        {% include "management/_field.html" with field=endereco_form.cep column="col-12 col-md-4" %}
+        {% include "management/_field.html" with field=endereco_form.logradouro column="col-12 col-md-8" %}
+        {% include "management/_field.html" with field=endereco_form.numero column="col-12 col-md-4" %}
+        {% include "management/_field.html" with field=endereco_form.complemento column="col-12 col-md-8" %}
+        {% include "management/_field.html" with field=endereco_form.bairro column="col-12 col-md-6" %}
+        {% include "management/_field.html" with field=endereco_form.estado column="col-12 col-md-2" %}
+        {% include "management/_field.html" with field=endereco_form.cidade column="col-12 col-md-4" %}
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h2>Formações</h2>
+      {{ formacao_formset.management_form }}
+      {% for error in formacao_formset.non_form_errors %}<div class="invalid-feedback d-block mb-3">{{ error }}</div>{% endfor %}
+      <div class="row g-3">
+        {% for formacao_form in formacao_formset %}
+          <div class="col-12">
+            <section class="border rounded-3 p-3">
+              {{ formacao_form.id }}
+              <div class="row g-3">
+                {% include "management/_field.html" with field=formacao_form.nivel column="col-12 col-md-6" %}
+                {% include "management/_field.html" with field=formacao_form.situacao column="col-12 col-md-6" %}
+                {% include "management/_field.html" with field=formacao_form.nome_curso column="col-12 col-md-6" %}
+                {% include "management/_field.html" with field=formacao_form.instituicao column="col-12 col-md-6" %}
+                {% include "management/_field.html" with field=formacao_form.modalidade column="col-12 col-md-4" %}
+                {% include "management/_field.html" with field=formacao_form.ano_inicio column="col-12 col-md-4" %}
+                {% include "management/_field.html" with field=formacao_form.ano_conclusao column="col-12 col-md-4" %}
+                {% if formacao_form.instance.pk %}<div class="col-12"><div class="form-check">{{ formacao_form.DELETE }} <label class="form-check-label" for="{{ formacao_form.DELETE.id_for_label }}">Excluir esta formação</label></div></div>{% endif %}
+              </div>
+            </section>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <footer class="form-actions"><a class="btn btn-light" href="{% url 'educator_model_list' %}">Cancelar</a><button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Salvar alterações</button></footer>
+  </form>
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script>
+  const educatorForm = document.querySelector(".management-form[data-cidades-url]");
+  const stateSelect = document.getElementById("id_endereco-estado");
+  const citySelect = document.getElementById("id_endereco-cidade");
+  if (educatorForm && stateSelect && citySelect) {
+    stateSelect.addEventListener("change", async () => {
+      citySelect.disabled = true;
+      citySelect.innerHTML = '<option value="">Buscando municípios...</option>';
+      if (!stateSelect.value) {
+        citySelect.innerHTML = '<option value="">Selecione primeiro a UF</option>';
+        citySelect.disabled = false;
+        return;
+      }
+      try {
+        const response = await fetch(`${educatorForm.dataset.cidadesUrl}?estado=${encodeURIComponent(stateSelect.value)}`, {headers: {"X-Requested-With": "XMLHttpRequest"}});
+        const data = await response.json();
+        citySelect.innerHTML = '<option value="">Selecione o município</option>';
+        data.results.forEach(item => citySelect.add(new Option(item.nome_cidade, item.id)));
+      } finally {
+        citySelect.disabled = false;
+      }
+    });
+  }
+</script>
+{% endblock %}

@@ -27,9 +27,9 @@ class FormacaoForm(BootstrapFormMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         current_year = date.today().year
-        self.fields["nivel"].choices = (("", "Selecione o nível"), *Formacao.Nivel.choices)
-        self.fields["situacao"].choices = (("", "Selecione a situação"), *Formacao.Situacao.choices)
-        self.fields["modalidade"].choices = (("", "Selecione a modalidade"), *Formacao.Modalidade.choices)
+        self.fields["nivel"].empty_label = "Selecione o nível"
+        self.fields["situacao"].empty_label = "Selecione a situação"
+        self.fields["modalidade"].empty_label = "Selecione a modalidade"
         self.fields["ano_inicio"].widget.attrs["max"] = current_year
         self.fields["ano_conclusao"].widget.attrs["max"] = current_year
         self._apply_bootstrap_classes()
@@ -47,7 +47,7 @@ class FormacaoForm(BootstrapFormMixin, forms.ModelForm):
             self.add_error("ano_conclusao", f"Informe um ano entre 1900 e {current_year}.")
         if ano_inicio and ano_conclusao and ano_conclusao < ano_inicio:
             self.add_error("ano_conclusao", "O ano de conclusão não pode ser anterior ao ano de início.")
-        if situacao == Formacao.Situacao.CONCLUIDO and not ano_conclusao:
+        if situacao and situacao.codigo == "concluido" and not ano_conclusao:
             self.add_error("ano_conclusao", "Informe o ano de conclusão da formação concluída.")
         return cleaned_data
 

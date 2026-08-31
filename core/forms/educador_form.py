@@ -25,6 +25,8 @@ class EducadorForm(BootstrapFormMixin, forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["data_nascimento"].input_formats = ["%Y-%m-%d"]
         self.fields["cor_raca"].empty_label = "Selecione a cor/raça"
+        self.fields["genero"].empty_label = "Selecione o gênero"
+        self.fields["estado_civil"].empty_label = "Selecione o estado civil"
         self._apply_bootstrap_classes()
 
     def clean_cpf(self):

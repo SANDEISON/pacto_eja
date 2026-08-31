@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import Cidade, EducadorEscola, Escola, Estado, FuncaoEducador
+from .models import Cidade, EducadorEscola, Escola, Estado, FuncaoCaracterizacaoTurma, FuncaoEducador
 
 
 User = get_user_model()
@@ -37,10 +37,13 @@ class EducatorManagementTests(TestCase):
             id_municipio=cls.cidade.codigo_ibge,
             sigla_uf=cls.estado.sigla,
         )
+        cls.anos_iniciais = FuncaoCaracterizacaoTurma.objects.get(codigo="anos_iniciais_eja")
+        cls.ensino_medio = FuncaoCaracterizacaoTurma.objects.get(codigo="ensino_medio")
+        cls.educacao_profissional = FuncaoCaracterizacaoTurma.objects.get(codigo="educacao_profissional")
         cls.cadastro = EducadorEscola.objects.create(
             cidade=cls.cidade,
             escola=cls.escola,
-            funcao_caracterizacao_turmas="anos_iniciais_eja",
+            funcao_caracterizacao_turmas=cls.anos_iniciais,
         )
         cls.funcao_educador = FuncaoEducador.objects.create(
             educador=cls.educator_user.educador,
@@ -56,7 +59,7 @@ class EducatorManagementTests(TestCase):
             "estado": self.estado.pk,
             "cidade": self.cidade.pk,
             "escola": self.escola.pk,
-            "funcao_caracterizacao_turmas": "ensino_medio",
+            "funcao_caracterizacao_turmas": self.ensino_medio.pk,
         }
         data.update(overrides)
         return data
@@ -109,7 +112,7 @@ class EducatorManagementTests(TestCase):
             reverse("educator_create"),
             self.form_data(
                 escola=outra_escola.pk,
-                funcao_caracterizacao_turmas="anos_iniciais_eja",
+                funcao_caracterizacao_turmas=self.anos_iniciais.pk,
             ),
         )
 
@@ -128,7 +131,7 @@ class EducatorManagementTests(TestCase):
     def test_management_rejects_exact_duplicate_registration(self):
         response = self.client.post(
             reverse("educator_create"),
-            self.form_data(funcao_caracterizacao_turmas="anos_iniciais_eja"),
+            self.form_data(funcao_caracterizacao_turmas=self.anos_iniciais.pk),
         )
 
         self.assertEqual(response.status_code, 200)
@@ -140,14 +143,14 @@ class EducatorManagementTests(TestCase):
 
         response = self.client.post(
             reverse("educator_update", args=(self.cadastro.pk,)),
-            self.form_data(funcao_caracterizacao_turmas="educacao_profissional"),
+            self.form_data(funcao_caracterizacao_turmas=self.educacao_profissional.pk),
         )
 
         self.assertRedirects(response, reverse("educator_list"))
         self.cadastro.refresh_from_db()
         self.assertEqual(
             self.cadastro.funcao_caracterizacao_turmas,
-            "educacao_profissional",
+            self.educacao_profissional,
         )
 
     def test_delete_educator_registration(self):

@@ -18,7 +18,10 @@ class FormacaoAdmin(admin.ModelAdmin):
         "educador__nome_social",
         "nome_curso",
         "instituicao",
+        "nivel__nome",
+        "situacao__nome",
+        "modalidade__nome",
     )
     list_filter = ("nivel", "situacao", "modalidade")
-    list_select_related = ("educador",)
+    list_select_related = ("educador", "nivel", "situacao", "modalidade")
     autocomplete_fields = ("educador",)

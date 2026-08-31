@@ -16,7 +16,7 @@ def cpf_lookup(request):
     except ValidationError:
         return JsonResponse({"valid": False, "exists": False, "message": "Informe um CPF válido."}, status=400)
 
-    educador = Educador.objects.select_related("usuario", "cor_raca").filter(cpf=cpf).first()
+    educador = Educador.objects.select_related("usuario", "cor_raca", "genero").filter(cpf=cpf).first()
     if educador is None:
         return JsonResponse({"valid": True, "exists": False, "registered": False})
 
@@ -29,7 +29,7 @@ def cpf_lookup(request):
             "nome_completo": educador.nome_completo or usuario.get_full_name() or usuario.first_name or usuario.username,
             "email": usuario.email,
             "cor_raca_id": educador.cor_raca_id,
-            "genero": educador.genero,
+            "genero": educador.genero_id,
             "data_nascimento": educador.data_nascimento.isoformat() if educador.data_nascimento else "",
         }
     )
