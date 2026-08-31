@@ -28,6 +28,8 @@ def management_access(request):
                 "core.view_cidade",
                 "core.view_corraca",
                 "core.view_educador",
+                "core.view_educadorgenero",
+                "core.change_educadorgenero",
                 "core.view_escola",
                 "core.view_estado",
                 "core.view_nivel",

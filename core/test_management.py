@@ -1,5 +1,6 @@
+from django.contrib import admin
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Group
+from django.contrib.auth.models import Group, Permission
 from django.test import TestCase
 from django.urls import reverse
 
@@ -28,6 +29,7 @@ class ManagementAccessTests(TestCase):
             [
                 "Cidades",
                 "Cores/raças",
+                "Gêneros",
                 "Educadores",
                 "Escolas",
                 "Estados",
@@ -43,8 +45,25 @@ class ManagementAccessTests(TestCase):
         administer = next(item for item in response.context["adminlte_menu_sidebar"] if item.get("text") == "Administrar")
         routes = {item["text"]: item["route"] for item in administer["submenu"]}
         self.assertEqual(routes["Cidades"], "city_list")
+        self.assertEqual(routes["Gêneros"], "educator_gender_list")
         self.assertEqual(routes["Níveis"], "level_list")
         self.assertNotIn("admin:", routes["Níveis"])
+
+    def test_staff_with_change_permission_sees_educator_gender_menu(self):
+        staff = User.objects.create_user(
+            username="gestor.generos@example.com",
+            password="SenhaForte2026!",
+            is_staff=True,
+        )
+        staff.user_permissions.add(Permission.objects.get(codename="change_educadorgenero"))
+        self.client.force_login(staff)
+
+        response = self.client.get(reverse("dashboard"))
+        administer = next(
+            item for item in response.context["adminlte_menu_sidebar"] if item.get("text") == "Administrar"
+        )
+        self.assertIn("Gêneros", [item["text"] for item in administer["submenu"]])
+        self.assertEqual(self.client.get(reverse("educator_gender_list")).status_code, 200)
 
 
 class CatalogManagementTests(TestCase):
@@ -60,6 +79,7 @@ class CatalogManagementTests(TestCase):
         url_names = (
             "city_list",
             "race_color_list",
+            "educator_gender_list",
             "educator_model_list",
             "school_list",
             "state_list",
@@ -72,6 +92,10 @@ class CatalogManagementTests(TestCase):
                 response = self.client.get(reverse(url_name))
                 self.assertEqual(response.status_code, 200)
                 self.assertTemplateUsed(response, "management/catalog_list.html")
+
+    def test_educator_gender_is_registered_in_django_admin(self):
+        self.assertIn(EducadorGenero, admin.site._registry)
+        self.assertEqual(admin.site._registry[EducadorGenero].list_display, ("id", "nome", "codigo"))
 
     def test_level_crud_uses_custom_pages(self):
         create_response = self.client.post(

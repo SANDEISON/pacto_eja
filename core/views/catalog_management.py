@@ -5,7 +5,7 @@ from django.http import Http404, HttpResponseRedirect
 from django.urls import reverse
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
-from ..models import Cidade, CorRaca, Educador, Escola, Estado, Modalidade, Nivel, Situacao
+from ..models import Cidade, CorRaca, Educador, EducadorGenero, Escola, Estado, Modalidade, Nivel, Situacao
 from .management_permission_mixin import ManagementPermissionMixin
 from .searchable_list_mixin import SearchableListMixin
 
@@ -29,6 +29,15 @@ CATALOGS = {
         "search_fields": ("nome",),
         "columns": (("ID", "pk"), ("Nome", "nome")),
         "list_url_name": "race_color_list",
+    },
+    "generos-educadores": {
+        "model": EducadorGenero,
+        "title": "Gêneros",
+        "singular": "gênero do educador",
+        "fields": ("codigo", "nome"),
+        "search_fields": ("codigo", "nome"),
+        "columns": (("ID", "pk"), ("Nome", "nome"), ("Código", "codigo")),
+        "list_url_name": "educator_gender_list",
     },
     "cadastros-educadores": {
         "model": Educador,
@@ -113,6 +122,14 @@ class CatalogMixin(ManagementPermissionMixin):
 
     def get_permission_required(self):
         return (f"{self.model._meta.app_label}.{self.action}_{self.model._meta.model_name}",)
+
+    def has_permission(self):
+        if self.action == "view":
+            opts = self.model._meta
+            return self.request.user.has_perm(
+                f"{opts.app_label}.view_{opts.model_name}"
+            ) or self.request.user.has_perm(f"{opts.app_label}.change_{opts.model_name}")
+        return super().has_permission()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
