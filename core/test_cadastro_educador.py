@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from .models import (
-    Cidade, CorRaca, Educador, EducadorEscola, EducadorGenero, Endereco,
+    Cidade, CorRaca, CursoCertificado, Educador, EducadorEscola, EducadorGenero, Endereco,
     Escola, Estado, Funcao, FuncaoCaracterizacaoTurma, FuncaoEducador,
 )
 
@@ -32,6 +32,9 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         cls.alfabetizacao = FuncaoCaracterizacaoTurma.objects.get(codigo="alfabetizacao_eja")
         cls.anos_iniciais = FuncaoCaracterizacaoTurma.objects.get(codigo="anos_iniciais_eja")
         cls.ensino_medio = FuncaoCaracterizacaoTurma.objects.get(codigo="ensino_medio")
+        cls.curso_certificado = CursoCertificado.objects.get(
+            nome="Alfabetização de Jovens, Adultos e Idosos - 80 horas"
+        )
 
     def registration_data(self, **overrides):
         data = {
@@ -41,6 +44,7 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
             "data_nascimento": "1990-05-12",
             "cor_raca": self.cor_raca.pk,
             "genero": self.genero_feminino.pk,
+            "curso_certificado": self.curso_certificado.pk,
             "endereco_cep": "57000-000",
             "endereco_logradouro": "Avenida Fernandes Lima",
             "endereco_numero": "1000",
@@ -90,6 +94,10 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         self.assertContains(response, "0-3 anos")
         self.assertContains(response, "4-6 anos")
         self.assertContains(response, "Mais de 6 anos")
+        self.assertContains(response, "Solicito liberação do Certificado do Curso:")
+        self.assertContains(response, "Alfabetização de Jovens, Adultos e Idosos - 80 horas")
+        self.assertContains(response, "Formação em Serviço para Formadores Regionais - 360 horas")
+        self.assertContains(response, 'type="radio"')
 
     def test_cor_raca_options_are_ordered_by_id(self):
         response = self.client.get(reverse("cadastro_educador"))
@@ -139,6 +147,7 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         self.assertEqual(usuario.educador.cor_raca, self.cor_raca)
         self.assertEqual(usuario.educador.genero, self.genero_feminino)
         self.assertEqual(usuario.educador.data_nascimento, date(1990, 5, 12))
+        self.assertEqual(usuario.educador.curso_certificado, self.curso_certificado)
         endereco = usuario.educador.endereco
         self.assertEqual(endereco.cep, "57000000")
         self.assertEqual(endereco.logradouro, "Avenida Fernandes Lima")

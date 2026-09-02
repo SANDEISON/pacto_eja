@@ -7,6 +7,7 @@ from django.db import transaction
 from ..models import (
     Cidade,
     CorRaca,
+    CursoCertificado,
     Educador,
     EducadorGenero,
     EducadorEscola,
@@ -130,6 +131,12 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
         required=False,
     )
     atuacoes_json = forms.CharField(required=False, widget=forms.HiddenInput())
+    curso_certificado = forms.ModelChoiceField(
+        label="Solicito liberação do Certificado do Curso:",
+        queryset=CursoCertificado.objects.all(),
+        widget=forms.RadioSelect(),
+        required=False,
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -328,7 +335,8 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
         educador.cor_raca = self.cleaned_data.get("cor_raca")
         educador.genero = self.cleaned_data.get("genero")
         educador.data_nascimento = self.cleaned_data.get("data_nascimento")
-        educador.save(update_fields=("cor_raca", "genero", "data_nascimento"))
+        educador.curso_certificado = self.cleaned_data.get("curso_certificado")
+        educador.save(update_fields=("cor_raca", "genero", "data_nascimento", "curso_certificado"))
 
         Endereco.objects.update_or_create(
             educador=educador,

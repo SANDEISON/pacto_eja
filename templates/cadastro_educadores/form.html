@@ -4,7 +4,7 @@
 {% block title %}Cadastro de Participantes | Pacto EJA{% endblock %}
 {% block body_class %}educator-public-page{% endblock %}
 {% block box_class %}educator-page-shell{% endblock %}
-{% block extra_css %}<link rel="stylesheet" href="{% static 'css/cadastro_educadores.css' %}?v=20260825-3">{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/cadastro_educadores.css' %}?v=20260902-1">{% endblock %}
 
 {% block auth_body %}
 <main class="educator-layout">
@@ -93,6 +93,15 @@
             </div>
             <div id="assignment-list" class="assignment-list" aria-live="polite"></div>
           </div>
+        </section>
+
+        <section class="educator-section certificate-section">
+          <div class="section-label"><span>3</span><div><h3>Certificado</h3><p>Selecione o curso para o qual deseja solicitar a liberação.</p></div></div>
+          <fieldset>
+            <legend class="form-label">{{ form.curso_certificado.label }}</legend>
+            {{ form.curso_certificado }}
+            {% for error in form.curso_certificado.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+          </fieldset>
         </section>
 
         <footer class="educator-actions"> <button class="btn btn-primary" type="submit"> <i class="bi bi-check2-circle"></i> Salvar cadastro</button>  <a href="{% url 'accounts:signin' %}" class="btn btn-light">Fazer login</a>    </footer>

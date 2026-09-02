@@ -1,5 +1,6 @@
 from .cidade import Cidade
 from .cor_raca import CorRaca
+from .curso_certificado import CursoCertificado
 from .educador import Educador
 from .educador_escola import EducadorEscola
 from .educador_estado_civil import EducadorEstadoCivil
@@ -18,6 +19,7 @@ from .situacao import Situacao
 __all__ = [
     "Cidade",
     "CorRaca",
+    "CursoCertificado",
     "Educador",
     "EducadorEscola",
     "EducadorEstadoCivil",

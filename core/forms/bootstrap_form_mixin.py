@@ -5,7 +5,9 @@ class BootstrapFormMixin:
     def _apply_bootstrap_classes(self):
         for field in self.fields.values():
             widget = field.widget
-            if isinstance(widget, forms.CheckboxInput):
+            if isinstance(widget, forms.RadioSelect):
+                css_class = "certificate-options"
+            elif isinstance(widget, forms.CheckboxInput):
                 css_class = "form-check-input"
             elif isinstance(widget, (forms.Select, forms.SelectMultiple)):
                 css_class = "form-select"
