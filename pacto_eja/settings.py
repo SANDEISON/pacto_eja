@@ -161,6 +161,7 @@ ADMINLTE = {
                 # {"text": "Grupos", "route": "group_list", "icon": "bi bi-collection", "can": "auth.view_group"},
                 {"text": "Cidades", "route": "city_list", "icon": "bi bi-buildings", "can": "core.view_cidade"},
                 {"text": "Cores/raças", "route": "race_color_list", "icon": "bi bi-palette", "can": "core.view_corraca"},
+                {"text": "Cursos para certificados", "route": "certificate_course_list", "icon": "bi bi-award", "can": ["core.view_cursocertificado", "core.change_cursocertificado"]},
                 {"text": "Gêneros", "route": "educator_gender_list", "icon": "bi bi-gender-ambiguous", "can": ["core.view_educadorgenero", "core.change_educadorgenero"]},
                 {"text": "Educadores", "route": "educator_model_list", "icon": "bi bi-person-badge", "can": "core.view_educador"},
                 {"text": "Escolas", "route": "school_list", "icon": "bi bi-building", "can": "core.view_escola"},

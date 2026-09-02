@@ -4,7 +4,7 @@ from django.contrib.auth.models import Group, Permission
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import EducadorGenero, Nivel
+from .models import CursoCertificado, EducadorGenero, Nivel
 
 
 User = get_user_model()
@@ -29,6 +29,7 @@ class ManagementAccessTests(TestCase):
             [
                 "Cidades",
                 "Cores/raças",
+                "Cursos para certificados",
                 "Gêneros",
                 "Educadores",
                 "Escolas",
@@ -45,6 +46,7 @@ class ManagementAccessTests(TestCase):
         administer = next(item for item in response.context["adminlte_menu_sidebar"] if item.get("text") == "Administrar")
         routes = {item["text"]: item["route"] for item in administer["submenu"]}
         self.assertEqual(routes["Cidades"], "city_list")
+        self.assertEqual(routes["Cursos para certificados"], "certificate_course_list")
         self.assertEqual(routes["Gêneros"], "educator_gender_list")
         self.assertEqual(routes["Níveis"], "level_list")
         self.assertNotIn("admin:", routes["Níveis"])
@@ -79,6 +81,7 @@ class CatalogManagementTests(TestCase):
         url_names = (
             "city_list",
             "race_color_list",
+            "certificate_course_list",
             "educator_gender_list",
             "educator_model_list",
             "school_list",
@@ -96,6 +99,10 @@ class CatalogManagementTests(TestCase):
     def test_educator_gender_is_registered_in_django_admin(self):
         self.assertIn(EducadorGenero, admin.site._registry)
         self.assertEqual(admin.site._registry[EducadorGenero].list_display, ("id", "nome", "codigo"))
+
+    def test_certificate_course_is_registered_in_django_admin(self):
+        self.assertIn(CursoCertificado, admin.site._registry)
+        self.assertEqual(admin.site._registry[CursoCertificado].list_display, ("id", "nome"))
 
     def test_level_crud_uses_custom_pages(self):
         create_response = self.client.post(

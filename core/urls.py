@@ -29,6 +29,7 @@ urlpatterns = [
     path("administracao/grupos/<int:pk>/excluir/", views.GroupDeleteView.as_view(), name="group_delete"),
     path("administracao/cidades/", views.CatalogListView.as_view(catalog_key="cidades"), name="city_list"),
     path("administracao/cores-racas/", views.CatalogListView.as_view(catalog_key="cores-racas"), name="race_color_list"),
+    path("administracao/cursos-certificados/", views.CatalogListView.as_view(catalog_key="cursos-certificados"), name="certificate_course_list"),
     path("administracao/generos-educadores/", views.CatalogListView.as_view(catalog_key="generos-educadores"), name="educator_gender_list"),
     path("administracao/cadastros-educadores/", views.CatalogListView.as_view(catalog_key="cadastros-educadores"), name="educator_model_list"),
     path("administracao/escolas/", views.CatalogListView.as_view(catalog_key="escolas"), name="school_list"),

@@ -1,5 +1,6 @@
 from .cidade_admin import CidadeAdmin
 from .cor_raca_admin import CorRacaAdmin
+from .curso_certificado_admin import CursoCertificadoAdmin
 from .educador_admin import EducadorAdmin
 from .educador_escola_admin import EducadorEscolaAdmin
 from .endereco_admin import EnderecoAdmin
@@ -12,6 +13,7 @@ from .opcoes_dominio_admin import OpcaoDominioAdmin
 __all__ = [
     "CidadeAdmin",
     "CorRacaAdmin",
+    "CursoCertificadoAdmin",
     "EducadorAdmin",
     "EducadorEscolaAdmin",
     "EnderecoAdmin",

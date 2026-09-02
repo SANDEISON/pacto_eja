@@ -5,7 +5,7 @@ from django.http import Http404, HttpResponseRedirect
 from django.urls import reverse
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
-from ..models import Cidade, CorRaca, Educador, EducadorGenero, Escola, Estado, Modalidade, Nivel, Situacao
+from ..models import Cidade, CorRaca, CursoCertificado, Educador, EducadorGenero, Escola, Estado, Modalidade, Nivel, Situacao
 from .management_permission_mixin import ManagementPermissionMixin
 from .searchable_list_mixin import SearchableListMixin
 
@@ -29,6 +29,15 @@ CATALOGS = {
         "search_fields": ("nome",),
         "columns": (("ID", "pk"), ("Nome", "nome")),
         "list_url_name": "race_color_list",
+    },
+    "cursos-certificados": {
+        "model": CursoCertificado,
+        "title": "Cursos para certificados",
+        "singular": "curso para certificado",
+        "fields": ("nome",),
+        "search_fields": ("nome",),
+        "columns": (("ID", "pk"), ("Curso", "nome")),
+        "list_url_name": "certificate_course_list",
     },
     "generos-educadores": {
         "model": EducadorGenero,
