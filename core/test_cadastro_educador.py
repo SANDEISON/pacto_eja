@@ -98,7 +98,11 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         self.assertContains(response, "4-6 anos")
         self.assertContains(response, "Mais de 6 anos")
         self.assertContains(response, "Solicito liberação do Certificado do Curso:")
-        self.assertContains(response, "Você pode selecionar apenas um curso ou os dois")
+        self.assertContains(
+            response,
+            "Selecione abaixo o(s) curso(s) para o(s) qual(is) deseja solicitar o certificado. "
+            "Você pode optar por um ou mais de um curso simultaneamente.",
+        )
         self.assertContains(response, "Alfabetização de Jovens, Adultos e Idosos - 80 horas")
         self.assertContains(response, "Formação em Serviço para Formadores Regionais - 360 horas")
         self.assertContains(response, 'type="checkbox"')
@@ -187,13 +191,26 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
             [self.curso_certificado, self.outro_curso_certificado],
         )
 
+    def test_registration_requires_at_least_one_certificate(self):
+        response = self.client.post(
+            reverse("cadastro_educador"),
+            self.registration_data(curso_certificado=[]),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFormError(
+            response.context["form"],
+            "curso_certificado",
+            "Este campo é obrigatório.",
+        )
+        self.assertFalse(Educador.objects.filter(cpf="52998224725").exists())
+
     def test_registration_requires_complete_address(self):
         data = self.registration_data()
         address_fields = (
             "endereco_cep",
             "endereco_logradouro",
             "endereco_numero",
-            "endereco_complemento",
             "endereco_bairro",
             "endereco_estado",
             "endereco_cidade",
@@ -205,6 +222,35 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         for field_name in address_fields:
+            self.assertFormError(response.context["form"], field_name, "Este campo é obrigatório.")
+        self.assertFalse(User.objects.filter(username="52998224725").exists())
+
+    def test_registration_accepts_empty_address_complement(self):
+        response = self.client.post(
+            reverse("cadastro_educador"),
+            self.registration_data(endereco_complemento=""),
+        )
+
+        self.assertRedirects(response, reverse("cadastro_educador_success"))
+        educador = Educador.objects.get(cpf="52998224725")
+        self.assertEqual(educador.endereco.complemento, "")
+
+    def test_registration_requires_complete_identification(self):
+        data = self.registration_data()
+        identification_fields = (
+            "nome_completo",
+            "data_nascimento",
+            "email",
+            "cor_raca",
+            "genero",
+        )
+        for field_name in identification_fields:
+            data.pop(field_name)
+
+        response = self.client.post(reverse("cadastro_educador"), data)
+
+        self.assertEqual(response.status_code, 200)
+        for field_name in identification_fields:
             self.assertFormError(response.context["form"], field_name, "Este campo é obrigatório.")
         self.assertFalse(User.objects.filter(username="52998224725").exists())
 

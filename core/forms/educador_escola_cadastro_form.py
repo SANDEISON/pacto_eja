@@ -26,7 +26,7 @@ User = get_user_model()
 
 
 class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
-    nome_completo = forms.CharField(label="Nome completo", max_length=150, required=False)
+    nome_completo = forms.CharField(label="Nome completo", max_length=150)
     cpf = forms.CharField(
         label="CPF",
         max_length=14,
@@ -38,10 +38,9 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
             }
         ),
     )
-    email = forms.EmailField(label="E-mail", required=False, widget=forms.EmailInput(attrs={"autocomplete": "email"}))
+    email = forms.EmailField(label="E-mail", widget=forms.EmailInput(attrs={"autocomplete": "email"}))
     data_nascimento = forms.DateField(
         label="Data de nascimento",
-        required=False,
         validators=(validate_birth_date,),
         widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
         input_formats=("%Y-%m-%d",),
@@ -50,13 +49,11 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
         label="Cor/raça",
         queryset=CorRaca.objects.order_by("id"),
         empty_label="Selecione a cor/raça",
-        required=False,
     )
     genero = forms.ModelChoiceField(
         label="Gênero",
         queryset=EducadorGenero.objects.all(),
         empty_label="Selecione o gênero",
-        required=False,
     )
     endereco_cep = forms.CharField(
         label="CEP",
@@ -83,6 +80,7 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
         label="Complemento",
         max_length=100,
         widget=forms.TextInput(attrs={"autocomplete": "address-line3"}),
+        required=False,
     )
     endereco_bairro = forms.CharField(label="Bairro", max_length=100)
     endereco_estado = forms.ModelChoiceField(
@@ -135,7 +133,7 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
         label="Solicito liberação do Certificado do Curso:",
         queryset=CursoCertificado.objects.all(),
         widget=forms.CheckboxSelectMultiple(),
-        required=False,
+        required=True,
     )
 
     def __init__(self, *args, **kwargs):
@@ -199,11 +197,7 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
         else:
             nome_completo = (cleaned_data.get("nome_completo") or "").strip()
             email = (cleaned_data.get("email") or "").strip().lower()
-            if not nome_completo:
-                self.add_error("nome_completo", "Informe o nome completo.")
-            if not email:
-                self.add_error("email", "Informe o e-mail.")
-            elif User.objects.filter(email__iexact=email).exists():
+            if email and User.objects.filter(email__iexact=email).exists():
                 self.add_error("email", "Já existe um usuário cadastrado com este e-mail.")
             if User.objects.filter(username=cleaned_data.get("cpf", "")).exists():
                 self.add_error("cpf", "Já existe um usuário cadastrado com este CPF.")

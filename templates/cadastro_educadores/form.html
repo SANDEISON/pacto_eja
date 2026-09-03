@@ -96,9 +96,9 @@
         </section>
 
         <section class="educator-section certificate-section">
-          <div class="section-label"><span>3</span><div><h3>Certificado</h3><p>Você pode selecionar apenas um curso ou os dois, caso tenha participado de ambas as formações.</p></div></div>
+          <div class="section-label"><span>3</span><div><h3>Certificado</h3><p>Selecione abaixo o(s) curso(s) para o(s) qual(is) deseja solicitar o certificado. Você pode optar por um ou mais de um curso simultaneamente.</p></div></div>
           <fieldset>
-            <legend class="form-label">{{ form.curso_certificado.label }}</legend>
+            <legend class="form-label">{{ form.curso_certificado.label }} <span class="text-danger">*</span></legend>
             {{ form.curso_certificado }}
             {% for error in form.curso_certificado.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
           </fieldset>
