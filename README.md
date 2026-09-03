@@ -17,6 +17,61 @@ Acesse `http://127.0.0.1:8000/` para abrir o cadastro público de educadores. O 
 
 As configurações locais são carregadas automaticamente do arquivo `.env`, que não é versionado. Para preparar outro computador, copie `.env.example` para `.env` e preencha a chave Django e a senha local do PostgreSQL.
 
+## Configurar o banco de dados PostgreSQL
+
+Instale o PostgreSQL e mantenha o serviço em execução. No Windows, o instalador oficial inclui o servidor e o `psql`; durante a instalação, defina uma senha para o usuário administrador `postgres`. No Debian/Ubuntu, instale e inicie o serviço com:
+
+```bash
+sudo apt update
+sudo apt install -y postgresql
+sudo systemctl enable --now postgresql
+```
+
+Crie o banco usado pela aplicação. No Windows, abra o **SQL Shell (psql)** e conecte-se com o usuário `postgres`. No Debian/Ubuntu, abra o console com `sudo -u postgres psql`. Em seguida, execute:
+
+```sql
+CREATE DATABASE db_pacto_eja;
+```
+
+Para sair do `psql`, use `\q`.
+
+Na raiz do projeto, copie o arquivo de exemplo para `.env`:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+No Linux, o comando equivalente é:
+
+```bash
+cp .env.example .env
+```
+
+Edite o `.env` e informe a senha definida para o PostgreSQL:
+
+```dotenv
+POSTGRES_DB=db_pacto_eja
+POSTGRES_HOST=127.0.0.1
+POSTGRES_PORT=5432
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=sua-senha-do-postgresql
+```
+
+Não versione o `.env`, pois ele contém credenciais. Para conferir se o banco aceita a conexão, execute:
+
+```powershell
+psql -h 127.0.0.1 -p 5432 -U postgres -d db_pacto_eja
+```
+
+Por fim, com o ambiente virtual ativado e as dependências instaladas, crie as tabelas do projeto e, opcionalmente, um administrador:
+
+```powershell
+python manage.py migrate
+python manage.py createsuperuser
+```
+
+Se o Django informar falha de autenticação, confira `POSTGRES_USER` e `POSTGRES_PASSWORD`. Se informar conexão recusada, confirme que o serviço PostgreSQL está iniciado e escutando na porta configurada em `POSTGRES_PORT`.
+
 ## Publicar na VM Debian
 
 A aplicação de produção roda como o usuário sem privilégios `sandeison`, escuta na porta 8080 com Gunicorn e entrega seus próprios arquivos estáticos com WhiteNoise. O HTTPS e o endereço público são fornecidos pelo proxy reverso da STI.
