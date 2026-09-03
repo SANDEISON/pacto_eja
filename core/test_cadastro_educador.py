@@ -35,6 +35,9 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         cls.curso_certificado = CursoCertificado.objects.get(
             nome="Alfabetização de Jovens, Adultos e Idosos - 80 horas"
         )
+        cls.outro_curso_certificado = CursoCertificado.objects.get(
+            nome="Formação em Serviço para Formadores Regionais - 360 horas"
+        )
 
     def registration_data(self, **overrides):
         data = {
@@ -44,7 +47,7 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
             "data_nascimento": "1990-05-12",
             "cor_raca": self.cor_raca.pk,
             "genero": self.genero_feminino.pk,
-            "curso_certificado": self.curso_certificado.pk,
+            "curso_certificado": [self.curso_certificado.pk],
             "endereco_cep": "57000-000",
             "endereco_logradouro": "Avenida Fernandes Lima",
             "endereco_numero": "1000",
@@ -95,9 +98,10 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         self.assertContains(response, "4-6 anos")
         self.assertContains(response, "Mais de 6 anos")
         self.assertContains(response, "Solicito liberação do Certificado do Curso:")
+        self.assertContains(response, "Você pode selecionar apenas um curso ou os dois")
         self.assertContains(response, "Alfabetização de Jovens, Adultos e Idosos - 80 horas")
         self.assertContains(response, "Formação em Serviço para Formadores Regionais - 360 horas")
-        self.assertContains(response, 'type="radio"')
+        self.assertContains(response, 'type="checkbox"')
 
     def test_cor_raca_options_are_ordered_by_id(self):
         response = self.client.get(reverse("cadastro_educador"))
@@ -147,7 +151,10 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         self.assertEqual(usuario.educador.cor_raca, self.cor_raca)
         self.assertEqual(usuario.educador.genero, self.genero_feminino)
         self.assertEqual(usuario.educador.data_nascimento, date(1990, 5, 12))
-        self.assertEqual(usuario.educador.curso_certificado, self.curso_certificado)
+        self.assertQuerySetEqual(
+            usuario.educador.cursos_certificados.all(),
+            [self.curso_certificado],
+        )
         endereco = usuario.educador.endereco
         self.assertEqual(endereco.cep, "57000000")
         self.assertEqual(endereco.logradouro, "Avenida Fernandes Lima")
@@ -161,6 +168,24 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         self.assertEqual(cadastro.escola, self.escola)
         self.assertEqual(cadastro.funcao, self.funcao)
         self.assertEqual(cadastro.tempo_atuacao, "4_6_anos")
+
+    def test_registration_allows_requesting_both_certificates(self):
+        response = self.client.post(
+            reverse("cadastro_educador"),
+            self.registration_data(
+                curso_certificado=[
+                    self.curso_certificado.pk,
+                    self.outro_curso_certificado.pk,
+                ]
+            ),
+        )
+
+        self.assertRedirects(response, reverse("cadastro_educador_success"))
+        educador = Educador.objects.get(cpf="52998224725")
+        self.assertQuerySetEqual(
+            educador.cursos_certificados.all(),
+            [self.curso_certificado, self.outro_curso_certificado],
+        )
 
     def test_registration_requires_complete_address(self):
         data = self.registration_data()

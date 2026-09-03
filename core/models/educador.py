@@ -44,12 +44,10 @@ class Educador(models.Model):
         null=True,
         blank=True,
     )
-    curso_certificado = models.ForeignKey(
+    cursos_certificados = models.ManyToManyField(
         "CursoCertificado",
-        on_delete=models.PROTECT,
         related_name="educadores_solicitantes",
-        verbose_name="curso solicitado para certificado",
-        null=True,
+        verbose_name="cursos solicitados para certificado",
         blank=True,
     )
 
