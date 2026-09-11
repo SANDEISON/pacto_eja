@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Avaliar trabalho | Pacto EJA{% endblock %}
+{% block page_title %}Avaliação de trabalho{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Início</a></li><li class="breadcrumb-item"><a href="{% url 'minhas_avaliacoes' %}">Minhas avaliações</a></li><li class="breadcrumb-item active">Parecer</li>{% endblock %}
+
+{% block content %}<div class="review-form-layout">
+  <aside class="review-context-card"><span class="activity-type">Avaliação confidencial</span><h2>{{ designacao.trabalho.titulo }}</h2><p>{{ designacao.trabalho.inscricao.atividade.titulo }}</p><a class="btn btn-outline-primary w-100" href="{% url 'trabalho_download' designacao.trabalho.pk %}"><i class="bi bi-file-earmark-pdf"></i> Baixar trabalho</a><hr><small><i class="bi bi-clock"></i> Prazo: {{ prazo|date:"d/m/Y H:i" }}</small>{% if finalizada %}<span class="candidate-state candidate-state-aprovada"><i class="bi bi-check-circle-fill"></i> Parecer concluído</span>{% elif fora_do_prazo %}<span class="candidate-state candidate-state-rejeitada"><i class="bi bi-exclamation-circle-fill"></i> Prazo encerrado</span>{% endif %}</aside>
+  <form method="post" class="management-card management-form" novalidate>{% csrf_token %}
+    {% include "management/_messages.html" %}{% include "management/_form_errors.html" %}
+    <section class="form-section"><div class="section-heading"><span><i class="bi bi-ui-checks"></i></span><div><h2>Critérios de avaliação</h2><p>Atribua notas de 1 (insuficiente) a 5 (excelente).</p></div></div><div class="row g-3">
+      {% include "management/_field.html" with field=form.nota_relevancia column="col-12 col-md-6" %}{% include "management/_field.html" with field=form.nota_metodologia column="col-12 col-md-6" %}{% include "management/_field.html" with field=form.nota_clareza column="col-12 col-md-6" %}{% include "management/_field.html" with field=form.nota_contribuicao column="col-12 col-md-6" %}
+    </div></section>
+    <section class="form-section"><h2>Parecer e recomendação</h2><div class="row g-3">{% include "management/_field.html" with field=form.parecer column="col-12" %}{% include "management/_field.html" with field=form.observacoes_autor column="col-12" %}{% include "management/_field.html" with field=form.recomendacao column="col-12 col-md-6" %}</div></section>
+    <footer class="form-actions"><a class="btn btn-light" href="{% url 'minhas_avaliacoes' %}">Voltar</a>{% if not finalizada and not fora_do_prazo %}<button class="btn btn-outline-primary" type="submit" name="acao" value="rascunho"><i class="bi bi-save"></i> Salvar rascunho</button><button class="btn btn-primary" type="submit" name="acao" value="concluir"><i class="bi bi-check2-circle"></i> Concluir avaliação</button>{% endif %}</footer>
+  </form>
+</div>{% endblock %}

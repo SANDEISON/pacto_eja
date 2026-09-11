@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block title %}Meus trabalhos para avaliar | Pacto EJA{% endblock %}
+{% block page_title %}Meus trabalhos para avaliar{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Início</a></li><li class="breadcrumb-item active">Minhas avaliações</li>{% endblock %}
+
+{% block content %}<div class="management-shell">{% include "management/_messages.html" %}<section class="management-card">
+  <header class="management-toolbar"><div><strong>Trabalhos liberados para você</strong><small class="d-block text-body-secondary">O conteúdo desta área é confidencial e não deve ser compartilhado.</small></div></header>
+  <div class="table-responsive"><table class="table management-table align-middle mb-0"><thead><tr><th>Trabalho</th><th>Evento</th><th>Prazo</th><th>Status</th><th class="text-end">Ação</th></tr></thead><tbody>
+    {% for designacao in designacoes %}<tr><td><strong>{{ designacao.trabalho.titulo }}</strong><small class="d-block text-body-secondary">Designado em {{ designacao.liberada_em|date:"d/m/Y" }}</small></td><td>{{ designacao.trabalho.inscricao.atividade.titulo }}</td><td>{{ designacao.prazo_efetivo|date:"d/m/Y H:i" }}</td><td>{% if designacao.concluida %}<span class="status-pill status-active">Concluída</span>{% elif designacao.atrasada %}<span class="status-pill status-danger">Prazo encerrado</span>{% elif designacao.avaliacao %}<span class="status-pill status-warning">Rascunho</span>{% else %}<span class="status-pill status-info">Pendente</span>{% endif %}</td><td class="text-end"><a class="btn btn-sm {% if designacao.concluida %}btn-outline-secondary{% else %}btn-primary{% endif %}" href="{% url 'preencher_avaliacao' designacao.pk %}">{% if designacao.concluida %}<i class="bi bi-eye"></i> Consultar{% else %}<i class="bi bi-pencil-square"></i> Avaliar{% endif %}</a></td></tr>
+    {% empty %}<tr><td colspan="5" class="empty-state">Nenhum trabalho foi liberado para você até o momento.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section></div>{% endblock %}

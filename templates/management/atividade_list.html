@@ -23,6 +23,7 @@
             <td>{% if atividade.ativo %}<span class="status-pill status-active">Ativa</span>{% else %}<span class="status-pill status-inactive">Inativa</span>{% endif %}</td>
             <td class="text-end text-nowrap">
               {% if perms.core.view_inscricao %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'atividade_inscricoes' atividade.pk %}" title="Ver inscrições"><i class="bi bi-people"></i></a>{% endif %}
+              {% if atividade.permite_submissao and perms.core.add_chamadaavaliadores %}{% if atividade.chamada_avaliadores %}<a class="btn btn-sm btn-outline-success" href="{% url 'chamada_avaliadores_update' atividade.chamada_avaliadores.pk %}" title="Editar chamada de avaliadores"><i class="bi bi-person-check"></i></a>{% else %}<a class="btn btn-sm btn-outline-success" href="{% url 'chamada_avaliadores_create' %}?atividade={{ atividade.pk }}" title="Criar chamada de avaliadores"><i class="bi bi-person-plus"></i></a>{% endif %}{% endif %}
               {% if perms.core.change_atividade %}<a class="btn btn-sm btn-outline-primary" href="{% url 'atividade_update' atividade.pk %}" title="Editar"><i class="bi bi-pencil"></i></a>{% endif %}
               {% if perms.core.delete_atividade and not atividade.total_inscricoes %}<a class="btn btn-sm btn-outline-danger" href="{% url 'atividade_delete' atividade.pk %}" title="Excluir"><i class="bi bi-trash"></i></a>{% endif %}
             </td>

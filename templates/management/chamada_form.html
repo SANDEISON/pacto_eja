@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}{% if object %}Editar{% else %}Cadastrar{% endif %} chamada | Pacto EJA{% endblock %}
+{% block page_title %}{% if object %}Editar{% else %}Cadastrar{% endif %} chamada de avaliadores{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Início</a></li><li class="breadcrumb-item"><a href="{% url 'chamada_avaliadores_list' %}">Chamadas e avaliações</a></li><li class="breadcrumb-item active">{% if object %}Editar{% else %}Cadastrar{% endif %}</li>{% endblock %}
+
+{% block content %}<div class="management-shell"><form method="post" class="management-card management-form" novalidate>{% csrf_token %}
+  {% include "management/_form_errors.html" %}
+  <section class="form-section"><div class="section-heading"><span><i class="bi bi-megaphone"></i></span><div><h2>Identificação da chamada</h2><p>Vincule a chamada a uma atividade que aceite submissões.</p></div></div><div class="row g-3">{% include "management/_field.html" with field=form.atividade column="col-12" %}{% include "management/_field.html" with field=form.titulo column="col-12" %}{% include "management/_field.html" with field=form.descricao column="col-12" %}{% include "management/_field.html" with field=form.requisitos column="col-12" %}</div></section>
+  <section class="form-section"><h2>Prazos e publicação</h2><div class="row g-3 align-items-end">{% include "management/_field.html" with field=form.inscricoes_inicio column="col-12 col-md-4" %}{% include "management/_field.html" with field=form.inscricoes_fim column="col-12 col-md-4" %}{% include "management/_field.html" with field=form.avaliacoes_fim column="col-12 col-md-4" %}{% include "management/_field.html" with field=form.ativa column="col-12" %}</div></section>
+  <footer class="form-actions"><a class="btn btn-light" href="{% url 'chamada_avaliadores_list' %}">Cancelar</a><button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Salvar chamada</button></footer>
+</form></div>{% endblock %}

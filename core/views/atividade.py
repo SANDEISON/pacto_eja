@@ -16,7 +16,7 @@ from ..forms import (
     ProfileUserForm,
     TrabalhoForm,
 )
-from ..models import Atividade, Educador, Inscricao, Trabalho
+from ..models import Atividade, DesignacaoAvaliacao, Educador, Inscricao, Trabalho
 from ..validators import somente_digitos
 from .management_permission_mixin import ManagementPermissionMixin
 from .searchable_list_mixin import SearchableListMixin
@@ -261,9 +261,13 @@ def inscricao_atividade(request, pk):
 
 @login_required
 def baixar_trabalho(request, pk):
-    """Entrega o PDF somente ao autor ou a quem possui permissão de consulta."""
+    """Entrega o PDF ao autor, à gestão ou a um avaliador designado."""
     trabalho = get_object_or_404(Trabalho.objects.select_related("inscricao__usuario"), pk=pk)
-    autorizado = trabalho.inscricao.usuario_id == request.user.pk or request.user.has_perm("core.view_trabalho")
+    autorizado = (
+        trabalho.inscricao.usuario_id == request.user.pk
+        or request.user.has_perm("core.view_trabalho")
+        or DesignacaoAvaliacao.objects.filter(trabalho=trabalho, avaliador=request.user).exists()
+    )
     if not autorizado:
         raise Http404
     return FileResponse(

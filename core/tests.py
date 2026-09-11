@@ -13,7 +13,9 @@ class DashboardTests(TestCase):
         response = self.client.get(reverse("dashboard"))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "index.html")
-        self.assertContains(response, "Olá, Educador!", html=False)
+        self.assertContains(response, "Inscrições e chamadas abertas", html=False)
+        self.assertNotContains(response, "Olá, Educador!", html=False)
+        self.assertNotContains(response, '<div class="app-content-header')
 
     def test_header_home_and_brand_link_to_system_dashboard(self):
         response = self.client.get(reverse("dashboard"))
@@ -47,8 +49,8 @@ class DashboardTests(TestCase):
             menu_texts,
             ["Início", "GESTÃO", "Formações", "Educadores", "Relatórios", "Meu perfil", "Sair"],
         )
-        self.assertContains(response, "PAINEL DE ACOMPANHAMENTO")
-        self.assertContains(response, "Acompanhe em um só lugar os principais indicadores do Pacto EJA.")
+        self.assertNotContains(response, "PAINEL DE ACOMPANHAMENTO")
+        self.assertNotContains(response, "Acompanhe em um só lugar os principais indicadores do Pacto EJA.")
         self.assertContains(response, "Educadores em formação")
         self.assertContains(response, "Participações por mês")
 

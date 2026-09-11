@@ -5,7 +5,7 @@ from django.db.models import Q
 from django.shortcuts import render
 from django.utils import timezone
 
-from ..models import Atividade
+from ..models import Atividade, ChamadaAvaliadores
 
 
 @login_required
@@ -35,6 +35,27 @@ def dashboard(request):
     # A anotação em memória simplifica o template sem introduzir regra de negócio nele.
     for atividade in atividades_disponiveis:
         atividade.inscricao_usuario = inscricoes_usuario.get(atividade.pk)
+
+    chamadas_avaliadores = []
+    if not request.user.is_staff:
+        chamadas_avaliadores = list(
+            ChamadaAvaliadores.objects.filter(ativa=True)
+            .filter(
+                Q(inscricoes_fim__gte=horario_atual)
+                | Q(candidaturas__usuario=request.user)
+            )
+            .select_related("atividade")
+            .distinct()
+            .order_by("inscricoes_fim", "titulo")
+        )
+        candidaturas_usuario = {
+            candidatura.chamada_id: candidatura
+            for candidatura in request.user.candidaturas_avaliador.filter(
+                chamada__in=chamadas_avaliadores
+            )
+        }
+        for chamada in chamadas_avaliadores:
+            chamada.candidatura_usuario = candidaturas_usuario.get(chamada.pk)
     context = {
         "year": date.today().year,
         "stats": [
@@ -43,5 +64,6 @@ def dashboard(request):
             {"value": 11441, "label": "Participações registradas", "icon": "bi-journal-check", "color": "danger"},
         ],
         "atividades_disponiveis": atividades_disponiveis,
+        "chamadas_avaliadores": chamadas_avaliadores,
     }
     return render(request, "index.html", context)

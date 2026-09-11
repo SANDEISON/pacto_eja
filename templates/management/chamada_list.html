@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block title %}Chamadas e avaliações | Pacto EJA{% endblock %}
+{% block page_title %}Gerenciar chamadas e avaliações{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Início</a></li><li class="breadcrumb-item active">Chamadas e avaliações</li>{% endblock %}
+
+{% block content %}<div class="management-shell">{% include "management/_messages.html" %}<section class="management-card">
+  <header class="management-toolbar"><form method="get" class="management-search"><i class="bi bi-search"></i><input type="search" name="q" value="{{ search_query }}" placeholder="Pesquisar chamada ou evento"><button class="btn btn-outline-primary" type="submit">Pesquisar</button></form>{% if perms.core.add_chamadaavaliadores %}<a class="btn btn-primary" href="{% url 'chamada_avaliadores_create' %}"><i class="bi bi-plus-lg"></i> Nova chamada</a>{% endif %}</header>
+  <div class="table-responsive"><table class="table management-table align-middle mb-0"><thead><tr><th>Chamada</th><th>Evento</th><th>Candidaturas</th><th>Prazo de avaliação</th><th>Status</th><th class="text-end">Ações</th></tr></thead><tbody>
+    {% for chamada in chamadas %}<tr><td><strong>{{ chamada.titulo }}</strong><small class="d-block text-body-secondary">Até {{ chamada.inscricoes_fim|date:"d/m/Y H:i" }}</small></td><td>{{ chamada.atividade.titulo }}</td><td><strong>{{ chamada.total_aprovadas }}</strong> aprovadas de {{ chamada.total_candidaturas }}</td><td>{{ chamada.avaliacoes_fim|date:"d/m/Y H:i" }}</td><td>{% if chamada.candidaturas_abertas %}<span class="status-pill status-active">Aberta</span>{% elif chamada.ativa %}<span class="status-pill status-warning">Publicada</span>{% else %}<span class="status-pill status-inactive">Inativa</span>{% endif %}</td><td class="text-end text-nowrap">{% if perms.core.view_candidaturaavaliador %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'candidatura_avaliador_list' chamada.pk %}" title="Analisar candidaturas"><i class="bi bi-people"></i></a>{% endif %}{% if perms.core.view_designacaoavaliacao %}<a class="btn btn-sm btn-outline-success" href="{% url 'designacao_avaliacao_manage' chamada.pk %}" title="Distribuir trabalhos"><i class="bi bi-shuffle"></i></a>{% endif %}{% if perms.core.change_chamadaavaliadores %}<a class="btn btn-sm btn-outline-primary" href="{% url 'chamada_avaliadores_update' chamada.pk %}" title="Editar"><i class="bi bi-pencil"></i></a>{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="6" class="empty-state">Nenhuma chamada cadastrada.</td></tr>{% endfor %}
+  </tbody></table></div>{% include "management/_pagination.html" %}
+</section></div>{% endblock %}

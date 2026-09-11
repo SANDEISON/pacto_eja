@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Candidatura — {{ chamada.titulo }} | Pacto EJA{% endblock %}
+{% block page_title %}Candidatura para avaliador{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Início</a></li><li class="breadcrumb-item"><a href="{% url 'chamadas_avaliadores' %}">Chamadas</a></li><li class="breadcrumb-item active">Candidatura</li>{% endblock %}
+
+{% block content %}<div class="review-form-layout">
+  <aside class="review-context-card"><span class="activity-type">{{ chamada.atividade.get_tipo_display }}</span><h2>{{ chamada.titulo }}</h2><p>{{ chamada.descricao }}</p><hr><strong>{{ chamada.atividade.titulo }}</strong><small><i class="bi bi-clock"></i> Inscrições até {{ chamada.inscricoes_fim|date:"d/m/Y H:i" }}</small></aside>
+  <form method="post" class="management-card management-form" novalidate>{% csrf_token %}
+    {% include "management/_form_errors.html" %}
+    <section class="form-section"><div class="section-heading"><span><i class="bi bi-person-vcard"></i></span><div><h2>Experiência e áreas de interesse</h2><p>Essas informações ajudam a coordenação a distribuir trabalhos compatíveis com seu perfil.</p></div></div><div class="row g-3">
+      {% include "management/_field.html" with field=form.area_atuacao column="col-12" %}{% include "management/_field.html" with field=form.experiencia column="col-12" %}{% include "management/_field.html" with field=form.temas_interesse column="col-12" %}{% include "management/_field.html" with field=form.conflitos_de_interesse column="col-12" %}
+      <div class="col-12"><div class="form-check">{{ form.declaracao }}<label class="form-check-label" for="{{ form.declaracao.id_for_label }}">{{ form.declaracao.label }}</label>{% for error in form.declaracao.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}</div></div>
+    </div></section>
+    <footer class="form-actions"><a class="btn btn-light" href="{% url 'chamadas_avaliadores' %}">Cancelar</a><button class="btn btn-primary" type="submit"><i class="bi bi-send"></i> Enviar candidatura</button></footer>
+  </form>
+</div>{% endblock %}

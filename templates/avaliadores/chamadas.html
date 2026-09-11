@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Chamadas para avaliadores | Pacto EJA{% endblock %}
+{% block page_title %}Chamadas para avaliadores{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Início</a></li><li class="breadcrumb-item active">Chamadas para avaliadores</li>{% endblock %}
+
+{% block content %}
+<div class="review-shell">
+  {% include "management/_messages.html" %}
+  <header class="review-page-heading"><div><span class="eyebrow">COLABORE COM O PACTO EJA</span><h1>Participe da avaliação de trabalhos</h1><p>Consulte as chamadas, informe sua experiência e acompanhe o resultado da análise.</p></div><i class="bi bi-people-fill" aria-hidden="true"></i></header>
+  <div class="review-call-grid">
+    {% for chamada in chamadas %}
+      <article class="review-call-card">
+        <header><div><span class="activity-type">{{ chamada.atividade.get_tipo_display }}</span><h2>{{ chamada.titulo }}</h2></div>{% if chamada.candidaturas_abertas %}<span class="status-pill status-active">Candidaturas abertas</span>{% else %}<span class="status-pill status-inactive">Encerrada</span>{% endif %}</header>
+        <p>{{ chamada.descricao|linebreaksbr }}</p>
+        <div class="review-requirements"><strong><i class="bi bi-check2-circle"></i> Requisitos</strong><p>{{ chamada.requisitos|linebreaksbr }}</p></div>
+        <dl class="review-dates"><div><dt>Candidaturas</dt><dd>{{ chamada.inscricoes_inicio|date:"d/m/Y H:i" }} a {{ chamada.inscricoes_fim|date:"d/m/Y H:i" }}</dd></div><div><dt>Prazo dos pareceres</dt><dd>{{ chamada.avaliacoes_fim|date:"d/m/Y H:i" }}</dd></div><div><dt>Evento</dt><dd>{{ chamada.atividade.titulo }}</dd></div></dl>
+        <footer>
+          {% if chamada.candidatura_usuario %}<span class="candidate-state candidate-state-{{ chamada.candidatura_usuario.status }}"><i class="bi bi-info-circle-fill"></i> Candidatura {{ chamada.candidatura_usuario.get_status_display|lower }}</span>
+          {% elif chamada.candidaturas_abertas %}<a class="btn btn-primary" href="{% url 'candidatar_avaliador' chamada.pk %}"><i class="bi bi-send"></i> Quero ser avaliador(a)</a>
+          {% else %}<span class="text-body-secondary">Período de candidatura encerrado</span>{% endif %}
+        </footer>
+      </article>
+    {% empty %}<div class="activity-empty"><i class="bi bi-megaphone"></i><strong>Nenhuma chamada disponível</strong><span>Novas oportunidades serão publicadas aqui.</span></div>{% endfor %}
+  </div>
+</div>
+{% endblock %}

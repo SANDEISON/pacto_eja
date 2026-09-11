@@ -1,4 +1,5 @@
 from .atividade import Atividade
+from .avaliacao import Avaliacao, CandidaturaAvaliador, ChamadaAvaliadores, DesignacaoAvaliacao
 from .cidade import Cidade
 from .cor_raca import CorRaca
 from .curso_certificado import CursoCertificado
@@ -22,10 +23,14 @@ from .coautor import Coautor
 
 __all__ = [
     "Atividade",
+    "Avaliacao",
+    "CandidaturaAvaliador",
+    "ChamadaAvaliadores",
     "Cidade",
     "CorRaca",
     "CursoCertificado",
     "Coautor",
+    "DesignacaoAvaliacao",
     "Educador",
     "EducadorEscola",
     "EducadorEstadoCivil",

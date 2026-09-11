@@ -4,7 +4,16 @@ from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
-from core.menu import activity_management_access, educator_management_access, management_access, staff_only
+from core.menu import (
+    activity_management_access,
+    educator_management_access,
+    evaluator_opportunities_access,
+    evaluator_portal_access,
+    evaluator_section_access,
+    management_access,
+    review_management_access,
+    staff_only,
+)
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -157,9 +166,13 @@ ADMINLTE = {
     "footer_right": "Educação que transforma",
     "menu": [
         {"text": "Início", "route": "dashboard", "icon": "bi bi-house-door-fill"},
+        {"header": "AVALIAÇÃO", "can": evaluator_section_access},
+        {"text": "Chamadas para avaliadores", "route": "chamadas_avaliadores", "icon": "bi bi-megaphone-fill", "can": evaluator_opportunities_access},
+        {"text": "Meus trabalhos para avaliar", "route": "minhas_avaliacoes", "icon": "bi bi-clipboard2-check-fill", "can": evaluator_portal_access},
         {"header": "GESTÃO", "can": staff_only},
         {"text": "Formações", "url": "#formacoes", "icon": "bi bi-mortarboard-fill", "can": staff_only},
         {"text": "Eventos e atividades", "route": "atividade_list", "icon": "bi bi-calendar2-event-fill", "can": activity_management_access},
+        {"text": "Chamadas e avaliações", "route": "chamada_avaliadores_list", "icon": "bi bi-person-check-fill", "can": review_management_access},
         {"text": "Educadores", "route": "educator_list", "icon": "bi bi-people-fill", "can": educator_management_access},
         {"text": "Relatórios", "url": "#relatorios", "icon": "bi bi-bar-chart-fill", "can": staff_only},
         {"header": "SISTEMA", "can": management_access},

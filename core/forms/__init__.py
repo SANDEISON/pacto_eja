@@ -1,4 +1,5 @@
 from .atividade_form import AtividadeForm, CoautorFormSet, DadosPessoaisInscricaoForm, TrabalhoForm
+from .avaliacao_form import AvaliacaoForm, CandidaturaAvaliadorForm, ChamadaAvaliadoresForm
 from .bootstrap_form_mixin import BootstrapFormMixin
 from .educador_escola_cadastro_form import EducadorEscolaCadastroForm
 from .educador_escola_form import EducadorEscolaForm
@@ -12,8 +13,11 @@ from .profile_user_form import ProfileUserForm
 
 __all__ = [
     "AtividadeForm",
+    "AvaliacaoForm",
     "BootstrapFormMixin",
     "CoautorFormSet",
+    "CandidaturaAvaliadorForm",
+    "ChamadaAvaliadoresForm",
     "DadosPessoaisInscricaoForm",
     "EducadorEscolaCadastroForm",
     "EducadorEscolaForm",
