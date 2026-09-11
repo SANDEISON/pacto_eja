@@ -108,6 +108,7 @@ CATALOGS = {
 
 
 def resolve_attr(obj, accessor):
+    """Resolve acessos como ``estado__sigla`` para montar tabelas genéricas."""
     value = obj
     for part in accessor.split("__"):
         value = getattr(value, part, None)
@@ -117,10 +118,12 @@ def resolve_attr(obj, accessor):
 
 
 class CatalogMixin(ManagementPermissionMixin):
+    """Seleciona a definição do catálogo e deriva sua permissão de acesso."""
     catalog_key = None
     action = "view"
 
     def setup(self, request, *args, **kwargs):
+        """Valida a chave recebida na URL e configura o model correspondente."""
         super().setup(request, *args, **kwargs)
         self.catalog_key = self.catalog_key or kwargs.get("catalog_key")
         try:
@@ -130,9 +133,11 @@ class CatalogMixin(ManagementPermissionMixin):
         self.model = self.catalog["model"]
 
     def get_permission_required(self):
+        """Monta o codename esperado pelo sistema de permissões do Django."""
         return (f"{self.model._meta.app_label}.{self.action}_{self.model._meta.model_name}",)
 
     def has_permission(self):
+        """Aceita visualização para quem possui permissão de leitura ou alteração."""
         if self.action == "view":
             opts = self.model._meta
             return self.request.user.has_perm(
@@ -151,6 +156,7 @@ class CatalogMixin(ManagementPermissionMixin):
 
 
 class CatalogListView(CatalogMixin, SearchableListMixin, ListView):
+    """Renderiza qualquer catálogo configurado como uma tabela pesquisável."""
     action = "view"
     template_name = "management/catalog_list.html"
     context_object_name = "objects"
@@ -180,12 +186,14 @@ class CatalogListView(CatalogMixin, SearchableListMixin, ListView):
 
 
 class CatalogFormMixin(CatalogMixin):
+    """Cria formulários de catálogo e aplica os estilos comuns do projeto."""
     template_name = "management/catalog_form.html"
 
     def get_form_class(self):
         return modelform_factory(self.model, fields=self.catalog["fields"])
 
     def get_form(self, form_class=None):
+        """Ajusta widgets e protege o identificador imutável de escolas."""
         form = super().get_form(form_class)
         for field in form.fields.values():
             widget = field.widget
@@ -206,6 +214,7 @@ class CatalogFormMixin(CatalogMixin):
 
 
 class CatalogCreateView(CatalogFormMixin, CreateView):
+    """Cria registros nos catálogos que permitem inclusão manual."""
     action = "add"
 
     def dispatch(self, request, *args, **kwargs):
@@ -215,10 +224,12 @@ class CatalogCreateView(CatalogFormMixin, CreateView):
 
 
 class CatalogUpdateView(CatalogFormMixin, UpdateView):
+    """Edita um registro do catálogo selecionado."""
     action = "change"
 
 
 class CatalogDeleteView(CatalogMixin, DeleteView):
+    """Exclui registros não protegidos por relacionamentos do domínio."""
     action = "delete"
     template_name = "management/confirm_delete.html"
 

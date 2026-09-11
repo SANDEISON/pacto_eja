@@ -6,6 +6,7 @@ from .bootstrap_form_mixin import BootstrapFormMixin
 
 
 class ProfileUserForm(BootstrapFormMixin, forms.ModelForm):
+    """Edita nome e e-mail da conta vinculada ao perfil."""
     full_name = forms.CharField(label="Nome completo", max_length=150)
 
     class Meta:
@@ -20,6 +21,7 @@ class ProfileUserForm(BootstrapFormMixin, forms.ModelForm):
         self._apply_bootstrap_classes()
 
     def clean_email(self):
+        """Normaliza o e-mail e impede seu uso por outra conta."""
         email = self.cleaned_data["email"].strip().lower()
         User = get_user_model()
         conflicts = User.objects.exclude(pk=self.instance.pk).filter(Q(email__iexact=email) | Q(username__iexact=email))
@@ -28,6 +30,7 @@ class ProfileUserForm(BootstrapFormMixin, forms.ModelForm):
         return email
 
     def save(self, commit=True):
+        """Divide o nome completo nos campos nativos do usuário Django."""
         user = super().save(commit=False)
         full_name = self.cleaned_data["full_name"].strip()
         user.first_name, _, user.last_name = full_name.partition(" ")

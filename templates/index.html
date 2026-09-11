@@ -7,13 +7,49 @@
 {% block content %}
 <section class="dashboard-welcome mb-4" aria-labelledby="welcome-title">
   <div>
-    <span class="eyebrow">PAINEL DE ACOMPANHAMENTO</span>
+    {% if request.user.is_staff %}<span class="eyebrow">PAINEL DE ACOMPANHAMENTO</span>{% endif %}
     <h1 id="welcome-title">Olá, {{ request.user.first_name|default:request.user.username }}!</h1>
-    <p>Acompanhe em um só lugar os principais indicadores do Pacto EJA.</p>
+    {% if request.user.is_staff %}<p>Acompanhe em um só lugar os principais indicadores do Pacto EJA.</p>{% endif %}
   </div>
   <div class="welcome-mark" aria-hidden="true"><i class="bi bi-stars"></i></div>
 </section>
 
+<section class="mb-4" aria-labelledby="atividades-title">
+  <div class="dashboard-section-heading">
+    <div><span class="eyebrow">AGENDA</span><h2 id="atividades-title">Inscrições abertas</h2><p>Escolha uma atividade e confirme seus dados para participar.</p></div>
+  </div>
+  <div class="row g-3">
+    {% for atividade in atividades_disponiveis %}
+      <div class="col-12 col-lg-6 col-xxl-4">
+        <article class="activity-card h-100">
+          <header><span class="activity-type activity-type-{{ atividade.tipo }}">{{ atividade.get_tipo_display }}</span>{% if atividade.permite_submissao %}<span class="activity-submission"><i class="bi bi-file-earmark-pdf"></i> Aceita trabalhos</span>{% endif %}</header>
+          <div class="activity-card-body">
+            <h3>{{ atividade.titulo }}</h3>
+            <p>{{ atividade.descricao|truncatewords:24 }}</p>
+            <dl>
+              <div><dt><i class="bi bi-calendar3"></i><span class="visually-hidden">Data</span></dt><dd>{{ atividade.data_inicio|date:"d/m/Y \à\s H:i" }}</dd></div>
+              {% if atividade.local %}<div><dt><i class="bi bi-geo-alt"></i><span class="visually-hidden">Local</span></dt><dd><a class="maps-link" href="https://www.google.com/maps/search/?api=1&amp;query={{ atividade.local|urlencode }}" target="_blank" rel="noopener noreferrer" title="Abrir endereço no Google Maps">{{ atividade.local }} <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i><span class="visually-hidden"> (abre no Google Maps)</span></a></dd></div>{% endif %}
+              {% if atividade.link %}<div><dt><i class="bi bi-camera-video"></i><span class="visually-hidden">Participação on-line</span></dt><dd><a href="{{ atividade.link }}" target="_blank" rel="noopener noreferrer">Acessar evento on-line</a></dd></div>{% endif %}
+              {% if atividade.vagas %}<div><dt><i class="bi bi-people"></i><span class="visually-hidden">Vagas</span></dt><dd>{{ atividade.vagas_restantes }} vaga{{ atividade.vagas_restantes|pluralize }} restante{{ atividade.vagas_restantes|pluralize }}</dd></div>{% endif %}
+            </dl>
+          </div>
+          <footer>
+            {% if atividade.inscricao_usuario %}
+              <span class="registration-ok"><i class="bi bi-check-circle-fill"></i> Inscrição confirmada</span>
+              {% if atividade.submissoes_abertas and atividade.permite_submissao %}<a class="btn btn-outline-primary" href="{% url 'atividade_inscricao' atividade.pk %}#trabalho-pane">{% if atividade.inscricao_usuario.trabalho %}Editar trabalho{% else %}Submeter trabalho{% endif %}</a>{% endif %}
+            {% elif atividade.inscricoes_abertas %}
+              <a class="btn btn-primary w-100" href="{% url 'atividade_inscricao' atividade.pk %}"><i class="bi bi-check2-square"></i> Inscrever-se</a>
+            {% else %}<span class="text-body-secondary"><i class="bi bi-x-circle"></i> Inscrições indisponíveis</span>{% endif %}
+          </footer>
+        </article>
+      </div>
+    {% empty %}
+      <div class="col-12"><div class="activity-empty"><i class="bi bi-calendar2-check"></i><strong>Nenhuma inscrição aberta no momento</strong><span>Novas atividades aparecerão aqui assim que forem publicadas.</span></div></div>
+    {% endfor %}
+  </div>
+</section>
+
+{% if request.user.is_staff %}
 <div class="row g-3 mb-4">
   {% for stat in stats %}
     <div class="col-12 col-md-6 col-xl-4">
@@ -75,4 +111,5 @@
     </article>
   </div>
 </div>
+{% endif %}
 {% endblock %}

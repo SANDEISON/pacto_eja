@@ -1,10 +1,12 @@
 from django import forms
 
 from ..models import Cidade, Endereco, Estado
+from ..validators import somente_digitos
 from .bootstrap_form_mixin import BootstrapFormMixin
 
 
 class EnderecoForm(BootstrapFormMixin, forms.ModelForm):
+    """Edita um endereço e mantém a cidade restrita à UF escolhida."""
     cep = forms.CharField(
         label="CEP",
         max_length=9,
@@ -40,6 +42,7 @@ class EnderecoForm(BootstrapFormMixin, forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        """Carrega apenas municípios válidos para a UF informada."""
         super().__init__(*args, **kwargs)
         estado_id = self.data.get(self.add_prefix("estado")) if self.is_bound else self.initial.get("estado")
         if not estado_id and self.instance.cidade_id:
@@ -52,12 +55,14 @@ class EnderecoForm(BootstrapFormMixin, forms.ModelForm):
         self._apply_bootstrap_classes()
 
     def clean_cep(self):
-        cep = "".join(character for character in self.cleaned_data.get("cep", "") if character.isdigit())
+        """Remove a máscara e valida o tamanho do CEP quando preenchido."""
+        cep = somente_digitos(self.cleaned_data.get("cep", ""))
         if cep and len(cep) != 8:
             raise forms.ValidationError("Informe um CEP válido com 8 números.")
         return cep
 
     def clean(self):
+        """Confere se o município realmente pertence à UF selecionada."""
         cleaned_data = super().clean()
         estado = cleaned_data.get("estado")
         cidade = cleaned_data.get("cidade")

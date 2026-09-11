@@ -11,6 +11,7 @@ from ..models import Educador, Endereco
 @permission_required("core.change_educador", raise_exception=True)
 @transaction.atomic
 def educator_profile_update(request, pk):
+    """Permite à equipe editar o perfil completo de outro educador."""
     educador = get_object_or_404(Educador.objects.select_related("usuario"), pk=pk)
     endereco = Endereco.objects.filter(educador=educador).first() or Endereco(educador=educador)
 

@@ -1,4 +1,14 @@
 from .dashboard import dashboard
+from .atividade import (
+    AtividadeCreateView,
+    AtividadeDeleteView,
+    AtividadeListView,
+    AtividadeUpdateView,
+    InscricaoListView,
+    baixar_trabalho,
+    buscar_coautores,
+    inscricao_atividade,
+)
 from .catalog_management import CatalogCreateView, CatalogDeleteView, CatalogListView, CatalogUpdateView
 from .error_pages import error_400, error_403, error_404, error_500, error_preview
 from .educator_create_view import EducatorCreateView
@@ -19,11 +29,19 @@ from .user_list_view import UserListView
 from .user_update_view import UserUpdateView
 
 __all__ = [
+    "AtividadeCreateView",
+    "AtividadeDeleteView",
+    "AtividadeListView",
+    "AtividadeUpdateView",
     "cadastro_educador",
     "cadastro_educador_success",
     "cidades_por_estado",
     "cpf_lookup",
     "dashboard",
+    "baixar_trabalho",
+    "buscar_coautores",
+    "inscricao_atividade",
+    "InscricaoListView",
     "CatalogCreateView",
     "CatalogDeleteView",
     "CatalogListView",

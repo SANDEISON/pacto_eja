@@ -4,24 +4,32 @@ from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
-from core.menu import educator_management_access, management_access, staff_only
+from core.menu import activity_management_access, educator_management_access, management_access, staff_only
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env", override=False)
 
+
+def env_flag(name, default=False):
+    """Lê uma variável de ambiente booleana aceitando formatos comuns."""
+    fallback = "true" if default else "false"
+    return os.environ.get(name, fallback).lower() in {"1", "true", "yes"}
+
+
+def env_list(name, default=""):
+    """Converte uma variável separada por vírgulas em uma lista sem itens vazios."""
+    return [item.strip() for item in os.environ.get(name, default).split(",") if item.strip()]
+
+
 INSECURE_DEFAULT_SECRET_KEY = "django-insecure-change-me-in-production"
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", INSECURE_DEFAULT_SECRET_KEY)
-DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() in {"1", "true", "yes"}
+DEBUG = env_flag("DJANGO_DEBUG", default=True)
 if not DEBUG and SECRET_KEY == INSECURE_DEFAULT_SECRET_KEY:
     raise ImproperlyConfigured("DJANGO_SECRET_KEY must be set when DJANGO_DEBUG=False")
 
-ALLOWED_HOSTS = [host.strip() for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,testserver").split(",") if host.strip()]
-CSRF_TRUSTED_ORIGINS = [
-    origin.strip()
-    for origin in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",")
-    if origin.strip()
-]
+ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,testserver")
+CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
 
 # Public path used by the STI reverse proxy. The proxy must strip this prefix
 # before forwarding the request to Gunicorn.
@@ -105,6 +113,8 @@ USE_TZ = True
 STATIC_URL = f"{FORCE_SCRIPT_NAME}/static/" if FORCE_SCRIPT_NAME else "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
+MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_URL = f"{FORCE_SCRIPT_NAME}/media/" if FORCE_SCRIPT_NAME else "/media/"
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {
@@ -149,6 +159,7 @@ ADMINLTE = {
         {"text": "Início", "route": "dashboard", "icon": "bi bi-house-door-fill"},
         {"header": "GESTÃO", "can": staff_only},
         {"text": "Formações", "url": "#formacoes", "icon": "bi bi-mortarboard-fill", "can": staff_only},
+        {"text": "Eventos e atividades", "route": "atividade_list", "icon": "bi bi-calendar2-event-fill", "can": activity_management_access},
         {"text": "Educadores", "route": "educator_list", "icon": "bi bi-people-fill", "can": educator_management_access},
         {"text": "Relatórios", "url": "#relatorios", "icon": "bi bi-bar-chart-fill", "can": staff_only},
         {"header": "SISTEMA", "can": management_access},

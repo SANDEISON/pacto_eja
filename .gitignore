@@ -216,5 +216,8 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
+# User-uploaded event submissions
+/media/
+
 # Streamlit
 .streamlit/secrets.toml

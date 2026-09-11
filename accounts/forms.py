@@ -2,13 +2,14 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 
-from core.validators import validate_cpf
+from core.validators import somente_digitos, validate_cpf
 
 
 User = get_user_model()
 
 
 class CPFAuthenticationForm(AuthenticationForm):
+    """Autentica usando o CPF normalizado como nome de usuário do Django."""
     username = forms.CharField(
         label="CPF",
         max_length=14,
@@ -23,12 +24,14 @@ class CPFAuthenticationForm(AuthenticationForm):
     )
 
     def clean_username(self):
-        cpf = "".join(character for character in self.cleaned_data["username"] if character.isdigit())
+        """Retira a máscara antes de consultar o usuário no banco."""
+        cpf = somente_digitos(self.cleaned_data["username"])
         validate_cpf(cpf)
         return cpf
 
 
 class SignUpForm(UserCreationForm):
+    """Cria, em uma única operação, a conta e o perfil de educador associado."""
     full_name = forms.CharField(label="Nome completo", max_length=150)
     cpf = forms.CharField(
         label="CPF",
@@ -42,19 +45,22 @@ class SignUpForm(UserCreationForm):
         fields = ("full_name", "cpf", "email", "password1", "password2")
 
     def clean_cpf(self):
-        cpf = "".join(character for character in self.cleaned_data["cpf"] if character.isdigit())
+        """Normaliza o CPF e garante que ele ainda não identifica outra conta."""
+        cpf = somente_digitos(self.cleaned_data["cpf"])
         validate_cpf(cpf)
         if User.objects.filter(username=cpf).exists():
             raise forms.ValidationError("Já existe uma conta cadastrada com este CPF.")
         return cpf
 
     def clean_email(self):
+        """Padroniza o e-mail e impede duplicidade sem diferenciar maiúsculas."""
         email = self.cleaned_data["email"].strip().lower()
         if User.objects.filter(email__iexact=email).exists():
             raise forms.ValidationError("Já existe uma conta cadastrada com este e-mail.")
         return email
 
     def save(self, commit=True):
+        """Persiste a conta e sincroniza os dados básicos do perfil criado pelo signal."""
         user = super().save(commit=False)
         full_name = self.cleaned_data["full_name"].strip()
         first_name, _, last_name = full_name.partition(" ")

@@ -18,7 +18,7 @@ from ..models import (
     FuncaoCaracterizacaoTurma,
     FuncaoEducador,
 )
-from ..validators import validate_birth_date, validate_cpf
+from ..validators import somente_digitos, validate_birth_date, validate_cpf
 from .bootstrap_form_mixin import BootstrapFormMixin
 
 
@@ -26,6 +26,7 @@ User = get_user_model()
 
 
 class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
+    """Cadastra ou localiza um educador e adiciona seus vínculos escolares."""
     nome_completo = forms.CharField(label="Nome completo", max_length=150)
     cpf = forms.CharField(
         label="CPF",
@@ -137,6 +138,7 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
     )
 
     def __init__(self, *args, **kwargs):
+        """Restringe cidades e escolas de acordo com as seleções recebidas."""
         super().__init__(*args, **kwargs)
         self.educador_encontrado = None
         if not self.is_bound:
@@ -175,18 +177,21 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
         self._apply_bootstrap_classes()
 
     def clean_cpf(self):
-        cpf = "".join(character for character in self.cleaned_data["cpf"] if character.isdigit())
+        """Normaliza o CPF e localiza um perfil que já possa ser reutilizado."""
+        cpf = somente_digitos(self.cleaned_data["cpf"])
         validate_cpf(cpf)
         self.educador_encontrado = Educador.objects.select_related("usuario").filter(cpf=cpf).first()
         return cpf
 
     def clean_endereco_cep(self):
-        cep = "".join(character for character in self.cleaned_data["endereco_cep"] if character.isdigit())
+        """Armazena o CEP sem máscara e exige os oito dígitos."""
+        cep = somente_digitos(self.cleaned_data["endereco_cep"])
         if len(cep) != 8:
             raise forms.ValidationError("Informe um CEP válido com 8 números.")
         return cep
 
     def clean(self):
+        """Valida identidade, endereço e a coleção de atuações do educador."""
         cleaned_data = super().clean()
         educador = self.educador_encontrado
 
@@ -215,6 +220,7 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
         return cleaned_data
 
     def _clean_atuacoes(self, raw_atuacoes, educador):
+        """Converte o JSON do navegador em objetos validados do domínio."""
         try:
             dados = json.loads(raw_atuacoes or "[]")
         except (TypeError, json.JSONDecodeError):
@@ -308,6 +314,7 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
 
     @transaction.atomic
     def save_cadastro(self):
+        """Persiste usuário, perfil, endereço e vínculos em uma única transação."""
         educador = self.educador_encontrado
         if educador is None:
             cpf = self.cleaned_data["cpf"]

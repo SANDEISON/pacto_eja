@@ -8,17 +8,20 @@ from .forms import CPFAuthenticationForm, SignUpForm
 
 
 class SignInView(LoginView):
+    """Exibe o login por CPF e evita uma segunda autenticação na mesma sessão."""
     template_name = "accounts/signin.html"
     authentication_form = CPFAuthenticationForm
     redirect_authenticated_user = True
 
 
 class SignOutView(LogoutView):
+    """Encerra a sessão somente por POST para evitar logout acidental por links."""
     http_method_names = ["post", "options"]
     next_page = reverse_lazy("accounts:signin")
 
 
 def signup(request):
+    """Cadastra uma conta pública e inicia a sessão do novo usuário."""
     if request.user.is_authenticated:
         return redirect("dashboard")
     form = SignUpForm(request.POST or None)

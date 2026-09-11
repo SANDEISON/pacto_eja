@@ -1,4 +1,6 @@
 (function () {
+  // Controla o cadastro público como um formulário progressivo: consulta CPF,
+  // restringe opções geográficas e reúne múltiplas atuações antes do envio.
   const form = document.getElementById("cadastro-educador-form");
   if (!form) return;
 
@@ -42,6 +44,7 @@
   let assignments = parseAssignments();
 
   function parseAssignments() {
+    // O campo oculto é a fonte de dados enviada ao servidor; a lista visual é só uma representação.
     try {
       const parsed = JSON.parse(assignmentsInput.value || "[]");
       return Array.isArray(parsed) ? parsed : [];
@@ -74,6 +77,7 @@
     cpfStatus.innerHTML = `<i class="bi ${icon}"></i><span>${message}</span>`;
   }
   async function lookupCpf() {
+    // Reaproveita perfis existentes e bloqueia a edição de identidade retornada pelo servidor.
     const cpf = digits(cpfInput.value);
     if (cpf.length !== 11) {
       setCpfStatus("", "bi-search", "Digite o CPF completo para consultar.");
@@ -117,6 +121,7 @@
   }
 
   function resetSchool(message) {
+    // Invalida respostas antigas para que uma busca lenta não sobrescreva a seleção atual.
     schoolRequestId += 1;
     schoolInput.value = "";
     schoolInput.dataset.selectedLabel = "";
@@ -197,6 +202,7 @@
     openSchoolOptions();
   }
   async function loadSchools() {
+    // O identificador incremental evita condições de corrida durante a digitação.
     if (!citySelect.value) return;
     const requestId = ++schoolRequestId;
     schoolSearch.placeholder = "Digite para buscar uma escola";
@@ -262,6 +268,7 @@
   }
 
   function currentAssignment() {
+    // Converte a seleção atual no formato validado novamente pelo backend.
     const selectedState = stateSelect.selectedOptions[0];
     const selectedCity = citySelect.selectedOptions[0];
     const selectedFunction = functionSelect.selectedOptions[0];
@@ -300,6 +307,7 @@
   }
 
   function renderAssignments() {
+    // Reconstrói a lista com textContent nos dados do usuário para evitar injeção de HTML.
     assignmentsList.replaceChildren();
     if (!assignments.length) {
       const empty = document.createElement("div");
@@ -352,6 +360,7 @@
   }
 
   function addOrUpdateAssignment() {
+    // Uma mesma chave de cidade, escola, função e atuação pode aparecer somente uma vez.
     const item = currentAssignment();
     if (!item) {
       setEditorError("Selecione função, atuação, tempo de atuação, estado, cidade e escola antes de adicionar.");

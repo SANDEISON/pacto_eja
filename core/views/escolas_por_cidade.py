@@ -6,6 +6,7 @@ from ..models import Cidade, Escola
 
 @require_GET
 def escolas_por_cidade(request):
+    """Pesquisa escolas da cidade escolhida para o componente de seleção."""
     cidade_id = request.GET.get("cidade", "")
     cidade = (
         Cidade.objects.select_related("estado").filter(pk=cidade_id).first()

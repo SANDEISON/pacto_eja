@@ -2,7 +2,10 @@ from django import forms
 
 
 class BootstrapFormMixin:
+    """Aplica automaticamente as classes Bootstrap adequadas a cada widget."""
+
     def _apply_bootstrap_classes(self):
+        """Mantém classes existentes e acrescenta o estilo conforme o tipo de campo."""
         for field in self.fields.values():
             widget = field.widget
             if isinstance(widget, (forms.RadioSelect, forms.CheckboxSelectMultiple)):

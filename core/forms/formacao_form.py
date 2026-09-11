@@ -8,6 +8,7 @@ from .bootstrap_form_mixin import BootstrapFormMixin
 
 
 class FormacaoForm(BootstrapFormMixin, forms.ModelForm):
+    """Edita uma formação acadêmica do perfil do educador."""
     class Meta:
         model = Formacao
         fields = (
@@ -35,6 +36,7 @@ class FormacaoForm(BootstrapFormMixin, forms.ModelForm):
         self._apply_bootstrap_classes()
 
     def clean(self):
+        """Valida intervalos de anos e a conclusão declarada."""
         cleaned_data = super().clean()
         current_year = date.today().year
         ano_inicio = cleaned_data.get("ano_inicio")
@@ -53,7 +55,10 @@ class FormacaoForm(BootstrapFormMixin, forms.ModelForm):
 
 
 class BaseFormacaoFormSet(BaseInlineFormSet):
+    """Valida em conjunto todas as formações enviadas no perfil."""
+
     def clean(self):
+        """Impede formações repetidas na mesma submissão."""
         super().clean()
         if any(self.errors):
             return

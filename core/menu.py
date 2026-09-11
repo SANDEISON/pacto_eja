@@ -4,6 +4,17 @@ def staff_only(request):
     return bool(user and user.is_authenticated and user.is_staff)
 
 
+def activity_management_access(request):
+    """Exibe atividades para a equipe que pode consultá-las ou alterá-las."""
+    user = getattr(request, "user", None)
+    return bool(
+        user
+        and user.is_authenticated
+        and user.is_staff
+        and (user.has_perm("core.view_atividade") or user.has_perm("core.change_atividade"))
+    )
+
+
 def educator_management_access(request):
     """Exibe Educadores somente para a equipe com acesso aos cadastros."""
     user = getattr(request, "user", None)

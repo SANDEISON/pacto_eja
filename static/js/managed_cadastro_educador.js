@@ -1,4 +1,5 @@
 (function () {
+  // Inicializa os campos dependentes usados na edição administrativa de vínculos escolares.
   const form = document.getElementById("managed-educator-form");
   if (!form) return;
 

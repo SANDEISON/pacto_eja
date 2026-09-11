@@ -7,6 +7,7 @@ from .models import Educador
 
 @receiver(post_save, sender=get_user_model())
 def create_user_profile(sender, instance, created, **kwargs):
+    """Cria o perfil de educador e mantém seu nome alinhado ao usuário Django."""
     nome_completo = instance.get_full_name().strip() or instance.get_username()
     if created:
         Educador.objects.get_or_create(

@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}Inscrições — {{ atividade.titulo }} | Pacto EJA{% endblock %}
+{% block page_title %}Inscrições da atividade{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Início</a></li><li class="breadcrumb-item"><a href="{% url 'atividade_list' %}">Eventos e atividades</a></li><li class="breadcrumb-item active">Inscrições</li>{% endblock %}
+{% block content %}<div class="management-shell"><section class="management-card">
+  <header class="management-toolbar"><div><strong>{{ atividade.titulo }}</strong><small class="d-block text-body-secondary">{{ page_obj.paginator.count }} inscrição{{ page_obj.paginator.count|pluralize }}</small></div><form method="get" class="management-search"><i class="bi bi-search"></i><input type="search" name="q" value="{{ search_query }}" placeholder="Pesquisar participante ou trabalho"><button class="btn btn-outline-primary" type="submit">Pesquisar</button></form></header>
+  <div class="table-responsive"><table class="table management-table align-middle mb-0"><thead><tr><th>Participante</th><th>CPF</th><th>Inscrição</th><th>Trabalho</th><th>Coautores</th></tr></thead><tbody>
+  {% for inscricao in inscricoes %}<tr><td><strong>{{ inscricao.usuario.get_full_name|default:inscricao.usuario.username }}</strong><small class="d-block text-body-secondary">{{ inscricao.usuario.email }}</small></td><td>{{ inscricao.usuario.educador.cpf|default:"—" }}</td><td>{{ inscricao.inscrito_em|date:"d/m/Y H:i" }}</td><td>{% if inscricao.trabalho %}{% if perms.core.view_trabalho %}<a href="{% url 'trabalho_download' inscricao.trabalho.pk %}"><i class="bi bi-file-earmark-pdf"></i> {{ inscricao.trabalho.titulo }}</a>{% else %}{{ inscricao.trabalho.titulo }}{% endif %}{% else %}—{% endif %}</td><td>{% if inscricao.trabalho %}{{ inscricao.trabalho.coautores.all|join:", "|default:"—" }}{% else %}—{% endif %}</td></tr>{% empty %}<tr><td colspan="5" class="empty-state">Nenhuma inscrição encontrada.</td></tr>{% endfor %}
+  </tbody></table></div>{% include "management/_pagination.html" %}
+</section></div>{% endblock %}

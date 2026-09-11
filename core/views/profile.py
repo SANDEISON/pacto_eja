@@ -16,17 +16,18 @@ from ..models import Educador, Endereco
 @login_required
 @transaction.atomic
 def profile(request):
+    """Exibe e atualiza dados pessoais, endereço e formações do usuário atual."""
     educador, _ = Educador.objects.get_or_create(usuario=request.user)
     adicionando_formacao = request.GET.get("adicionar_formacao") == "1" or (
         request.method == "POST" and request.POST.get("adicionar_formacao") == "1"
     )
     endereco = Endereco.objects.filter(educador=educador).first() or Endereco(educador=educador)
-    user_form = ProfileUserForm(request.POST or None, instance=request.user, prefix="user")
-    educador_form = EducadorForm(request.POST or None, instance=educador, prefix="educador")
+    formulario_usuario = ProfileUserForm(request.POST or None, instance=request.user, prefix="user")
+    formulario_educador = EducadorForm(request.POST or None, instance=educador, prefix="educador")
     endereco_data = request.POST if request.method == "POST" and any(
         key.startswith("endereco-") for key in request.POST
     ) else None
-    endereco_form = EnderecoForm(endereco_data, instance=endereco, prefix="endereco")
+    formulario_endereco = EnderecoForm(endereco_data, instance=endereco, prefix="endereco")
     formacao_data = None
     if request.method == "POST" and "formacao-TOTAL_FORMS" in request.POST:
         formacao_data = request.POST.copy()
@@ -41,40 +42,41 @@ def profile(request):
         if adicionando_formacao and request.method == "GET"
         else FormacaoFormSet
     )
-    formacao_formset = formset_class(formacao_data, instance=educador, prefix="formacao")
-    endereco_valido = not endereco_form.is_bound or endereco_form.is_valid()
-    formacoes_validas = not formacao_formset.is_bound or formacao_formset.is_valid()
+    formulario_formacoes = formset_class(formacao_data, instance=educador, prefix="formacao")
+    endereco_valido = not formulario_endereco.is_bound or formulario_endereco.is_valid()
+    formacoes_validas = not formulario_formacoes.is_bound or formulario_formacoes.is_valid()
     if (
         request.method == "POST"
         and not adicionando_formacao
-        and user_form.is_valid()
-        and educador_form.is_valid()
+        and formulario_usuario.is_valid()
+        and formulario_educador.is_valid()
         and endereco_valido
         and formacoes_validas
     ):
-        usuario = user_form.save()
-        educador = educador_form.save(commit=False)
+        usuario = formulario_usuario.save()
+        educador = formulario_educador.save(commit=False)
         educador.nome_completo = usuario.get_full_name()
         educador.save()
-        if endereco_form.is_bound and endereco_form.has_changed():
-            endereco = endereco_form.save(commit=False)
+        if formulario_endereco.is_bound and formulario_endereco.has_changed():
+            endereco = formulario_endereco.save(commit=False)
             endereco.educador = educador
             endereco.save()
-        if formacao_formset.is_bound:
-            formacao_formset.save()
+        if formulario_formacoes.is_bound:
+            formulario_formacoes.save()
         messages.success(request, "Seu perfil foi atualizado com sucesso.")
         return redirect("profile")
     active_profile_tab = "education" if adicionando_formacao or (
-        formacao_formset.is_bound and not formacoes_validas
+        formulario_formacoes.is_bound and not formacoes_validas
     ) else "personal"
     return render(
         request,
         "profile/profile.html",
         {
             "active_profile_tab": active_profile_tab,
-            "user_form": user_form,
-            "educador_form": educador_form,
-            "endereco_form": endereco_form,
-            "formacao_formset": formacao_formset,
+            # Estes nomes são o contrato existente com o template.
+            "user_form": formulario_usuario,
+            "educador_form": formulario_educador,
+            "endereco_form": formulario_endereco,
+            "formacao_formset": formulario_formacoes,
         },
     )

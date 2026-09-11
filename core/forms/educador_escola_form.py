@@ -13,6 +13,7 @@ from .bootstrap_form_mixin import BootstrapFormMixin
 
 
 class EducadorEscolaForm(BootstrapFormMixin, forms.ModelForm):
+    """Gerencia um vínculo individual entre educador, função e escola."""
     educador = forms.ModelChoiceField(
         label="Educador",
         queryset=Educador.objects.none(),
@@ -43,6 +44,7 @@ class EducadorEscolaForm(BootstrapFormMixin, forms.ModelForm):
         )
 
     def __init__(self, *args, **kwargs):
+        """Prepara opções dependentes e valores atuais para criação ou edição."""
         super().__init__(*args, **kwargs)
         self.fields["educador"].queryset = Educador.objects.select_related("usuario").order_by(
             "nome_completo",
@@ -92,6 +94,7 @@ class EducadorEscolaForm(BootstrapFormMixin, forms.ModelForm):
         return f"{educador} — {identificacao}"
 
     def clean(self):
+        """Valida a hierarquia geográfica e impede vínculos duplicados."""
         cleaned_data = super().clean()
         estado = cleaned_data.get("estado")
         cidade = cleaned_data.get("cidade")
@@ -124,6 +127,7 @@ class EducadorEscolaForm(BootstrapFormMixin, forms.ModelForm):
 
     @transaction.atomic
     def save(self, commit=True):
+        """Salva o vínculo escolar e sincroniza sua associação ao educador."""
         vinculo = super().save(commit=False)
         if commit:
             vinculo.save()

@@ -7,6 +7,7 @@ from ..forms import EducadorEscolaCadastroForm
 
 @require_http_methods(["GET", "POST"])
 def cadastro_educador(request):
+    """Exibe o cadastro público e persiste todos os vínculos validados."""
     form = EducadorEscolaCadastroForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         try:

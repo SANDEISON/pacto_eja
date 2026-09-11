@@ -6,6 +6,7 @@ from ..models import Cidade
 
 @require_GET
 def cidades_por_estado(request):
+    """Retorna municípios de uma UF para os selects dependentes da interface."""
     estado_id = request.GET.get("estado")
     cidades = (
         Cidade.objects.filter(estado_id=estado_id).values("id", "nome_cidade")
