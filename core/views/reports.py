@@ -90,14 +90,14 @@ class ReportsView(TemplateView):
         educadores_qs = Educador.objects.select_related(
             'usuario', 'genero', 'cor_raca'
         ).prefetch_related(
-            'vinculos_educador_escola__cidade__estado',
-            'vinculos_educador_escola__escola',
-            'vinculos_educador_escola__funcao'
+            'funcoes__educador_escola__cidade__estado',
+            'funcoes__educador_escola__escola',
+            'funcoes__educador_escola__funcao'
         )
 
         participantes_detalhados = []
         for ed in educadores_qs:
-            vinculos = list(ed.vinculos_educador_escola.all())
+            funcoes = list(ed.funcoes.all())
             nome = ed.nome_completo or (ed.usuario.get_full_name() if ed.usuario else '') or (ed.usuario.username if ed.usuario else 'Educador Sem Nome')
             cpf = ed.cpf or ''
             email = ed.usuario.email if ed.usuario else ''
@@ -105,8 +105,11 @@ class ReportsView(TemplateView):
             genero = ed.genero.nome if ed.genero else 'Não informado'
             cor = ed.cor_raca.nome if ed.cor_raca else 'Não informado'
 
-            if vinculos:
-                for v in vinculos:
+            if funcoes:
+                for f in funcoes:
+                    v = f.educador_escola
+                    if not v:
+                        continue
                     tempo_raw = v.tempo_atuacao or ''
                     tempo_desc = tempo_map.get(tempo_raw, tempo_raw or 'Não informado')
                     participantes_detalhados.append({
