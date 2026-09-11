@@ -234,6 +234,48 @@
     </div>
   </div>
 
+  <!-- Grade Secundária: Perfis Demográficos -->
+  <div class="row g-3 mb-4">
+    <!-- Card Gênero -->
+    <div class="col-12 col-md-6 col-xl-4">
+      <div class="card chart-card shadow-sm h-100 p-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="fw-bold m-0"><i class="bi bi-gender-ambiguous me-2 text-primary"></i>Gênero</h6>
+          <span class="badge bg-light text-dark fw-bold">Demográfico</span>
+        </div>
+        <div class="chart-container-sm">
+          <canvas id="generoChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card Tempo de Atuação -->
+    <div class="col-12 col-md-6 col-xl-4">
+      <div class="card chart-card shadow-sm h-100 p-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="fw-bold m-0"><i class="bi bi-clock-history me-2 text-success"></i>Tempo de Atuação EJA</h6>
+          <span class="badge bg-light text-dark fw-bold">Experiência</span>
+        </div>
+        <div class="chart-container-sm">
+          <canvas id="tempoChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card Cor / Raça -->
+    <div class="col-12 col-md-12 col-xl-4">
+      <div class="card chart-card shadow-sm h-100 p-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="fw-bold m-0"><i class="bi bi-palette-fill me-2 text-info"></i>Cor / Raça</h6>
+          <span class="badge bg-light text-dark fw-bold">Diversidade</span>
+        </div>
+        <div class="chart-container-sm">
+          <canvas id="corChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Seção Inferior: Tabela Detalhada com Filtros Avançados, Paginação e Exportação CSV -->
   <div class="card chart-card shadow-sm mb-4">
     <!-- Cabeçalho do Card com Abas de Visualização e Menu de Exportação -->
@@ -402,48 +444,6 @@
           <!-- Botões de paginação renderizados dinamicamente -->
         </ul>
       </nav>
-    </div>
-  </div>
-
-  <!-- Grade Secundária: Perfis Demográficos -->
-  <div class="row g-3">
-    <!-- Card Gênero -->
-    <div class="col-12 col-md-6 col-xl-4">
-      <div class="card chart-card shadow-sm h-100 p-3">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <h6 class="fw-bold m-0"><i class="bi bi-gender-ambiguous me-2 text-primary"></i>Gênero</h6>
-          <span class="badge bg-light text-dark fw-bold">Demográfico</span>
-        </div>
-        <div class="chart-container-sm">
-          <canvas id="generoChart"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <!-- Card Tempo de Atuação -->
-    <div class="col-12 col-md-6 col-xl-4">
-      <div class="card chart-card shadow-sm h-100 p-3">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <h6 class="fw-bold m-0"><i class="bi bi-clock-history me-2 text-success"></i>Tempo de Atuação EJA</h6>
-          <span class="badge bg-light text-dark fw-bold">Experiência</span>
-        </div>
-        <div class="chart-container-sm">
-          <canvas id="tempoChart"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <!-- Card Cor / Raça -->
-    <div class="col-12 col-md-12 col-xl-4">
-      <div class="card chart-card shadow-sm h-100 p-3">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <h6 class="fw-bold m-0"><i class="bi bi-palette-fill me-2 text-info"></i>Cor / Raça</h6>
-          <span class="badge bg-light text-dark fw-bold">Diversidade</span>
-        </div>
-        <div class="chart-container-sm">
-          <canvas id="corChart"></canvas>
-        </div>
-      </div>
     </div>
   </div>
 
