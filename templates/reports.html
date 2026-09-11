@@ -234,7 +234,7 @@
     </div>
   </div>
 
-  <!-- Seção Inferior: Tabela Detalhada com Filtros Avançados e Opções de Exportação CSV -->
+  <!-- Seção Inferior: Tabela Detalhada com Filtros Avançados, Paginação e Exportação CSV -->
   <div class="card chart-card shadow-sm mb-4">
     <!-- Cabeçalho do Card com Abas de Visualização e Menu de Exportação -->
     <div class="card-header bg-transparent border-bottom p-3">
@@ -243,7 +243,7 @@
           <h5 class="fw-bold m-0 d-flex align-items-center gap-2">
             <i class="bi bi-file-earmark-person-fill text-primary"></i> Tabela Detalhada & Exportação de Dados
           </h5>
-          <span class="small text-muted" id="tableSubtitle">Listagem geral dos participantes com filtros personalizados e exportação CSV granular.</span>
+          <span class="small text-muted" id="tableSubtitle">Listagem geral dos participantes com paginação, filtros personalizados e exportação CSV granular.</span>
         </div>
 
         <div class="d-flex align-items-center gap-2 flex-wrap">
@@ -337,7 +337,7 @@
           </div>
           <div class="col-12 col-md-4 text-md-end">
             <span class="badge bg-primary-subtle text-primary fw-bold px-3 py-2" id="filteredCountBadge">
-              Exibindo 0 participantes
+              Total: 0 participantes
             </span>
           </div>
         </div>
@@ -381,6 +381,27 @@
           </tbody>
         </table>
       </div>
+    </div>
+
+    <!-- Rodapé da Tabela com Paginação (10 por página) -->
+    <div class="card-footer bg-transparent border-top p-3 d-flex flex-column flex-sm-row align-items-center justify-content-between gap-3" id="participantsPaginationFooter">
+      <div class="d-flex align-items-center gap-3">
+        <span class="small text-muted fw-semibold" id="participantsPaginationInfo">Exibindo 0 registros</span>
+        <div class="d-flex align-items-center gap-1">
+          <label for="selectPageSize" class="small text-muted me-1">Por página:</label>
+          <select id="selectPageSize" class="form-select form-select-sm" style="width: 80px;">
+            <option value="10" selected>10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+        </div>
+      </div>
+      <nav aria-label="Navegação de páginas">
+        <ul class="pagination pagination-sm m-0" id="participantsPaginationNav">
+          <!-- Botões de paginação renderizados dinamicamente -->
+        </ul>
+      </nav>
     </div>
   </div>
 
@@ -455,6 +476,10 @@
   let mainChartInstance = null;
   let currentFilteredParticipants = [...participantsData];
 
+  // Estado da Paginação
+  let currentPage = 1;
+  let pageSize = 10;
+
   // Formata CPF para exibição bonita (ex: 123.456.789-00)
   function formatCPF(cpf) {
     if (!cpf) return '<span class="text-muted">—</span>';
@@ -509,8 +534,10 @@
     addOptions('filterGenero', generos);
   }
 
-  // Aplica os filtros na lista de participantes
+  // Aplica os filtros na lista de participantes e reseta a paginação para a página 1
   function applyParticipantFilters() {
+    currentPage = 1;
+
     const municipio = document.getElementById('filterMunicipio').value;
     const escola = document.getElementById('filterEscola').value;
     const funcao = document.getElementById('filterFuncao').value;
@@ -537,25 +564,42 @@
       return true;
     });
 
-    renderParticipantsTable(currentFilteredParticipants);
+    renderParticipantsTable();
   }
 
-  // Renderiza a Tabela Detalhada dos Participantes
-  function renderParticipantsTable(list) {
+  // Renderiza a Tabela Detalhada com Paginação (10 registros por página)
+  function renderParticipantsTable() {
+    const list = currentFilteredParticipants;
     const tBody = document.getElementById('tableParticipantsBody');
+    const paginationInfo = document.getElementById('participantsPaginationInfo');
     tBody.innerHTML = '';
 
-    document.getElementById('filteredCountBadge').innerText = `Exibindo ${list.length} de ${participantsData.length} participantes`;
+    const totalItems = list.length;
+    const totalPages = Math.ceil(totalItems / pageSize) || 1;
 
-    if (!list || list.length === 0) {
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+
+    const startIdx = (currentPage - 1) * pageSize;
+    const endIdx = Math.min(startIdx + pageSize, totalItems);
+    const pagedItems = list.slice(startIdx, endIdx);
+
+    document.getElementById('filteredCountBadge').innerText = `Total: ${totalItems} participante(s)`;
+
+    if (totalItems === 0) {
+      paginationInfo.innerText = 'Exibindo 0 registros';
       tBody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted"><i class="bi bi-inbox fs-3 d-block mb-1"></i>Nenhum participante encontrado com os filtros selecionados.</td></tr>';
+      renderPaginationControls(0, 1);
       return;
     }
 
-    list.forEach((p, idx) => {
+    paginationInfo.innerText = `Exibindo ${startIdx + 1} a ${endIdx} de ${totalItems} participante(s)`;
+
+    pagedItems.forEach((p, idx) => {
+      const realIndex = startIdx + idx + 1;
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td class="ps-4 fw-bold text-muted">${idx + 1}</td>
+        <td class="ps-4 fw-bold text-muted">${realIndex}</td>
         <td>
           <div class="fw-bold text-primary">${p.nome || 'Não informado'}</div>
           <small class="text-muted">
@@ -580,6 +624,94 @@
       `;
       tBody.appendChild(tr);
     });
+
+    renderPaginationControls(totalPages, currentPage);
+  }
+
+  // Renderiza os botões de navegação da paginação (Anterior, 1, 2, 3..., Próximo)
+  function renderPaginationControls(totalPages, activePage) {
+    const nav = document.getElementById('participantsPaginationNav');
+    nav.innerHTML = '';
+
+    if (totalPages <= 1) return;
+
+    // Botão Anterior
+    const prevLi = document.createElement('li');
+    prevLi.className = `page-item ${activePage === 1 ? 'disabled' : ''}`;
+    prevLi.innerHTML = `<button class="page-link" aria-label="Anterior"><i class="bi bi-chevron-left me-1"></i>Anterior</button>`;
+    if (activePage > 1) {
+      prevLi.querySelector('button').addEventListener('click', () => {
+        currentPage--;
+        renderParticipantsTable();
+      });
+    }
+    nav.appendChild(prevLi);
+
+    // Números de Página Inteligentes (até 5 números visíveis)
+    let startPage = Math.max(1, activePage - 2);
+    let endPage = Math.min(totalPages, startPage + 4);
+    if (endPage - startPage < 4) {
+      startPage = Math.max(1, endPage - 4);
+    }
+
+    if (startPage > 1) {
+      const firstLi = document.createElement('li');
+      firstLi.className = 'page-item';
+      firstLi.innerHTML = `<button class="page-link">1</button>`;
+      firstLi.querySelector('button').addEventListener('click', () => {
+        currentPage = 1;
+        renderParticipantsTable();
+      });
+      nav.appendChild(firstLi);
+
+      if (startPage > 2) {
+        const dotsLi = document.createElement('li');
+        dotsLi.className = 'page-item disabled';
+        dotsLi.innerHTML = `<span class="page-link">...</span>`;
+        nav.appendChild(dotsLi);
+      }
+    }
+
+    for (let p = startPage; p <= endPage; p++) {
+      const li = document.createElement('li');
+      li.className = `page-item ${p === activePage ? 'active' : ''}`;
+      li.innerHTML = `<button class="page-link">${p}</button>`;
+      const pageNum = p;
+      li.querySelector('button').addEventListener('click', () => {
+        currentPage = pageNum;
+        renderParticipantsTable();
+      });
+      nav.appendChild(li);
+    }
+
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) {
+        const dotsLi = document.createElement('li');
+        dotsLi.className = 'page-item disabled';
+        dotsLi.innerHTML = `<span class="page-link">...</span>`;
+        nav.appendChild(dotsLi);
+      }
+      const lastLi = document.createElement('li');
+      lastLi.className = 'page-item';
+      lastLi.innerHTML = `<button class="page-link">${totalPages}</button>`;
+      lastLi.querySelector('button').addEventListener('click', () => {
+        currentPage = totalPages;
+        renderParticipantsTable();
+      });
+      nav.appendChild(lastLi);
+    }
+
+    // Botão Próximo
+    const nextLi = document.createElement('li');
+    nextLi.className = `page-item ${activePage === totalPages ? 'disabled' : ''}`;
+    nextLi.innerHTML = `<button class="page-link" aria-label="Próximo">Próximo<i class="bi bi-chevron-right ms-1"></i></button>`;
+    if (activePage < totalPages) {
+      nextLi.querySelector('button').addEventListener('click', () => {
+        currentPage++;
+        renderParticipantsTable();
+      });
+    }
+    nav.appendChild(nextLi);
   }
 
   // Renderiza o Gráfico Principal
@@ -860,6 +992,13 @@
   document.getElementById('filterGenero').addEventListener('change', applyParticipantFilters);
   document.getElementById('participantSearchInput').addEventListener('input', applyParticipantFilters);
 
+  // Event Listener para alterar quantidade de registros por página (10, 25, 50, 100)
+  document.getElementById('selectPageSize').addEventListener('change', (e) => {
+    pageSize = parseInt(e.target.value, 10) || 10;
+    currentPage = 1;
+    renderParticipantsTable();
+  });
+
   document.getElementById('btnClearFilters').addEventListener('click', () => {
     document.getElementById('filterMunicipio').value = '';
     document.getElementById('filterEscola').value = '';
@@ -876,17 +1015,20 @@
       const tableParticipants = document.getElementById('tableParticipants');
       const tableSummary = document.getElementById('tableSummary');
       const filtersContainer = document.getElementById('participantFiltersContainer');
+      const paginationFooter = document.getElementById('participantsPaginationFooter');
       const subtitle = document.getElementById('tableSubtitle');
 
       if (mode === 'participants') {
         tableParticipants.classList.remove('d-none');
         tableSummary.classList.add('d-none');
         filtersContainer.classList.remove('d-none');
-        subtitle.innerText = 'Listagem geral dos participantes com filtros personalizados e exportação CSV granular.';
+        paginationFooter.classList.remove('d-none');
+        subtitle.innerText = 'Listagem geral dos participantes com paginação, filtros personalizados e exportação CSV granular.';
       } else {
         tableParticipants.classList.add('d-none');
         tableSummary.classList.remove('d-none');
         filtersContainer.classList.add('d-none');
+        paginationFooter.classList.add('d-none');
         subtitle.innerText = 'Resumo quantitativo e percentual por dimensão estatística.';
       }
     });
