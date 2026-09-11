@@ -589,14 +589,26 @@
     return colors;
   }
 
-  // Inicialização do Mapa Interativo do Brasil com Leaflet
+  // Mapeamento de nomes de estados para sigla UF
+  const STATE_NAME_TO_SIGLA = {
+    "acre": "AC", "alagoas": "AL", "amapá": "AP", "amapa": "AP", "amazonas": "AM",
+    "bahia": "BA", "ceará": "CE", "ceara": "CE", "distrito federal": "DF",
+    "espírito santo": "ES", "espirito santo": "ES", "goiás": "GO", "goias": "GO",
+    "maranhão": "MA", "maranhao": "MA", "mato grosso": "MT", "mato grosso do sul": "MS",
+    "minas gerais": "MG", "pará": "PA", "para": "PA", "paraíba": "PB", "paraiba": "PB",
+    "paraná": "PR", "parana": "PR", "pernambuco": "PE", "piauí": "PI", "piaui": "PI",
+    "rio de janeiro": "RJ", "rio grande do norte": "RN", "rio grande do sul": "RS",
+    "rondônia": "RO", "rondonia": "RO", "roraima": "RR", "santa catarina": "SC",
+    "são paulo": "SP", "sao paulo": "SP", "sergipe": "SE", "tocantins": "TO"
+  };
+
+  // Inicialização do Mapa Coroplético do Brasil por Estado com Leaflet
   function initBrazilMap() {
     const mapContainer = document.getElementById('mapBrazil');
     if (!mapContainer) return;
 
     const isDark = document.body.getAttribute('data-bs-theme') === 'dark' || document.documentElement.getAttribute('data-bs-theme') === 'dark';
 
-    // Se o mapa já existir, remove
     if (leafletMapInstance) leafletMapInstance.remove();
 
     // Centro do Brasil
@@ -607,7 +619,7 @@
       scrollWheelZoom: false
     });
 
-    // CARTO Basemaps API Key
+    // CARTO Basemaps API Key para a camada base neutra em tom cinza
     const cartoApiKey = 'cb1_3hah_1_072f421d51111ef4352b9c82';
     const tileUrl = isDark 
       ? `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=${cartoApiKey}`
@@ -619,67 +631,108 @@
       maxZoom: 19
     }).addTo(leafletMapInstance);
 
-    const municipioData = datasets.municipio.data || [];
-    const bounds = [];
-
-    municipioData.forEach(item => {
-      const cityName = (item.label || '').trim();
-      if (!cityName || cityName === 'Não informado') return;
-
-      const normName = cityName.toLowerCase();
-      const stateSigla = item.state || '';
-
-      // Tenta obter coordenadas exatas do dicionário ou fallback do estado
-      let coords = CITY_COORDINATES[normName];
-      if (!coords && stateSigla && STATE_COORDINATES[stateSigla]) {
-        const base = STATE_COORDINATES[stateSigla];
-        // Adiciona pequena variação aleatória para não sobrepor na mesma capital
-        coords = [base[0] + (Math.random() - 0.5) * 0.4, base[1] + (Math.random() - 0.5) * 0.4];
-      }
-
-      if (coords) {
-        bounds.push(coords);
-        const radius = Math.max(9, Math.min(26, 7 + Math.sqrt(item.qtd) * 4));
-
-        const circle = L.circleMarker(coords, {
-          radius: radius,
-          fillColor: '#0d6efd',
-          color: '#ffffff',
-          weight: 2,
-          opacity: 0.9,
-          fillOpacity: 0.85
-        }).addTo(leafletMapInstance);
-
-        const popupContent = `
-          <div class="p-2 text-center" style="min-width: 140px;">
-            <div class="fw-bold text-primary mb-1">📍 ${cityName} ${stateSigla ? ' - ' + stateSigla : ''}</div>
-            <span class="badge bg-primary px-3 py-1 fs-6 mb-2">${item.qtd} Educador(es)</span>
-            <div>
-              <button type="button" class="btn btn-sm btn-outline-primary fw-semibold w-100 py-1" onclick="filterByCityFromMap('${cityName.replace(/'/g, "\\'")}')">
-                <i class="bi bi-funnel me-1"></i> Filtrar Cidade
-              </button>
-            </div>
-          </div>
-        `;
-
-        circle.bindPopup(popupContent);
-      }
+    // Mapeia totais de educadores por Estado
+    const stateCounts = {};
+    const estadoData = datasets.estado.data || [];
+    estadoData.forEach(item => {
+      const stateName = (item.label || '').trim();
+      if (!stateName || stateName === 'Não informado') return;
+      const sigla = STATE_NAME_TO_SIGLA[stateName.toLowerCase()] || stateName.toUpperCase();
+      stateCounts[sigla] = (stateCounts[sigla] || 0) + item.qtd;
+      stateCounts[stateName.toLowerCase()] = (stateCounts[stateName.toLowerCase()] || 0) + item.qtd;
     });
 
-    // Ajusta o zoom do mapa para os municípios plotados
-    if (bounds.length > 0) {
-      leafletMapInstance.fitBounds(bounds, { padding: [40, 40], maxZoom: 8 });
+    // Função de Escala de Cores do Estado (Choropleth)
+    function getStateColor(count) {
+      if (!count || count === 0) return isDark ? '#2b3035' : '#e9ecef';
+      if (count <= 2) return '#9ec5fe'; // Azul Claro
+      if (count <= 5) return '#3d8bfd'; // Azul Vibrante
+      if (count <= 10) return '#0d6efd'; // Azul Primário
+      return '#0a58ca'; // Azul Intenso
     }
+
+    // Carrega GeoJSON oficial dos Estados do Brasil
+    fetch('https://cdn.jsdelivr.net/gh/codeforamerica/click_that_hood@master/public/data/brazil-states.geojson')
+      .then(res => res.json())
+      .then(geoJsonData => {
+        L.geoJSON(geoJsonData, {
+          style: function(feature) {
+            const stateName = feature.properties.name || '';
+            const sigla = STATE_NAME_TO_SIGLA[stateName.toLowerCase()] || feature.properties.sigla || '';
+            const count = stateCounts[sigla] || stateCounts[stateName.toLowerCase()] || 0;
+
+            return {
+              fillColor: getStateColor(count),
+              weight: 1.5,
+              opacity: 1,
+              color: isDark ? '#495057' : '#ffffff',
+              fillOpacity: count > 0 ? 0.85 : 0.4
+            };
+          },
+          onEachFeature: function(feature, layer) {
+            const stateName = feature.properties.name || 'Estado';
+            const sigla = STATE_NAME_TO_SIGLA[stateName.toLowerCase()] || feature.properties.sigla || '';
+            const count = stateCounts[sigla] || stateCounts[stateName.toLowerCase()] || 0;
+
+            // Destaque ao passar o mouse (Hover)
+            layer.on({
+              mouseover: function(e) {
+                const l = e.target;
+                l.setStyle({
+                  weight: 3,
+                  color: '#0d6efd',
+                  fillOpacity: 0.95
+                });
+                if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+                  l.bringToFront();
+                }
+              },
+              mouseout: function(e) {
+                leafletGeoJsonLayer.resetStyle(e.target);
+              },
+              click: function() {
+                filterByStateFromMap(stateName);
+              }
+            });
+
+            // Tooltip e Popup do Estado
+            const popupContent = `
+              <div class="p-2 text-center" style="min-width: 150px;">
+                <div class="fw-bold text-primary mb-1">🗺️ ${stateName} ${sigla ? ' (' + sigla + ')' : ''}</div>
+                <span class="badge ${count > 0 ? 'bg-primary' : 'bg-secondary'} px-3 py-1 fs-6 mb-2">
+                  ${count} Educador(es)
+                </span>
+                ${count > 0 ? `
+                  <div>
+                    <button type="button" class="btn btn-sm btn-outline-primary fw-semibold w-100 py-1" onclick="filterByStateFromMap('${stateName.replace(/'/g, "\\'")}')">
+                      <i class="bi bi-funnel me-1"></i> Filtrar Estado
+                    </button>
+                  </div>
+                ` : ''}
+              </div>
+            `;
+            layer.bindPopup(popupContent);
+          }
+        }).addTo(leafletMapInstance);
+
+        var leafletGeoJsonLayer = leafletMapInstance._layers[Object.keys(leafletMapInstance._layers).find(k => leafletMapInstance._layers[k].resetStyle)];
+      })
+      .catch(err => console.warn('GeoJSON carregado via fallback básico:', err));
   }
 
-  // Função chamada ao clicar em uma cidade no mapa
-  window.filterByCityFromMap = function(cityName) {
-    const filterMunicipio = document.getElementById('filterMunicipio');
-    if (filterMunicipio) {
-      filterMunicipio.value = cityName;
-      applyParticipantFilters();
+  // Função chamada ao clicar em um estado no mapa
+  window.filterByStateFromMap = function(stateName) {
+    const filterSelect = document.getElementById('filterSelect');
+    if (filterSelect) {
+      filterSelect.value = 'estado';
+      renderMainChart();
       
-      // Rola suavemente até a tabela de participantes
+      const searchInput = document.getElementById('participantSearchInput');
+      if (searchInput) {
+        searchInput.value = stateName;
+        applyParticipantFilters();
+      }
+
       document.getElementById('tableParticipants').scrollIntoView({ behavior: 'smooth' });
     }
   };
