@@ -148,7 +148,8 @@ activemq-data/
 *.sage.py
 
 # Environments
-.env
+
+
 .envrc
 .env.production
 .venv
@@ -218,3 +219,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local Scratch, Environment and Exported files
+scratch/
+.env
+.venv_backup/
+*.csv
