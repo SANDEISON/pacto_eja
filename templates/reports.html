@@ -5,6 +5,7 @@
 {% block breadcrumb %}<li class="breadcrumb-item active" aria-current="page">Relatórios</li>{% endblock %}
 
 {% block page_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
 <style>
   .report-header-banner {
     background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 50%, #084298 100%);
@@ -38,6 +39,15 @@
     border-radius: 16px;
     border: 1px solid rgba(120, 130, 140, 0.15);
     background-color: var(--bs-body-bg, #ffffff);
+    overflow: hidden;
+  }
+
+  .map-wrapper {
+    position: relative;
+    height: 420px;
+    width: 100%;
+    border-radius: 0 0 16px 16px;
+    z-index: 1;
   }
 
   .chart-container-main {
@@ -76,6 +86,12 @@
     border-radius: 12px;
     padding: 8px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  }
+
+  .leaflet-popup-content-wrapper {
+    border-radius: 12px;
+    padding: 4px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
   }
 </style>
 {% endblock %}
@@ -162,6 +178,26 @@
           </div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Mapa Interativo de Distribuição Geográfica do Brasil -->
+  <div class="card chart-card shadow-sm mb-4">
+    <div class="card-header bg-transparent border-bottom p-3 d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2">
+      <div>
+        <h5 class="fw-bold m-0 d-flex align-items-center gap-2">
+          <i class="bi bi-map-fill text-primary"></i> Mapa Interativo de Distribuição — Brasil
+        </h5>
+        <span class="small text-muted">Mapeamento em tempo real das cidades com educadores cadastrados no Pacto EJA.</span>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-primary-subtle text-primary fw-bold px-3 py-2">
+          <i class="bi bi-geo-alt me-1"></i> {{ total_municipios|default:0 }} Cidades Mapeadas
+        </span>
+      </div>
+    </div>
+    <div class="card-body p-0">
+      <div id="mapBrazil" class="map-wrapper"></div>
     </div>
   </div>
 
@@ -452,9 +488,58 @@
 
 {% block page_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script>
   // Dataset de Participantes Detalhados
   const participantsData = {{ participantes_detalhados_json|safe }};
+
+  // Coordenadas Geográficas de Referência para Cidades do Brasil (Lat, Lng)
+  const CITY_COORDINATES = {
+    "joão pessoa": [-7.1195, -34.8450],
+    "campina grande": [-7.2307, -35.8817],
+    "patos": [-7.0269, -37.2797],
+    "sousa": [-6.7616, -38.2274],
+    "cajazeiras": [-6.8884, -38.5567],
+    "guarabira": [-6.8536, -35.4903],
+    "são miguel de taipu": [-7.2338, -35.0069],
+    "santa rita": [-7.1139, -34.9781],
+    "bayeux": [-7.1264, -34.9317],
+    "cabedelo": [-6.9814, -34.8339],
+    "nova iguaçu": [-22.7592, -43.4511],
+    "carpina": [-7.8503, -35.2536],
+    "timbaúba dos batistas": [-6.4636, -37.0547],
+    "ouroeste": [-20.0006, -50.3719],
+    "guanambi": [-14.2239, -42.7814],
+    "caldeirão grande": [-10.9789, -40.3019],
+    "bom jardim": [-7.7958, -35.5861],
+    "brejinho": [-6.1864, -35.3561],
+    "poções": [-14.5286, -40.3667],
+    "caetanos": [-14.3314, -41.0778],
+    "barra da estiva": [-13.6264, -41.3267],
+    "cristópolis": [-12.0461, -45.1764],
+    "heliópolis": [-10.6806, -38.3583],
+    "ribeirão pires": [-23.7125, -46.4136],
+    "recife": [-8.0476, -34.8770],
+    "salvador": [-12.9777, -38.5016],
+    "natal": [-5.7945, -35.2110],
+    "são paulo": [-23.5505, -46.6333],
+    "rio de janeiro": [-22.9068, -43.1729],
+    "brasília": [-15.7975, -47.8919],
+    "fortaleza": [-3.7319, -38.5267],
+    "maceió": [-9.6658, -35.7353],
+    "aracaju": [-10.9472, -37.0731],
+    "teresina": [-5.0920, -42.8038],
+    "são luís": [-2.5307, -44.3068],
+    "belo horizonte": [-19.9167, -43.9345]
+  };
+
+  const STATE_COORDINATES = {
+    "PB": [-7.12, -36.72], "PE": [-8.05, -37.27], "RN": [-5.81, -36.59],
+    "BA": [-12.97, -41.70], "SP": [-23.55, -46.63], "RJ": [-22.90, -43.20],
+    "CE": [-5.20, -39.53], "AL": [-9.57, -36.78], "SE": [-10.57, -37.38],
+    "MA": [-5.42, -45.44], "PI": [-7.71, -42.72], "MG": [-18.51, -44.55],
+    "DF": [-15.79, -47.89], "AM": [-3.41, -65.85], "PA": [-3.79, -52.48]
+  };
 
   // Paletas de Cores Harmoniosas
   const COLOR_PALETTE = [
@@ -474,13 +559,14 @@
   };
 
   let mainChartInstance = null;
+  let leafletMapInstance = null;
   let currentFilteredParticipants = [...participantsData];
 
   // Estado da Paginação
   let currentPage = 1;
   let pageSize = 10;
 
-  // Formata CPF para exibição bonita (ex: 123.456.789-00)
+  // Formata CPF para exibição bonita
   function formatCPF(cpf) {
     if (!cpf) return '<span class="text-muted">—</span>';
     const clean = cpf.replace(/\D/g, '');
@@ -502,6 +588,101 @@
     }
     return colors;
   }
+
+  // Inicialização do Mapa Interativo do Brasil com Leaflet
+  function initBrazilMap() {
+    const mapContainer = document.getElementById('mapBrazil');
+    if (!mapContainer) return;
+
+    const isDark = document.body.getAttribute('data-bs-theme') === 'dark' || document.documentElement.getAttribute('data-bs-theme') === 'dark';
+
+    // Se o mapa já existir, remove
+    if (leafletMapInstance) leafletMapInstance.remove();
+
+    // Centro do Brasil
+    leafletMapInstance = L.map('mapBrazil', {
+      center: [-14.2350, -51.9253],
+      zoom: 4,
+      zoomControl: true,
+      scrollWheelZoom: false
+    });
+
+    // CARTO Basemaps API Key
+    const cartoApiKey = 'cb1_3hah_1_072f421d51111ef4352b9c82';
+    const tileUrl = isDark 
+      ? `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=${cartoApiKey}`
+      : `https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=${cartoApiKey}`;
+
+    L.tileLayer(tileUrl, {
+      attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap',
+      subdomains: 'abcd',
+      maxZoom: 19
+    }).addTo(leafletMapInstance);
+
+    const municipioData = datasets.municipio.data || [];
+    const bounds = [];
+
+    municipioData.forEach(item => {
+      const cityName = (item.label || '').trim();
+      if (!cityName || cityName === 'Não informado') return;
+
+      const normName = cityName.toLowerCase();
+      const stateSigla = item.state || '';
+
+      // Tenta obter coordenadas exatas do dicionário ou fallback do estado
+      let coords = CITY_COORDINATES[normName];
+      if (!coords && stateSigla && STATE_COORDINATES[stateSigla]) {
+        const base = STATE_COORDINATES[stateSigla];
+        // Adiciona pequena variação aleatória para não sobrepor na mesma capital
+        coords = [base[0] + (Math.random() - 0.5) * 0.4, base[1] + (Math.random() - 0.5) * 0.4];
+      }
+
+      if (coords) {
+        bounds.push(coords);
+        const radius = Math.max(9, Math.min(26, 7 + Math.sqrt(item.qtd) * 4));
+
+        const circle = L.circleMarker(coords, {
+          radius: radius,
+          fillColor: '#0d6efd',
+          color: '#ffffff',
+          weight: 2,
+          opacity: 0.9,
+          fillOpacity: 0.85
+        }).addTo(leafletMapInstance);
+
+        const popupContent = `
+          <div class="p-2 text-center" style="min-width: 140px;">
+            <div class="fw-bold text-primary mb-1">📍 ${cityName} ${stateSigla ? ' - ' + stateSigla : ''}</div>
+            <span class="badge bg-primary px-3 py-1 fs-6 mb-2">${item.qtd} Educador(es)</span>
+            <div>
+              <button type="button" class="btn btn-sm btn-outline-primary fw-semibold w-100 py-1" onclick="filterByCityFromMap('${cityName.replace(/'/g, "\\'")}')">
+                <i class="bi bi-funnel me-1"></i> Filtrar Cidade
+              </button>
+            </div>
+          </div>
+        `;
+
+        circle.bindPopup(popupContent);
+      }
+    });
+
+    // Ajusta o zoom do mapa para os municípios plotados
+    if (bounds.length > 0) {
+      leafletMapInstance.fitBounds(bounds, { padding: [40, 40], maxZoom: 8 });
+    }
+  }
+
+  // Função chamada ao clicar em uma cidade no mapa
+  window.filterByCityFromMap = function(cityName) {
+    const filterMunicipio = document.getElementById('filterMunicipio');
+    if (filterMunicipio) {
+      filterMunicipio.value = cityName;
+      applyParticipantFilters();
+      
+      // Rola suavemente até a tabela de participantes
+      document.getElementById('tableParticipants').scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   // Preenche os Selects de Filtros com os dados únicos disponíveis
   function populateFilterDropdowns() {
@@ -534,7 +715,7 @@
     addOptions('filterGenero', generos);
   }
 
-  // Aplica os filtros na lista de participantes e reseta a paginação para a página 1
+  // Aplica os filtros na lista de participantes
   function applyParticipantFilters() {
     currentPage = 1;
 
@@ -567,7 +748,7 @@
     renderParticipantsTable();
   }
 
-  // Renderiza a Tabela Detalhada com Paginação (10 registros por página)
+  // Renderiza a Tabela Detalhada com Paginação
   function renderParticipantsTable() {
     const list = currentFilteredParticipants;
     const tBody = document.getElementById('tableParticipantsBody');
@@ -628,14 +809,13 @@
     renderPaginationControls(totalPages, currentPage);
   }
 
-  // Renderiza os botões de navegação da paginação (Anterior, 1, 2, 3..., Próximo)
+  // Renderiza os botões de navegação da paginação
   function renderPaginationControls(totalPages, activePage) {
     const nav = document.getElementById('participantsPaginationNav');
     nav.innerHTML = '';
 
     if (totalPages <= 1) return;
 
-    // Botão Anterior
     const prevLi = document.createElement('li');
     prevLi.className = `page-item ${activePage === 1 ? 'disabled' : ''}`;
     prevLi.innerHTML = `<button class="page-link" aria-label="Anterior"><i class="bi bi-chevron-left me-1"></i>Anterior</button>`;
@@ -647,7 +827,6 @@
     }
     nav.appendChild(prevLi);
 
-    // Números de Página Inteligentes (até 5 números visíveis)
     let startPage = Math.max(1, activePage - 2);
     let endPage = Math.min(totalPages, startPage + 4);
     if (endPage - startPage < 4) {
@@ -701,7 +880,6 @@
       nav.appendChild(lastLi);
     }
 
-    // Botão Próximo
     const nextLi = document.createElement('li');
     nextLi.className = `page-item ${activePage === totalPages ? 'disabled' : ''}`;
     nextLi.innerHTML = `<button class="page-link" aria-label="Próximo">Próximo<i class="bi bi-chevron-right ms-1"></i></button>`;
@@ -848,7 +1026,7 @@
     });
   }
 
-  // Exportação CSV 1: Participantes Detalhados (com filtros aplicados)
+  // Exportação CSV 1: Participantes Detalhados
   function exportFullParticipantsCSV() {
     const dataToExport = currentFilteredParticipants;
 
@@ -857,7 +1035,6 @@
       return;
     }
 
-    // Usar BOM \uFEFF para garantir acentuação perfeita no Microsoft Excel (Windows)
     let csvContent = "\uFEFFNome Completo;CPF;E-mail;Telefone;Município;Estado;Escola;Função;Tempo de Atuação EJA;Gênero;Cor / Raça\n";
 
     dataToExport.forEach(p => {
@@ -992,7 +1169,6 @@
   document.getElementById('filterGenero').addEventListener('change', applyParticipantFilters);
   document.getElementById('participantSearchInput').addEventListener('input', applyParticipantFilters);
 
-  // Event Listener para alterar quantidade de registros por página (10, 25, 50, 100)
   document.getElementById('selectPageSize').addEventListener('change', (e) => {
     pageSize = parseInt(e.target.value, 10) || 10;
     currentPage = 1;
@@ -1050,6 +1226,7 @@
     applyParticipantFilters();
     renderMainChart();
     renderSecondaryCharts();
+    initBrazilMap();
   });
 </script>
 {% endblock %}
