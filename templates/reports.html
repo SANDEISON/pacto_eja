@@ -1,0 +1,604 @@
+{% extends "base.html" %}
+
+{% block title %}Relatórios & Analytics | Pacto EJA{% endblock %}
+{% block page_title %}Relatórios & Analytics{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active" aria-current="page">Relatórios</li>{% endblock %}
+
+{% block page_css %}
+<style>
+  .report-header-banner {
+    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 50%, #084298 100%);
+    color: #ffffff;
+    border-radius: 16px;
+    padding: 24px 28px;
+    box-shadow: 0 10px 30px rgba(13, 110, 253, 0.2);
+  }
+
+  .stat-card-widget {
+    border: 0;
+    border-radius: 14px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    overflow: hidden;
+  }
+  .stat-card-widget:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15) !important;
+  }
+  .stat-icon-wrapper {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+  }
+
+  .chart-card {
+    border-radius: 16px;
+    border: 1px solid rgba(120, 130, 140, 0.15);
+    background-color: var(--bs-body-bg, #ffffff);
+  }
+
+  .chart-container-main {
+    position: relative;
+    height: 380px;
+    width: 100%;
+  }
+  .chart-container-sm {
+    position: relative;
+    height: 260px;
+    width: 100%;
+  }
+
+  .top-list-item {
+    padding: 10px 14px;
+    border-radius: 10px;
+    background-color: rgba(100, 110, 120, 0.06);
+    margin-bottom: 8px;
+    transition: background-color 0.2s;
+  }
+  .top-list-item:hover {
+    background-color: rgba(100, 110, 120, 0.12);
+  }
+
+  .filter-btn-group .btn-check:checked + .btn {
+    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
+  }
+
+  .badge-stat {
+    font-size: 0.82rem;
+    padding: 6px 12px;
+    border-radius: 20px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+
+  <!-- Banner de Cabeçalho -->
+  <div class="report-header-banner mb-4 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+    <div>
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <span class="badge bg-white text-primary fw-bold px-3 py-1 rounded-pill">PAINEL ESTATÍSTICO</span>
+      </div>
+      <h2 class="fw-bold m-0 text-white">Relatórios & Analytics EJA</h2>
+      <p class="m-0 opacity-85 fs-6 mt-1">Análise detalhada de participantes, escolas, abrangência geográfica e perfil demográfico.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <button type="button" class="btn btn-light btn-sm fw-semibold shadow-sm px-3 py-2" onclick="window.print()">
+        <i class="bi bi-printer me-1"></i> Imprimir / PDF
+      </button>
+      <button type="button" class="btn btn-outline-light btn-sm fw-semibold px-3 py-2" onclick="location.reload()">
+        <i class="bi bi-arrow-clockwise me-1"></i> Atualizar
+      </button>
+    </div>
+  </div>
+
+  <!-- Cards de Métricas Principais (KPIs) -->
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-sm-6 col-xl-3">
+      <div class="card stat-card-widget shadow-sm h-100 p-3" style="border-left: 5px solid #0d6efd;">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <span class="text-muted small fw-semibold text-uppercase">Educadores</span>
+            <h3 class="fw-bold my-1 text-primary">{{ total_educadores|default:0 }}</h3>
+            <span class="text-muted small">Total Cadastrado</span>
+          </div>
+          <div class="stat-icon-wrapper bg-primary-subtle text-primary">
+            <i class="bi bi-people-fill"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+      <div class="card stat-card-widget shadow-sm h-100 p-3" style="border-left: 5px solid #198754;">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <span class="text-muted small fw-semibold text-uppercase">Vínculos</span>
+            <h3 class="fw-bold my-1 text-success">{{ total_vinculos|default:0 }}</h3>
+            <span class="text-muted small">Vínculos Escolares</span>
+          </div>
+          <div class="stat-icon-wrapper bg-success-subtle text-success">
+            <i class="bi bi-person-workspace"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+      <div class="card stat-card-widget shadow-sm h-100 p-3" style="border-left: 5px solid #0dcaf0;">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <span class="text-muted small fw-semibold text-uppercase">Municípios</span>
+            <h3 class="fw-bold my-1 text-info">{{ total_municipios|default:0 }}</h3>
+            <span class="text-muted small">Cidades Atendidas</span>
+          </div>
+          <div class="stat-icon-wrapper bg-info-subtle text-info">
+            <i class="bi bi-geo-alt-fill"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+      <div class="card stat-card-widget shadow-sm h-100 p-3" style="border-left: 5px solid #6f42c1;">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <span class="text-muted small fw-semibold text-uppercase">Escolas</span>
+            <h3 class="fw-bold my-1 text-purple" style="color: #6f42c1;">{{ total_escolas|default:0 }}</h3>
+            <span class="text-muted small">Escolas Participantes</span>
+          </div>
+          <div class="stat-icon-wrapper text-purple" style="background-color: rgba(111, 66, 193, 0.15); color: #6f42c1;">
+            <i class="bi bi-building-check"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Painel Principal de Exploração Dinâmica -->
+  <div class="card chart-card shadow-sm mb-4">
+    <div class="card-header bg-transparent border-bottom p-3">
+      <div class="row align-items-center g-3">
+        <!-- Dropdown Seleção de Dimensão -->
+        <div class="col-12 col-md-5 col-lg-4">
+          <label for="filterSelect" class="form-label small fw-bold text-uppercase me-2 mb-1">
+            <i class="bi bi-funnel-fill me-1 text-primary"></i> Dimensão do Relatório:
+          </label>
+          <select id="filterSelect" class="form-select form-select-md fw-semibold border-primary-subtle">
+            <option value="municipio" selected>🏙️ Município de Atuação</option>
+            <option value="escola">🏫 Escola</option>
+            <option value="estado">🗺️ Estado</option>
+            <option value="funcao">💼 Função do Educador</option>
+            <option value="tempo">⏳ Tempo de Atuação na EJA</option>
+            <option value="genero">👤 Gênero</option>
+            <option value="cor">🎨 Cor / Raça</option>
+          </select>
+        </div>
+
+        <!-- Seletor de Tipo de Gráfico -->
+        <div class="col-12 col-md-7 col-lg-8 d-flex justify-content-md-end align-items-center gap-2 flex-wrap">
+          <span class="small text-muted fw-semibold me-1 d-none d-sm-inline">Estilo do Visualizador:</span>
+          <div class="btn-group btn-group-sm filter-btn-group" role="group" aria-label="Tipo de Gráfico">
+            <input type="radio" class="btn-check" name="chartType" id="chartTypeBar" value="bar" checked>
+            <label class="btn btn-outline-primary fw-semibold" for="chartTypeBar">
+              <i class="bi bi-bar-chart-line-fill me-1"></i> Barras
+            </label>
+
+            <input type="radio" class="btn-check" name="chartType" id="chartTypeDonut" value="doughnut">
+            <label class="btn btn-outline-primary fw-semibold" for="chartTypeDonut">
+              <i class="bi bi-pie-chart-fill me-1"></i> Rosca
+            </label>
+
+            <input type="radio" class="btn-check" name="chartType" id="chartTypePie" value="pie">
+            <label class="btn btn-outline-primary fw-semibold" for="chartTypePie">
+              <i class="bi bi-pie-chart me-1"></i> Pizza
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-body p-4">
+      <div class="row g-4 align-items-center">
+        <!-- Gráfico Interativo Principal -->
+        <div class="col-12 col-lg-7 col-xl-8">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold m-0" id="mainChartTitle">Distribuição por Município</h5>
+            <span class="badge bg-primary-subtle text-primary fw-bold badge-stat" id="mainChartTotal">Total: 0</span>
+          </div>
+          <div class="chart-container-main">
+            <canvas id="mainChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Ranking / Destaques Laterais -->
+        <div class="col-12 col-lg-5 col-xl-4 border-start-lg ps-lg-4">
+          <h6 class="fw-bold mb-3 d-flex align-items-center gap-2">
+            <i class="bi bi-trophy-fill text-warning"></i> Principais Destaques
+          </h6>
+          <div id="topBreakdownList" class="d-flex flex-column gap-1">
+            <!-- Renderizado dinamicamente via JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Seção Inferior: Tabela Detalhada com Busca e Exportação -->
+  <div class="card chart-card shadow-sm mb-4">
+    <div class="card-header bg-transparent border-bottom p-3 d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3">
+      <div>
+        <h5 class="fw-bold m-0"><i class="bi bi-table me-2 text-primary"></i>Tabela Detalhada de Dados</h5>
+        <span class="small text-muted">Valores absolutos e percentuais da dimensão selecionada</span>
+      </div>
+      <div class="d-flex gap-2">
+        <div class="input-group input-group-sm" style="max-width: 250px;">
+          <span class="input-group-text bg-transparent"><i class="bi bi-search"></i></span>
+          <input type="text" id="tableSearch" class="form-select-sm form-control" placeholder="Filtrar tabela...">
+        </div>
+        <button id="btnExportCsv" class="btn btn-sm btn-outline-success fw-semibold">
+          <i class="bi bi-file-earmark-spreadsheet me-1"></i> CSV
+        </button>
+      </div>
+    </div>
+
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle m-0" id="dataTable">
+          <thead class="table-light">
+            <tr>
+              <th class="ps-4" style="width: 70px;">#</th>
+              <th>Categoria / Nome</th>
+              <th class="text-center" style="width: 180px;">Quantidade</th>
+              <th class="pe-4" style="width: 300px;">Representatividade (%)</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <!-- Preenchido dinamicamente via JavaScript -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Grade Secundária: Perfis Demográficos -->
+  <div class="row g-3">
+    <!-- Card Gênero -->
+    <div class="col-12 col-md-6 col-xl-4">
+      <div class="card chart-card shadow-sm h-100 p-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="fw-bold m-0"><i class="bi bi-gender-ambiguous me-2 text-primary"></i>Gênero</h6>
+          <span class="badge bg-light text-dark fw-bold">Demográfico</span>
+        </div>
+        <div class="chart-container-sm">
+          <canvas id="generoChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card Tempo de Atuação -->
+    <div class="col-12 col-md-6 col-xl-4">
+      <div class="card chart-card shadow-sm h-100 p-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="fw-bold m-0"><i class="bi bi-clock-history me-2 text-success"></i>Tempo de Atuação EJA</h6>
+          <span class="badge bg-light text-dark fw-bold">Experiência</span>
+        </div>
+        <div class="chart-container-sm">
+          <canvas id="tempoChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card Cor / Raça -->
+    <div class="col-12 col-md-12 col-xl-4">
+      <div class="card chart-card shadow-sm h-100 p-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="fw-bold m-0"><i class="bi bi-palette-fill me-2 text-info"></i>Cor / Raça</h6>
+          <span class="badge bg-light text-dark fw-bold">Diversidade</span>
+        </div>
+        <div class="chart-container-sm">
+          <canvas id="corChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+  // Paletas de Cores Harmoniosas
+  const COLOR_PALETTE = [
+    '#0d6efd', '#198754', '#0dcaf0', '#6f42c1', '#fd7e14',
+    '#d63384', '#20c997', '#ffc107', '#6610f2', '#084298',
+    '#146c43', '#087990', '#495057', '#b02a37', '#e0a800'
+  ];
+
+  const datasets = {
+    municipio: { title: "Distribuição por Município", data: {{ municipio_json|safe }} },
+    escola: { title: "Distribuição por Escola", data: {{ escola_json|safe }} },
+    estado: { title: "Distribuição por Estado", data: {{ estado_json|safe }} },
+    genero: { title: "Distribuição por Gênero", data: {{ genero_json|safe }} },
+    cor: { title: "Distribuição por Cor / Raça", data: {{ cor_json|safe }} },
+    funcao: { title: "Distribuição por Função", data: {{ funcao_json|safe }} },
+    tempo: { title: "Distribuição por Tempo de Atuação", data: {{ tempo_json|safe }} }
+  };
+
+  let mainChartInstance = null;
+  let generoChartInstance = null;
+  let tempoChartInstance = null;
+  let corChartInstance = null;
+
+  // Função auxiliar para obter cor do texto conforme o tema (Dark / Light)
+  function getThemeTextColor() {
+    const isDark = document.body.getAttribute('data-bs-theme') === 'dark' || document.documentElement.getAttribute('data-bs-theme') === 'dark';
+    return isDark ? '#e9ecef' : '#212529';
+  }
+
+  // Gera array de cores dinâmicas
+  function getColors(count) {
+    const colors = [];
+    for (let i = 0; i < count; i++) {
+      colors.push(COLOR_PALETTE[i % COLOR_PALETTE.length]);
+    }
+    return colors;
+  }
+
+  // Renderiza o Gráfico Principal
+  function renderMainChart() {
+    const filterKey = document.getElementById('filterSelect').value;
+    const selectedChartType = document.querySelector('input[name="chartType"]:checked').value;
+    const datasetObj = datasets[filterKey];
+
+    const rawData = datasetObj.data || [];
+    const labels = rawData.map(d => d.label || 'Não informado');
+    const values = rawData.map(d => d.qtd || 0);
+    const totalSum = values.reduce((a, b) => a + b, 0);
+
+    // Atualiza cabeçalhos e totais
+    document.getElementById('mainChartTitle').innerText = datasetObj.title;
+    document.getElementById('mainChartTotal').innerText = `Total: ${totalSum} participantes`;
+
+    // Destrói gráfico existente
+    if (mainChartInstance) mainChartInstance.destroy();
+
+    const colors = getColors(labels.length);
+    const textColor = getThemeTextColor();
+
+    const ctx = document.getElementById('mainChart').getContext('2d');
+
+    const chartOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: selectedChartType !== 'bar',
+          position: 'right',
+          labels: { color: textColor, font: { family: 'Inter, sans-serif', size: 12 } }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const val = context.parsed.y !== undefined ? context.parsed.y : context.parsed;
+              const pct = totalSum ? ((val / totalSum) * 100).toFixed(1) : 0;
+              return ` ${context.label}: ${val} (${pct}%)`;
+            }
+          }
+        }
+      }
+    };
+
+    if (selectedChartType === 'bar') {
+      chartOptions.scales = {
+        x: { ticks: { color: textColor, font: { size: 11 } }, grid: { display: false } },
+        y: { ticks: { color: textColor }, grid: { color: 'rgba(150,150,150,0.1)' } }
+      };
+    }
+
+    mainChartInstance = new Chart(ctx, {
+      type: selectedChartType,
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Quantidade',
+          data: values,
+          backgroundColor: selectedChartType === 'bar' ? colors[0] : colors,
+          borderColor: selectedChartType === 'bar' ? colors[0] : '#ffffff',
+          borderWidth: 1.5,
+          borderRadius: selectedChartType === 'bar' ? 6 : 0
+        }]
+      },
+      options: chartOptions
+    });
+
+    renderTopBreakdown(rawData, totalSum);
+    renderTable(rawData, totalSum);
+  }
+
+  // Renderiza a lista dos 5 principais destaques
+  function renderTopBreakdown(rawData, totalSum) {
+    const container = document.getElementById('topBreakdownList');
+    container.innerHTML = '';
+
+    if (!rawData || rawData.length === 0) {
+      container.innerHTML = '<p class="text-muted small">Nenhum dado cadastrado.</p>';
+      return;
+    }
+
+    const sorted = [...rawData].sort((a, b) => b.qtd - a.qtd).slice(0, 5);
+
+    sorted.forEach((item, idx) => {
+      const pct = totalSum ? ((item.qtd / totalSum) * 100).toFixed(1) : 0;
+      const color = COLOR_PALETTE[idx % COLOR_PALETTE.length];
+
+      const div = document.createElement('div');
+      div.className = 'top-list-item';
+      div.innerHTML = `
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <span class="fw-semibold text-truncate me-2 small" title="${item.label}">${item.label}</span>
+          <span class="badge bg-secondary-subtle text-dark fw-bold">${item.qtd} (${pct}%)</span>
+        </div>
+        <div class="progress" style="height: 6px;">
+          <div class="progress-bar" role="progressbar" style="width: ${pct}%; background-color: ${color};" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+      `;
+      container.appendChild(div);
+    });
+  }
+
+  // Renderiza a Tabela Detalhada
+  function renderTable(rawData, totalSum) {
+    const tBody = document.getElementById('tableBody');
+    tBody.innerHTML = '';
+
+    if (!rawData || rawData.length === 0) {
+      tBody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-muted">Nenhum dado encontrado.</td></tr>';
+      return;
+    }
+
+    rawData.forEach((item, idx) => {
+      const pct = totalSum ? ((item.qtd / totalSum) * 100).toFixed(1) : 0;
+      const color = COLOR_PALETTE[idx % COLOR_PALETTE.length];
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="ps-4 fw-bold text-muted">${idx + 1}</td>
+        <td class="fw-semibold">${item.label}</td>
+        <td class="text-center">
+          <span class="badge bg-primary-subtle text-primary px-3 py-2 fs-6 fw-bold">${item.qtd}</span>
+        </td>
+        <td class="pe-4">
+          <div class="d-flex align-items-center gap-2">
+            <div class="progress flex-grow-1" style="height: 8px;">
+              <div class="progress-bar" role="progressbar" style="width: ${pct}%; background-color: ${color};" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+            <span class="fw-bold small text-muted" style="min-width: 50px;">${pct}%</span>
+          </div>
+        </td>
+      `;
+      tBody.appendChild(tr);
+    });
+  }
+
+  // Busca em tempo real na tabela
+  document.getElementById('tableSearch').addEventListener('input', function(e) {
+    const term = e.target.value.toLowerCase();
+    const rows = document.querySelectorAll('#tableBody tr');
+
+    rows.forEach(row => {
+      const text = row.innerText.toLowerCase();
+      row.style.display = text.includes(term) ? '' : 'none';
+    });
+  });
+
+  // Exportação CSV
+  document.getElementById('btnExportCsv').addEventListener('click', function() {
+    const filterKey = document.getElementById('filterSelect').value;
+    const datasetObj = datasets[filterKey];
+    const data = datasetObj.data || [];
+
+    let csvContent = "data:text/csv;charset=utf-8,Posicao;Categoria;Quantidade\n";
+    data.forEach((row, i) => {
+      csvContent += `${i + 1};"${row.label.replace(/"/g, '""')}";${row.qtd}\n`;
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `relatorio_${filterKey}_pacto_eja.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  });
+
+  // Renderiza Gráficos Secundários Fixos (Demográficos)
+  function renderSecondaryCharts() {
+    const textColor = getThemeTextColor();
+
+    // 1. Gênero (Doughnut)
+    const generoData = datasets.genero.data;
+    if (generoData.length) {
+      new Chart(document.getElementById('generoChart').getContext('2d'), {
+        type: 'doughnut',
+        data: {
+          labels: generoData.map(d => d.label),
+          datasets: [{
+            data: generoData.map(d => d.qtd),
+            backgroundColor: ['#0d6efd', '#d63384', '#6f42c1', '#6c757d']
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { color: textColor } } }
+        }
+      });
+    }
+
+    // 2. Tempo de Atuação (Bar Horizontal)
+    const tempoData = datasets.tempo.data;
+    if (tempoData.length) {
+      new Chart(document.getElementById('tempoChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: tempoData.map(d => d.label),
+          datasets: [{
+            label: 'Educadores',
+            data: tempoData.map(d => d.qtd),
+            backgroundColor: '#198754',
+            borderRadius: 6
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: textColor }, grid: { color: 'rgba(150,150,150,0.1)' } },
+            y: { ticks: { color: textColor }, grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    // 3. Cor / Raça (Polar / Doughnut)
+    const corData = datasets.cor.data;
+    if (corData.length) {
+      new Chart(document.getElementById('corChart').getContext('2d'), {
+        type: 'doughnut',
+        data: {
+          labels: corData.map(d => d.label),
+          datasets: [{
+            data: corData.map(d => d.qtd),
+            backgroundColor: COLOR_PALETTE
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { color: textColor } } }
+        }
+      });
+    }
+  }
+
+  // Event Listeners
+  document.getElementById('filterSelect').addEventListener('change', renderMainChart);
+  document.querySelectorAll('input[name="chartType"]').forEach(radio => {
+    radio.addEventListener('change', renderMainChart);
+  });
+
+  // Inicialização
+  document.addEventListener('DOMContentLoaded', () => {
+    renderMainChart();
+    renderSecondaryCharts();
+  });
+</script>
+{% endblock %}
