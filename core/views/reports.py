@@ -32,7 +32,10 @@ class ReportsView(TemplateView):
 
         # Raw querysets
         ctx["participantes_por_municipio"] = (
-            EducadorEscola.objects.values(city_name=F('cidade__nome_cidade'))
+            EducadorEscola.objects.values(
+                city_name=F('cidade__nome_cidade'),
+                state_sigla=F('cidade__estado__sigla')
+            )
             .annotate(qtd=Count('id'))
             .order_by('-qtd')
         )
@@ -42,7 +45,10 @@ class ReportsView(TemplateView):
             .order_by('-qtd')
         )
         ctx["participantes_por_estado"] = (
-            EducadorEscola.objects.values(state_name=F('cidade__estado__nome_estado'))
+            EducadorEscola.objects.values(
+                state_name=F('cidade__estado__nome_estado'),
+                sigla=F('cidade__estado__sigla')
+            )
             .annotate(qtd=Count('id'))
             .order_by('-qtd')
         )
@@ -77,7 +83,12 @@ class ReportsView(TemplateView):
                     val = "Não informado"
                 else:
                     val = str(raw)
-                res.append({"label": val, "qtd": item["qtd"]})
+                entry = {"label": val, "qtd": item["qtd"]}
+                if "state_sigla" in item:
+                    entry["state"] = item["state_sigla"] or ""
+                if "sigla" in item:
+                    entry["sigla"] = item["sigla"] or ""
+                res.append(entry)
             return res
 
         tempo_map = {

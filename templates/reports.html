@@ -631,15 +631,16 @@
       maxZoom: 19
     }).addTo(leafletMapInstance);
 
-    // Mapeia totais de educadores por Estado
-    const stateCounts = {};
+    // Mapeia totais de educadores estritamente pela Sigla UF de 2 letras (ex: 'PB': 12, 'PE': 2, 'SP': 1)
+    const stateCountsBySigla = {};
     const estadoData = datasets.estado.data || [];
     estadoData.forEach(item => {
       const stateName = (item.label || '').trim();
       if (!stateName || stateName === 'Não informado') return;
-      const sigla = STATE_NAME_TO_SIGLA[stateName.toLowerCase()] || stateName.toUpperCase();
-      stateCounts[sigla] = (stateCounts[sigla] || 0) + item.qtd;
-      stateCounts[stateName.toLowerCase()] = (stateCounts[stateName.toLowerCase()] || 0) + item.qtd;
+      const sigla = (item.sigla || STATE_NAME_TO_SIGLA[stateName.toLowerCase()] || '').toUpperCase();
+      if (sigla) {
+        stateCountsBySigla[sigla] = (stateCountsBySigla[sigla] || 0) + item.qtd;
+      }
     });
 
     // Função de Escala de Cores do Estado (Choropleth)
@@ -655,11 +656,12 @@
     fetch('https://cdn.jsdelivr.net/gh/codeforamerica/click_that_hood@master/public/data/brazil-states.geojson')
       .then(res => res.json())
       .then(geoJsonData => {
-        L.geoJSON(geoJsonData, {
+        let geoLayer = null;
+        geoLayer = L.geoJSON(geoJsonData, {
           style: function(feature) {
             const stateName = feature.properties.name || '';
-            const sigla = STATE_NAME_TO_SIGLA[stateName.toLowerCase()] || feature.properties.sigla || '';
-            const count = stateCounts[sigla] || stateCounts[stateName.toLowerCase()] || 0;
+            const sigla = (feature.properties.sigla || STATE_NAME_TO_SIGLA[stateName.toLowerCase()] || '').toUpperCase();
+            const count = stateCountsBySigla[sigla] || 0;
 
             return {
               fillColor: getStateColor(count),
@@ -671,8 +673,8 @@
           },
           onEachFeature: function(feature, layer) {
             const stateName = feature.properties.name || 'Estado';
-            const sigla = STATE_NAME_TO_SIGLA[stateName.toLowerCase()] || feature.properties.sigla || '';
-            const count = stateCounts[sigla] || stateCounts[stateName.toLowerCase()] || 0;
+            const sigla = (feature.properties.sigla || STATE_NAME_TO_SIGLA[stateName.toLowerCase()] || '').toUpperCase();
+            const count = stateCountsBySigla[sigla] || 0;
 
             // Destaque ao passar o mouse (Hover)
             layer.on({
@@ -688,14 +690,11 @@
                 }
               },
               mouseout: function(e) {
-                leafletGeoJsonLayer.resetStyle(e.target);
-              },
-              click: function() {
-                filterByStateFromMap(stateName);
+                if (geoLayer) geoLayer.resetStyle(e.target);
               }
             });
 
-            // Tooltip e Popup do Estado
+            // Tooltip e Popup do Estado (Apenas abre o popup ao clicar, sem redirecionar a tela)
             const popupContent = `
               <div class="p-2 text-center" style="min-width: 150px;">
                 <div class="fw-bold text-primary mb-1">🗺️ ${stateName} ${sigla ? ' (' + sigla + ')' : ''}</div>
@@ -704,7 +703,7 @@
                 </span>
                 ${count > 0 ? `
                   <div>
-                    <button type="button" class="btn btn-sm btn-outline-primary fw-semibold w-100 py-1" onclick="filterByStateFromMap('${stateName.replace(/'/g, "\\'")}')">
+                    <button type="button" class="btn btn-sm btn-outline-primary fw-semibold w-100 py-1" onclick="filterByStateFromMap('${stateName.replace(/'/g, "\\'")}', '${sigla}')">
                       <i class="bi bi-funnel me-1"></i> Filtrar Estado
                     </button>
                   </div>
@@ -714,14 +713,12 @@
             layer.bindPopup(popupContent);
           }
         }).addTo(leafletMapInstance);
-
-        var leafletGeoJsonLayer = leafletMapInstance._layers[Object.keys(leafletMapInstance._layers).find(k => leafletMapInstance._layers[k].resetStyle)];
       })
-      .catch(err => console.warn('GeoJSON carregado via fallback básico:', err));
+      .catch(err => console.warn('GeoJSON de estados do Brasil não pôde ser carregado:', err));
   }
 
-  // Função chamada ao clicar em um estado no mapa
-  window.filterByStateFromMap = function(stateName) {
+  // Função chamada APENAS ao clicar no botão "Filtrar Estado" dentro do popup
+  window.filterByStateFromMap = function(stateName, sigla) {
     const filterSelect = document.getElementById('filterSelect');
     if (filterSelect) {
       filterSelect.value = 'estado';
@@ -729,7 +726,7 @@
       
       const searchInput = document.getElementById('participantSearchInput');
       if (searchInput) {
-        searchInput.value = stateName;
+        searchInput.value = stateName || sigla || '';
         applyParticipantFilters();
       }
 
