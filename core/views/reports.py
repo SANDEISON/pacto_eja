@@ -86,6 +86,59 @@ class ReportsView(TemplateView):
             "mais_6_anos": "Mais de 6 anos",
         }
 
+        # Detailed participant records for granular table view and advanced CSV export
+        educadores_qs = Educador.objects.select_related(
+            'usuario', 'genero', 'cor_raca'
+        ).prefetch_related(
+            'vinculos_educador_escola__cidade__estado',
+            'vinculos_educador_escola__escola',
+            'vinculos_educador_escola__funcao'
+        )
+
+        participantes_detalhados = []
+        for ed in educadores_qs:
+            vinculos = list(ed.vinculos_educador_escola.all())
+            nome = ed.nome_completo or (ed.usuario.get_full_name() if ed.usuario else '') or (ed.usuario.username if ed.usuario else 'Educador Sem Nome')
+            cpf = ed.cpf or ''
+            email = ed.usuario.email if ed.usuario else ''
+            telefone = ed.telefone or ''
+            genero = ed.genero.nome if ed.genero else 'Não informado'
+            cor = ed.cor_raca.nome if ed.cor_raca else 'Não informado'
+
+            if vinculos:
+                for v in vinculos:
+                    tempo_raw = v.tempo_atuacao or ''
+                    tempo_desc = tempo_map.get(tempo_raw, tempo_raw or 'Não informado')
+                    participantes_detalhados.append({
+                        'nome': nome,
+                        'cpf': cpf,
+                        'email': email,
+                        'telefone': telefone,
+                        'municipio': v.cidade.nome_cidade if (v.cidade and v.cidade.nome_cidade) else 'Não informado',
+                        'estado': v.cidade.estado.nome_estado if (v.cidade and v.cidade.estado and v.cidade.estado.nome_estado) else 'Não informado',
+                        'escola': v.escola.nome if (v.escola and v.escola.nome) else 'Não informado',
+                        'funcao': v.funcao.nome if (v.funcao and v.funcao.nome) else 'Não informado',
+                        'tempo': tempo_desc,
+                        'genero': genero,
+                        'cor': cor,
+                    })
+            else:
+                participantes_detalhados.append({
+                    'nome': nome,
+                    'cpf': cpf,
+                    'email': email,
+                    'telefone': telefone,
+                    'municipio': 'Não informado',
+                    'estado': 'Não informado',
+                    'escola': 'Não informado',
+                    'funcao': 'Não informado',
+                    'tempo': 'Não informado',
+                    'genero': genero,
+                    'cor': cor,
+                })
+
+        ctx['participantes_detalhados_json'] = json.dumps(participantes_detalhados)
+
         # Serialize datasets into clean uniform JSON structures
         ctx['municipio_json'] = json.dumps(normalize(ctx['participantes_por_municipio'], 'city_name'))
         ctx['escola_json'] = json.dumps(normalize(ctx['participantes_por_escola'], 'escola_name'))

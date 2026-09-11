@@ -71,6 +71,12 @@
     padding: 6px 12px;
     border-radius: 20px;
   }
+
+  .csv-dropdown-menu {
+    border-radius: 12px;
+    padding: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  }
 </style>
 {% endblock %}
 
@@ -228,27 +234,140 @@
     </div>
   </div>
 
-  <!-- Seção Inferior: Tabela Detalhada com Busca e Exportação -->
+  <!-- Seção Inferior: Tabela Detalhada com Filtros Avançados e Opções de Exportação CSV -->
   <div class="card chart-card shadow-sm mb-4">
-    <div class="card-header bg-transparent border-bottom p-3 d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3">
-      <div>
-        <h5 class="fw-bold m-0"><i class="bi bi-table me-2 text-primary"></i>Tabela Detalhada de Dados</h5>
-        <span class="small text-muted">Valores absolutos e percentuais da dimensão selecionada</span>
-      </div>
-      <div class="d-flex gap-2">
-        <div class="input-group input-group-sm" style="max-width: 250px;">
-          <span class="input-group-text bg-transparent"><i class="bi bi-search"></i></span>
-          <input type="text" id="tableSearch" class="form-select-sm form-control" placeholder="Filtrar tabela...">
+    <!-- Cabeçalho do Card com Abas de Visualização e Menu de Exportação -->
+    <div class="card-header bg-transparent border-bottom p-3">
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-3">
+        <div>
+          <h5 class="fw-bold m-0 d-flex align-items-center gap-2">
+            <i class="bi bi-file-earmark-person-fill text-primary"></i> Tabela Detalhada & Exportação de Dados
+          </h5>
+          <span class="small text-muted" id="tableSubtitle">Listagem geral dos participantes com filtros personalizados e exportação CSV granular.</span>
         </div>
-        <button id="btnExportCsv" class="btn btn-sm btn-outline-success fw-semibold">
-          <i class="bi bi-file-earmark-spreadsheet me-1"></i> CSV
-        </button>
+
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          <!-- Toggle de Abas da Tabela -->
+          <div class="btn-group btn-group-sm" role="group" aria-label="Visualização da Tabela">
+            <input type="radio" class="btn-check" name="tableViewMode" id="viewModeParticipants" value="participants" checked>
+            <label class="btn btn-outline-primary fw-semibold" for="viewModeParticipants">
+              <i class="bi bi-people-fill me-1"></i> Participantes Detalhados
+            </label>
+
+            <input type="radio" class="btn-check" name="tableViewMode" id="viewModeSummary" value="summary">
+            <label class="btn btn-outline-primary fw-semibold" for="viewModeSummary">
+              <i class="bi text-primary bi-bar-chart-steps me-1"></i> Resumo Agrupado
+            </label>
+          </div>
+
+          <!-- Menu Dropdown de Exportação CSV -->
+          <div class="dropdown">
+            <button class="btn btn-success btn-sm fw-bold dropdown-toggle shadow-sm" type="button" id="dropdownCsvExport" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="bi bi-download me-1"></i> Exportar CSV
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end csv-dropdown-menu" aria-labelledby="dropdownCsvExport">
+              <li>
+                <button class="dropdown-item py-2 fw-semibold" id="btnExportFullCsv">
+                  <i class="bi bi-file-earmark-spreadsheet text-success me-2 fs-5"></i>
+                  <div>
+                    <div>Exportar Participantes (CSV Completo)</div>
+                    <small class="text-muted font-normal">Exporta Nome, CPF, E-mail, Município, Escola, Função, etc. com filtros aplicados.</small>
+                  </div>
+                </button>
+              </li>
+              <li><hr class="dropdown-divider"></li>
+              <li>
+                <button class="dropdown-item py-2 fw-semibold" id="btnExportSummaryCsv">
+                  <i class="bi bi-pie-chart-fill text-primary me-2 fs-5"></i>
+                  <div>
+                    <div>Exportar Resumo Agrupado (CSV Estatístico)</div>
+                    <small class="text-muted font-normal">Exporta totais e percentuais agregados da dimensão selecionada.</small>
+                  </div>
+                </button>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Barra de Filtros Específicos para a Tabela de Participantes -->
+      <div id="participantFiltersContainer" class="bg-body-tertiary p-3 rounded-3 border">
+        <div class="row g-2 align-items-center">
+          <div class="col-12 col-sm-6 col-md-3">
+            <label for="filterMunicipio" class="form-label mb-1 small fw-semibold text-muted">🏙️ Município:</label>
+            <select id="filterMunicipio" class="form-select form-select-sm">
+              <option value="">Todos os Municípios</option>
+            </select>
+          </div>
+
+          <div class="col-12 col-sm-6 col-md-3">
+            <label for="filterEscola" class="form-label mb-1 small fw-semibold text-muted">🏫 Escola:</label>
+            <select id="filterEscola" class="form-select form-select-sm">
+              <option value="">Todas as Escolas</option>
+            </select>
+          </div>
+
+          <div class="col-12 col-sm-6 col-md-2">
+            <label for="filterFuncao" class="form-label mb-1 small fw-semibold text-muted">💼 Função:</label>
+            <select id="filterFuncao" class="form-select form-select-sm">
+              <option value="">Todas as Funções</option>
+            </select>
+          </div>
+
+          <div class="col-12 col-sm-6 col-md-2">
+            <label for="filterGenero" class="form-label mb-1 small fw-semibold text-muted">👤 Gênero:</label>
+            <select id="filterGenero" class="form-select form-select-sm">
+              <option value="">Todos os Gêneros</option>
+            </select>
+          </div>
+
+          <div class="col-12 col-md-2 d-flex align-items-end">
+            <button id="btnClearFilters" class="btn btn-sm btn-outline-secondary w-100 fw-semibold">
+              <i class="bi bi-x-circle me-1"></i> Limpar Filtros
+            </button>
+          </div>
+        </div>
+
+        <div class="row g-2 align-items-center mt-2">
+          <div class="col-12 col-md-8">
+            <div class="input-group input-group-sm">
+              <span class="input-group-text bg-transparent"><i class="bi bi-search text-muted"></i></span>
+              <input type="text" id="participantSearchInput" class="form-control" placeholder="Buscar por nome, CPF, e-mail, telefone, escola ou município...">
+            </div>
+          </div>
+          <div class="col-12 col-md-4 text-md-end">
+            <span class="badge bg-primary-subtle text-primary fw-bold px-3 py-2" id="filteredCountBadge">
+              Exibindo 0 participantes
+            </span>
+          </div>
+        </div>
       </div>
     </div>
 
+    <!-- Conteúdo da Tabela -->
     <div class="card-body p-0">
       <div class="table-responsive">
-        <table class="table table-hover align-middle m-0" id="dataTable">
+        <!-- Tabela 1: Lista Detalhada dos Participantes -->
+        <table class="table table-hover align-middle m-0" id="tableParticipants">
+          <thead class="table-light">
+            <tr>
+              <th class="ps-4" style="width: 50px;">#</th>
+              <th>Nome Completo / Contato</th>
+              <th>Documento (CPF)</th>
+              <th>Município / UF</th>
+              <th>Escola</th>
+              <th>Função</th>
+              <th>Tempo EJA</th>
+              <th>Demografia</th>
+            </tr>
+          </thead>
+          <tbody id="tableParticipantsBody">
+            <!-- Renderizado dinamicamente via JavaScript -->
+          </tbody>
+        </table>
+
+        <!-- Tabela 2: Resumo Agrupado Estatístico -->
+        <table class="table table-hover align-middle m-0 d-none" id="tableSummary">
           <thead class="table-light">
             <tr>
               <th class="ps-4" style="width: 70px;">#</th>
@@ -257,8 +376,8 @@
               <th class="pe-4" style="width: 300px;">Representatividade (%)</th>
             </tr>
           </thead>
-          <tbody id="tableBody">
-            <!-- Preenchido dinamicamente via JavaScript -->
+          <tbody id="tableSummaryBody">
+            <!-- Renderizado dinamicamente via JavaScript -->
           </tbody>
         </table>
       </div>
@@ -313,6 +432,9 @@
 {% block page_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
+  // Dataset de Participantes Detalhados
+  const participantsData = {{ participantes_detalhados_json|safe }};
+
   // Paletas de Cores Harmoniosas
   const COLOR_PALETTE = [
     '#0d6efd', '#198754', '#0dcaf0', '#6f42c1', '#fd7e14',
@@ -331,23 +453,133 @@
   };
 
   let mainChartInstance = null;
-  let generoChartInstance = null;
-  let tempoChartInstance = null;
-  let corChartInstance = null;
+  let currentFilteredParticipants = [...participantsData];
 
-  // Função auxiliar para obter cor do texto conforme o tema (Dark / Light)
+  // Formata CPF para exibição bonita (ex: 123.456.789-00)
+  function formatCPF(cpf) {
+    if (!cpf) return '<span class="text-muted">—</span>';
+    const clean = cpf.replace(/\D/g, '');
+    if (clean.length === 11) {
+      return clean.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+    }
+    return cpf;
+  }
+
   function getThemeTextColor() {
     const isDark = document.body.getAttribute('data-bs-theme') === 'dark' || document.documentElement.getAttribute('data-bs-theme') === 'dark';
     return isDark ? '#e9ecef' : '#212529';
   }
 
-  // Gera array de cores dinâmicas
   function getColors(count) {
     const colors = [];
     for (let i = 0; i < count; i++) {
       colors.push(COLOR_PALETTE[i % COLOR_PALETTE.length]);
     }
     return colors;
+  }
+
+  // Preenche os Selects de Filtros com os dados únicos disponíveis
+  function populateFilterDropdowns() {
+    const municipios = new Set();
+    const escolas = new Set();
+    const funcoes = new Set();
+    const generos = new Set();
+
+    participantsData.forEach(p => {
+      if (p.municipio && p.municipio !== 'Não informado') municipios.add(p.municipio);
+      if (p.escola && p.escola !== 'Não informado') escolas.add(p.escola);
+      if (p.funcao && p.funcao !== 'Não informado') funcoes.add(p.funcao);
+      if (p.genero && p.genero !== 'Não informado') generos.add(p.genero);
+    });
+
+    const addOptions = (selectId, setValues) => {
+      const select = document.getElementById(selectId);
+      const sorted = Array.from(setValues).sort();
+      sorted.forEach(val => {
+        const opt = document.createElement('option');
+        opt.value = val;
+        opt.textContent = val;
+        select.appendChild(opt);
+      });
+    };
+
+    addOptions('filterMunicipio', municipios);
+    addOptions('filterEscola', escolas);
+    addOptions('filterFuncao', funcoes);
+    addOptions('filterGenero', generos);
+  }
+
+  // Aplica os filtros na lista de participantes
+  function applyParticipantFilters() {
+    const municipio = document.getElementById('filterMunicipio').value;
+    const escola = document.getElementById('filterEscola').value;
+    const funcao = document.getElementById('filterFuncao').value;
+    const genero = document.getElementById('filterGenero').value;
+    const searchTerm = document.getElementById('participantSearchInput').value.toLowerCase().trim();
+
+    currentFilteredParticipants = participantsData.filter(p => {
+      if (municipio && p.municipio !== municipio) return false;
+      if (escola && p.escola !== escola) return false;
+      if (funcao && p.funcao !== funcao) return false;
+      if (genero && p.genero !== genero) return false;
+
+      if (searchTerm) {
+        const matchName = (p.nome || '').toLowerCase().includes(searchTerm);
+        const matchCpf = (p.cpf || '').toLowerCase().includes(searchTerm);
+        const matchEmail = (p.email || '').toLowerCase().includes(searchTerm);
+        const matchPhone = (p.telefone || '').toLowerCase().includes(searchTerm);
+        const matchSchool = (p.escola || '').toLowerCase().includes(searchTerm);
+        const matchCity = (p.municipio || '').toLowerCase().includes(searchTerm);
+        if (!matchName && !matchCpf && !matchEmail && !matchPhone && !matchSchool && !matchCity) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    renderParticipantsTable(currentFilteredParticipants);
+  }
+
+  // Renderiza a Tabela Detalhada dos Participantes
+  function renderParticipantsTable(list) {
+    const tBody = document.getElementById('tableParticipantsBody');
+    tBody.innerHTML = '';
+
+    document.getElementById('filteredCountBadge').innerText = `Exibindo ${list.length} de ${participantsData.length} participantes`;
+
+    if (!list || list.length === 0) {
+      tBody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted"><i class="bi bi-inbox fs-3 d-block mb-1"></i>Nenhum participante encontrado com os filtros selecionados.</td></tr>';
+      return;
+    }
+
+    list.forEach((p, idx) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="ps-4 fw-bold text-muted">${idx + 1}</td>
+        <td>
+          <div class="fw-bold text-primary">${p.nome || 'Não informado'}</div>
+          <small class="text-muted">
+            ${p.email ? `<i class="bi bi-envelope me-1"></i>${p.email}` : ''}
+            ${p.email && p.telefone ? ' | ' : ''}
+            ${p.telefone ? `<i class="bi bi-telephone me-1"></i>${p.telefone}` : ''}
+            ${!p.email && !p.telefone ? 'Sem contato cadastrado' : ''}
+          </small>
+        </td>
+        <td><code class="fw-semibold text-dark">${formatCPF(p.cpf)}</code></td>
+        <td>
+          <span class="fw-semibold">${p.municipio || 'Não informado'}</span>
+          <small class="text-muted d-block">${p.estado || ''}</small>
+        </td>
+        <td><span class="badge bg-light text-dark border">${p.escola || 'Não informado'}</span></td>
+        <td><span class="badge bg-info-subtle text-info-emphasis">${p.funcao || 'Não informado'}</span></td>
+        <td><span class="badge bg-secondary-subtle text-secondary-emphasis">${p.tempo || 'Não informado'}</span></td>
+        <td>
+          <small class="d-block text-muted">Gênero: <strong>${p.genero}</strong></small>
+          <small class="d-block text-muted">Cor/Raça: <strong>${p.cor}</strong></small>
+        </td>
+      `;
+      tBody.appendChild(tr);
+    });
   }
 
   // Renderiza o Gráfico Principal
@@ -361,11 +593,9 @@
     const values = rawData.map(d => d.qtd || 0);
     const totalSum = values.reduce((a, b) => a + b, 0);
 
-    // Atualiza cabeçalhos e totais
     document.getElementById('mainChartTitle').innerText = datasetObj.title;
     document.getElementById('mainChartTotal').innerText = `Total: ${totalSum} participantes`;
 
-    // Destrói gráfico existente
     if (mainChartInstance) mainChartInstance.destroy();
 
     const colors = getColors(labels.length);
@@ -418,7 +648,7 @@
     });
 
     renderTopBreakdown(rawData, totalSum);
-    renderTable(rawData, totalSum);
+    renderSummaryTable(rawData, totalSum);
   }
 
   // Renderiza a lista dos 5 principais destaques
@@ -452,9 +682,9 @@
     });
   }
 
-  // Renderiza a Tabela Detalhada
-  function renderTable(rawData, totalSum) {
-    const tBody = document.getElementById('tableBody');
+  // Renderiza a Tabela de Resumo Agrupado
+  function renderSummaryTable(rawData, totalSum) {
+    const tBody = document.getElementById('tableSummaryBody');
     tBody.innerHTML = '';
 
     if (!rawData || rawData.length === 0) {
@@ -486,42 +716,76 @@
     });
   }
 
-  // Busca em tempo real na tabela
-  document.getElementById('tableSearch').addEventListener('input', function(e) {
-    const term = e.target.value.toLowerCase();
-    const rows = document.querySelectorAll('#tableBody tr');
+  // Exportação CSV 1: Participantes Detalhados (com filtros aplicados)
+  function exportFullParticipantsCSV() {
+    const dataToExport = currentFilteredParticipants;
 
-    rows.forEach(row => {
-      const text = row.innerText.toLowerCase();
-      row.style.display = text.includes(term) ? '' : 'none';
+    if (!dataToExport || dataToExport.length === 0) {
+      alert("Nenhum participante encontrado para exportar.");
+      return;
+    }
+
+    // Usar BOM \uFEFF para garantir acentuação perfeita no Microsoft Excel (Windows)
+    let csvContent = "\uFEFFNome Completo;CPF;E-mail;Telefone;Município;Estado;Escola;Função;Tempo de Atuação EJA;Gênero;Cor / Raça\n";
+
+    dataToExport.forEach(p => {
+      const cleanField = (val) => `"${(val || '').replace(/"/g, '""')}"`;
+      csvContent += [
+        cleanField(p.nome),
+        cleanField(p.cpf),
+        cleanField(p.email),
+        cleanField(p.telefone),
+        cleanField(p.municipio),
+        cleanField(p.estado),
+        cleanField(p.escola),
+        cleanField(p.funcao),
+        cleanField(p.tempo),
+        cleanField(p.genero),
+        cleanField(p.cor)
+      ].join(";") + "\n";
     });
-  });
 
-  // Exportação CSV
-  document.getElementById('btnExportCsv').addEventListener('click', function() {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `relatorio_participantes_pacto_eja_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  // Exportação CSV 2: Resumo Agrupado
+  function exportSummaryCSV() {
     const filterKey = document.getElementById('filterSelect').value;
     const datasetObj = datasets[filterKey];
     const data = datasetObj.data || [];
 
-    let csvContent = "data:text/csv;charset=utf-8,Posicao;Categoria;Quantidade\n";
+    if (!data || data.length === 0) {
+      alert("Nenhum dado resumo disponível para exportar.");
+      return;
+    }
+
+    let csvContent = "\uFEFFPosicao;Categoria / Nome;Quantidade\n";
     data.forEach((row, i) => {
-      csvContent += `${i + 1};"${row.label.replace(/"/g, '""')}";${row.qtd}\n`;
+      csvContent += `${i + 1};"${(row.label || '').replace(/"/g, '""')}";${row.qtd}\n`;
     });
 
-    const encodedUri = encodeURI(csvContent);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `relatorio_${filterKey}_pacto_eja.csv`);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `resumo_${filterKey}_pacto_eja_${new Date().toISOString().slice(0,10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  });
+  }
 
   // Renderiza Gráficos Secundários Fixos (Demográficos)
   function renderSecondaryCharts() {
     const textColor = getThemeTextColor();
 
-    // 1. Gênero (Doughnut)
+    // 1. Gênero
     const generoData = datasets.genero.data;
     if (generoData.length) {
       new Chart(document.getElementById('generoChart').getContext('2d'), {
@@ -541,7 +805,7 @@
       });
     }
 
-    // 2. Tempo de Atuação (Bar Horizontal)
+    // 2. Tempo de Atuação
     const tempoData = datasets.tempo.data;
     if (tempoData.length) {
       new Chart(document.getElementById('tempoChart').getContext('2d'), {
@@ -568,7 +832,7 @@
       });
     }
 
-    // 3. Cor / Raça (Polar / Doughnut)
+    // 3. Cor / Raça
     const corData = datasets.cor.data;
     if (corData.length) {
       new Chart(document.getElementById('corChart').getContext('2d'), {
@@ -589,14 +853,59 @@
     }
   }
 
-  // Event Listeners
+  // Event Listeners de Filtros da Tabela
+  document.getElementById('filterMunicipio').addEventListener('change', applyParticipantFilters);
+  document.getElementById('filterEscola').addEventListener('change', applyParticipantFilters);
+  document.getElementById('filterFuncao').addEventListener('change', applyParticipantFilters);
+  document.getElementById('filterGenero').addEventListener('change', applyParticipantFilters);
+  document.getElementById('participantSearchInput').addEventListener('input', applyParticipantFilters);
+
+  document.getElementById('btnClearFilters').addEventListener('click', () => {
+    document.getElementById('filterMunicipio').value = '';
+    document.getElementById('filterEscola').value = '';
+    document.getElementById('filterFuncao').value = '';
+    document.getElementById('filterGenero').value = '';
+    document.getElementById('participantSearchInput').value = '';
+    applyParticipantFilters();
+  });
+
+  // Event Listeners de Troca de Aba (Participantes Detalhados vs Resumo Agrupado)
+  document.querySelectorAll('input[name="tableViewMode"]').forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      const mode = e.target.value;
+      const tableParticipants = document.getElementById('tableParticipants');
+      const tableSummary = document.getElementById('tableSummary');
+      const filtersContainer = document.getElementById('participantFiltersContainer');
+      const subtitle = document.getElementById('tableSubtitle');
+
+      if (mode === 'participants') {
+        tableParticipants.classList.remove('d-none');
+        tableSummary.classList.add('d-none');
+        filtersContainer.classList.remove('d-none');
+        subtitle.innerText = 'Listagem geral dos participantes com filtros personalizados e exportação CSV granular.';
+      } else {
+        tableParticipants.classList.add('d-none');
+        tableSummary.classList.remove('d-none');
+        filtersContainer.classList.add('d-none');
+        subtitle.innerText = 'Resumo quantitativo e percentual por dimensão estatística.';
+      }
+    });
+  });
+
+  // Event Listeners de Exportação CSV
+  document.getElementById('btnExportFullCsv').addEventListener('click', exportFullParticipantsCSV);
+  document.getElementById('btnExportSummaryCsv').addEventListener('click', exportSummaryCSV);
+
+  // Event Listeners do Gráfico Principal
   document.getElementById('filterSelect').addEventListener('change', renderMainChart);
   document.querySelectorAll('input[name="chartType"]').forEach(radio => {
     radio.addEventListener('change', renderMainChart);
   });
 
-  // Inicialização
+  // Inicialização no DOM
   document.addEventListener('DOMContentLoaded', () => {
+    populateFilterDropdowns();
+    applyParticipantFilters();
     renderMainChart();
     renderSecondaryCharts();
   });
