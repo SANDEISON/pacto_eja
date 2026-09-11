@@ -370,7 +370,14 @@
 
       <!-- Barra de Filtros Específicos para a Tabela de Participantes -->
       <div id="participantFiltersContainer" class="bg-body-tertiary p-3 rounded-3 border">
-        <div class="row g-2 align-items-center">
+        <div class="row g-2 align-items-center mb-2">
+          <div class="col-12 col-sm-6 col-md-2">
+            <label for="filterEstado" class="form-label mb-1 small fw-semibold text-muted">🗺️ Estado:</label>
+            <select id="filterEstado" class="form-select form-select-sm">
+              <option value="">Todos os Estados</option>
+            </select>
+          </div>
+
           <div class="col-12 col-sm-6 col-md-3">
             <label for="filterMunicipio" class="form-label mb-1 small fw-semibold text-muted">🏙️ Município:</label>
             <select id="filterMunicipio" class="form-select form-select-sm">
@@ -398,22 +405,21 @@
               <option value="">Todos os Gêneros</option>
             </select>
           </div>
+        </div>
 
-          <div class="col-12 col-md-2 d-flex align-items-end">
+        <div class="row g-2 align-items-center">
+          <div class="col-12 col-md-8">
+            <div class="input-group input-group-sm">
+              <span class="input-group-text bg-transparent"><i class="bi bi-search text-muted"></i></span>
+              <input type="text" id="participantSearchInput" class="form-control" placeholder="Buscar por nome, CPF, e-mail, telefone, escola, município ou estado...">
+            </div>
+          </div>
+          <div class="col-12 col-md-2">
             <button id="btnClearFilters" class="btn btn-sm btn-outline-secondary w-100 fw-semibold">
               <i class="bi bi-x-circle me-1"></i> Limpar Filtros
             </button>
           </div>
-        </div>
-
-        <div class="row g-2 align-items-center mt-2">
-          <div class="col-12 col-md-8">
-            <div class="input-group input-group-sm">
-              <span class="input-group-text bg-transparent"><i class="bi bi-search text-muted"></i></span>
-              <input type="text" id="participantSearchInput" class="form-control" placeholder="Buscar por nome, CPF, e-mail, telefone, escola ou município...">
-            </div>
-          </div>
-          <div class="col-12 col-md-4 text-md-end">
+          <div class="col-12 col-md-2 text-md-end">
             <span class="badge bg-primary-subtle text-primary fw-bold px-3 py-2" id="filteredCountBadge">
               Total: 0 participantes
             </span>
@@ -723,25 +729,51 @@
     if (filterSelect) {
       filterSelect.value = 'estado';
       renderMainChart();
-      
-      const searchInput = document.getElementById('participantSearchInput');
-      if (searchInput) {
-        searchInput.value = stateName || sigla || '';
-        applyParticipantFilters();
+    }
+    
+    // Tenta selecionar o estado no dropdown de filtro de estado
+    const filterEstado = document.getElementById('filterEstado');
+    let stateMatchedInSelect = false;
+    if (filterEstado) {
+      const targetVal = (stateName || '').toLowerCase();
+      const targetSigla = (sigla || '').toLowerCase();
+      for (let opt of filterEstado.options) {
+        const valLower = opt.value.toLowerCase();
+        if (valLower && (valLower === targetVal || valLower === targetSigla)) {
+          filterEstado.value = opt.value;
+          stateMatchedInSelect = true;
+          break;
+        }
       }
+    }
 
-      document.getElementById('tableParticipants').scrollIntoView({ behavior: 'smooth' });
+    const searchInput = document.getElementById('participantSearchInput');
+    if (searchInput) {
+      if (!stateMatchedInSelect) {
+        searchInput.value = stateName || sigla || '';
+      } else {
+        searchInput.value = '';
+      }
+    }
+
+    applyParticipantFilters();
+
+    const tableEl = document.getElementById('tableParticipants');
+    if (tableEl) {
+      tableEl.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
   // Preenche os Selects de Filtros com os dados únicos disponíveis
   function populateFilterDropdowns() {
+    const estados = new Set();
     const municipios = new Set();
     const escolas = new Set();
     const funcoes = new Set();
     const generos = new Set();
 
     participantsData.forEach(p => {
+      if (p.estado && p.estado !== 'Não informado') estados.add(p.estado);
       if (p.municipio && p.municipio !== 'Não informado') municipios.add(p.municipio);
       if (p.escola && p.escola !== 'Não informado') escolas.add(p.escola);
       if (p.funcao && p.funcao !== 'Não informado') funcoes.add(p.funcao);
@@ -750,6 +782,7 @@
 
     const addOptions = (selectId, setValues) => {
       const select = document.getElementById(selectId);
+      if (!select) return;
       const sorted = Array.from(setValues).sort();
       sorted.forEach(val => {
         const opt = document.createElement('option');
@@ -759,6 +792,7 @@
       });
     };
 
+    addOptions('filterEstado', estados);
     addOptions('filterMunicipio', municipios);
     addOptions('filterEscola', escolas);
     addOptions('filterFuncao', funcoes);
@@ -769,6 +803,8 @@
   function applyParticipantFilters() {
     currentPage = 1;
 
+    const filterEstadoEl = document.getElementById('filterEstado');
+    const estado = filterEstadoEl ? filterEstadoEl.value : '';
     const municipio = document.getElementById('filterMunicipio').value;
     const escola = document.getElementById('filterEscola').value;
     const funcao = document.getElementById('filterFuncao').value;
@@ -776,6 +812,7 @@
     const searchTerm = document.getElementById('participantSearchInput').value.toLowerCase().trim();
 
     currentFilteredParticipants = participantsData.filter(p => {
+      if (estado && p.estado !== estado && p.sigla_uf !== estado) return false;
       if (municipio && p.municipio !== municipio) return false;
       if (escola && p.escola !== escola) return false;
       if (funcao && p.funcao !== funcao) return false;
@@ -788,7 +825,8 @@
         const matchPhone = (p.telefone || '').toLowerCase().includes(searchTerm);
         const matchSchool = (p.escola || '').toLowerCase().includes(searchTerm);
         const matchCity = (p.municipio || '').toLowerCase().includes(searchTerm);
-        if (!matchName && !matchCpf && !matchEmail && !matchPhone && !matchSchool && !matchCity) {
+        const matchState = (p.estado || '').toLowerCase().includes(searchTerm) || (p.sigla_uf || '').toLowerCase().includes(searchTerm);
+        if (!matchName && !matchCpf && !matchEmail && !matchPhone && !matchSchool && !matchCity && !matchState) {
           return false;
         }
       }
@@ -1213,6 +1251,9 @@
   }
 
   // Event Listeners de Filtros da Tabela
+  if (document.getElementById('filterEstado')) {
+    document.getElementById('filterEstado').addEventListener('change', applyParticipantFilters);
+  }
   document.getElementById('filterMunicipio').addEventListener('change', applyParticipantFilters);
   document.getElementById('filterEscola').addEventListener('change', applyParticipantFilters);
   document.getElementById('filterFuncao').addEventListener('change', applyParticipantFilters);
@@ -1226,6 +1267,7 @@
   });
 
   document.getElementById('btnClearFilters').addEventListener('click', () => {
+    if (document.getElementById('filterEstado')) document.getElementById('filterEstado').value = '';
     document.getElementById('filterMunicipio').value = '';
     document.getElementById('filterEscola').value = '';
     document.getElementById('filterFuncao').value = '';
