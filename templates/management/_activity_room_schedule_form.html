@@ -1,0 +1,14 @@
+<article class="activity-room-schedule" data-activity-room-schedule>
+  <div class="activity-room-schedule-heading">
+    <strong><i class="bi bi-calendar2-event"></i> Programação da sala</strong>
+    <button class="btn btn-sm btn-outline-danger" type="button" data-remove-activity-room-schedule title="Remover programação">
+      <i class="bi bi-trash"></i><span class="visually-hidden">Remover programação</span>
+    </button>
+  </div>
+  {% for hidden in schedule_form.hidden_fields %}{{ hidden }}{% endfor %}
+  <div class="row g-3">
+    {% for field in schedule_form.visible_fields %}
+      {% if field.name == "DELETE" %}<div hidden>{{ field }}</div>{% else %}{% include "management/_field.html" with field=field column="col-12 col-md-6" %}{% endif %}
+    {% endfor %}
+  </div>
+</article>

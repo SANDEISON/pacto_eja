@@ -495,9 +495,18 @@
 {% block page_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+{{ participantes_detalhados|json_script:"participants-data" }}
+{{ municipio_dados|json_script:"municipality-data" }}
+{{ escola_dados|json_script:"school-data" }}
+{{ estado_dados|json_script:"state-data" }}
+{{ genero_dados|json_script:"gender-data" }}
+{{ cor_dados|json_script:"race-color-data" }}
+{{ funcao_dados|json_script:"role-data" }}
+{{ tempo_dados|json_script:"experience-time-data" }}
 <script>
   // Dataset de Participantes Detalhados
-  const participantsData = {{ participantes_detalhados_json|safe }};
+  const readJsonData = (elementId) => JSON.parse(document.getElementById(elementId).textContent);
+  const participantsData = readJsonData("participants-data");
 
   // Coordenadas Geográficas de Referência para Cidades do Brasil (Lat, Lng)
   const CITY_COORDINATES = {
@@ -555,13 +564,13 @@
   ];
 
   const datasets = {
-    municipio: { title: "Distribuição por Município", data: {{ municipio_json|safe }} },
-    escola: { title: "Distribuição por Escola", data: {{ escola_json|safe }} },
-    estado: { title: "Distribuição por Estado", data: {{ estado_json|safe }} },
-    genero: { title: "Distribuição por Gênero", data: {{ genero_json|safe }} },
-    cor: { title: "Distribuição por Cor / Raça", data: {{ cor_json|safe }} },
-    funcao: { title: "Distribuição por Função", data: {{ funcao_json|safe }} },
-    tempo: { title: "Distribuição por Tempo de Atuação", data: {{ tempo_json|safe }} }
+    municipio: { title: "Distribuição por Município", data: readJsonData("municipality-data") },
+    escola: { title: "Distribuição por Escola", data: readJsonData("school-data") },
+    estado: { title: "Distribuição por Estado", data: readJsonData("state-data") },
+    genero: { title: "Distribuição por Gênero", data: readJsonData("gender-data") },
+    cor: { title: "Distribuição por Cor / Raça", data: readJsonData("race-color-data") },
+    funcao: { title: "Distribuição por Função", data: readJsonData("role-data") },
+    tempo: { title: "Distribuição por Tempo de Atuação", data: readJsonData("experience-time-data") }
   };
 
   let mainChartInstance = null;

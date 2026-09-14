@@ -3,6 +3,7 @@ from django.db import models
 
 
 class Endereco(models.Model):
+    """Endereço residencial associado a um único educador."""
     educador = models.OneToOneField(
         "Educador",
         on_delete=models.CASCADE,
@@ -35,6 +36,7 @@ class Endereco(models.Model):
 
     @property
     def uf(self):
+        """Retorna a sigla do estado sem duplicá-la na tabela de endereços."""
         return self.cidade.estado.sigla if self.cidade_id else ""
 
     def __str__(self):

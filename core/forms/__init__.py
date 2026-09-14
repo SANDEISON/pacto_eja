@@ -19,11 +19,17 @@ from .managed_group_form import ManagedGroupForm
 from .managed_user_form import ManagedUserForm
 from .profile_password_change_form import ProfilePasswordChangeForm
 from .profile_user_form import ProfileUserForm
-from .sala_form import ProgramacaoSalaInlineForm, SalaProgramacaoFormSet
+from .sala_form import (
+    AtividadeSalaProgramacaoFormSet,
+    ProgramacaoSalaInlineForm,
+    SalaAtividadeForm,
+    SalaProgramacaoFormSet,
+)
 
 __all__ = [
     "AtividadeForm",
     "AtividadeRefeicaoFormSet",
+    "AtividadeSalaProgramacaoFormSet",
     "AvaliacaoForm",
     "BootstrapFormMixin",
     "CoautorFormSet",
@@ -43,6 +49,7 @@ __all__ = [
     "ProfilePasswordChangeForm",
     "ProfileUserForm",
     "RefeicaoForm",
+    "SalaAtividadeForm",
     "ProgramacaoSalaInlineForm",
     "SalaProgramacaoFormSet",
     "TrabalhoForm",

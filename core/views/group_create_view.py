@@ -8,6 +8,7 @@ from .management_permission_mixin import ManagementPermissionMixin
 
 
 class GroupCreateView(ManagementPermissionMixin, CreateView):
+    """Cria um grupo de permissões do Django."""
     model = Group
     permission_required = "auth.add_group"
     form_class = ManagedGroupForm
@@ -15,5 +16,6 @@ class GroupCreateView(ManagementPermissionMixin, CreateView):
     success_url = reverse_lazy("group_list")
 
     def form_valid(self, form):
+        """Confirma a criação do grupo."""
         messages.success(self.request, "Grupo cadastrado com sucesso.")
         return super().form_valid(form)

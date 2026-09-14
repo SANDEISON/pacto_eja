@@ -7,6 +7,7 @@ from .management_permission_mixin import ManagementPermissionMixin
 
 
 class GroupDeleteView(ManagementPermissionMixin, DeleteView):
+    """Exclui um grupo de permissões existente."""
     model = Group
     permission_required = "auth.delete_group"
     template_name = "management/confirm_delete.html"
@@ -14,5 +15,6 @@ class GroupDeleteView(ManagementPermissionMixin, DeleteView):
     extra_context = {"object_label": "grupo", "cancel_url_name": "group_list"}
 
     def form_valid(self, form):
+        """Confirma a exclusão do grupo."""
         messages.success(self.request, "Grupo excluído com sucesso.")
         return super().form_valid(form)

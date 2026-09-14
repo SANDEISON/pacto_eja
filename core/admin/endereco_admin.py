@@ -19,5 +19,6 @@ class EnderecoAdmin(admin.ModelAdmin):
     autocomplete_fields = ("educador", "cidade")
 
     @admin.display(description="UF", ordering="cidade__estado__sigla")
-    def uf(self, obj):
-        return obj.uf
+    def uf(self, endereco):
+        """Exibe a sigla do estado derivada da cidade."""
+        return endereco.uf

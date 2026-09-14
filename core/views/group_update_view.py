@@ -8,6 +8,7 @@ from .management_permission_mixin import ManagementPermissionMixin
 
 
 class GroupUpdateView(ManagementPermissionMixin, UpdateView):
+    """Atualiza nome e permissões de um grupo."""
     model = Group
     permission_required = "auth.change_group"
     form_class = ManagedGroupForm
@@ -15,5 +16,6 @@ class GroupUpdateView(ManagementPermissionMixin, UpdateView):
     success_url = reverse_lazy("group_list")
 
     def form_valid(self, form):
+        """Confirma a atualização do grupo."""
         messages.success(self.request, "Grupo atualizado com sucesso.")
         return super().form_valid(form)

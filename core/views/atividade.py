@@ -2,25 +2,29 @@ from dataclasses import dataclass
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import permission_required
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError, transaction
 from django.db.models import Count, Q
 from django.db.models.deletion import ProtectedError
 from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
 from ..forms import (
     AtividadeForm,
     AtividadeRefeicaoFormSet,
+    AtividadeSalaProgramacaoFormSet,
     CoautorFormSet,
     DadosPessoaisInscricaoForm,
     EnderecoForm,
     EvidenciaTrabalhoFormSet,
     FormacaoFormSet,
     ProfileUserForm,
+    ProgramacaoSalaInlineForm,
+    SalaAtividadeForm,
     TrabalhoForm,
     TrabalhoMunicipioFormSet,
 )
@@ -30,7 +34,9 @@ from ..models import (
     Educador,
     Endereco,
     Inscricao,
+    ProgramacaoSala,
     RascunhoInscricao,
+    Sala,
     Trabalho,
 )
 from ..validators import somente_digitos
@@ -73,12 +79,47 @@ class AtividadeFormMixin(ManagementPermissionMixin):
         return AtividadeRefeicaoFormSet(**kwargs)
 
     def get_context_data(self, **kwargs):
-        """Inclui o formset de refeições no contexto da página."""
+        """Inclui refeições e o cadastro rápido de sala no contexto da página."""
         context = super().get_context_data(**kwargs)
         form = context.get("form")
         context["refeicao_formset"] = kwargs.get("refeicao_formset") or self.get_refeicao_formset(
             instance=form.instance if form else None
         )
+        context["can_create_activity_room"] = self.request.user.has_perms(
+            ("core.add_sala", "core.add_programacaosala")
+        )
+        context["can_add_room_schedule"] = self.request.user.has_perm(
+            "core.add_programacaosala"
+        )
+        context["can_change_room_schedule"] = self.request.user.has_perm(
+            "core.change_programacaosala"
+        )
+        context["can_delete_room_schedule"] = self.request.user.has_perm(
+            "core.delete_programacaosala"
+        )
+        context["can_add_activity_room"] = bool(
+            self.object and context["can_create_activity_room"]
+        )
+        context["programacoes_vinculadas"] = (
+            self.object.programacoes.select_related("sala", "tematica").order_by(
+                "sala__nome", "data", "turno", "modalidade"
+            )
+            if self.object
+            else ()
+        )
+        if context["can_add_activity_room"]:
+            nova_sala = SalaAtividadeForm(prefix="nova_sala")
+            context["nova_sala_form"] = nova_sala
+            context["nova_programacao_formset"] = AtividadeSalaProgramacaoFormSet(
+                instance=nova_sala.instance,
+                prefix="nova_programacoes",
+            )
+        if self.object and (
+            context["can_add_room_schedule"] or context["can_change_room_schedule"]
+        ):
+            context["programacao_atividade_form"] = ProgramacaoSalaInlineForm(
+                prefix="programacao"
+            )
         return context
 
     def form_valid(self, form):
@@ -129,6 +170,217 @@ class AtividadeDeleteView(ManagementPermissionMixin, DeleteView):
             return redirect("atividade_list")
         messages.success(self.request, "Atividade excluída com sucesso.")
         return response
+
+
+@login_required
+@permission_required(
+    ("core.change_atividade", "core.add_sala", "core.add_programacaosala"),
+    raise_exception=True,
+)
+def adicionar_sala_atividade(request, pk):
+    """Cria uma sala com programações e as vincula à atividade informada."""
+    if request.method != "POST":
+        raise Http404
+    atividade = get_object_or_404(Atividade, pk=pk)
+    sala_form = SalaAtividadeForm(request.POST, prefix="nova_sala")
+    programacao_formset = AtividadeSalaProgramacaoFormSet(
+        request.POST,
+        instance=sala_form.instance,
+        prefix="nova_programacoes",
+    )
+    if not sala_form.is_valid() or not programacao_formset.is_valid():
+        errors = []
+        for field_errors in sala_form.errors.values():
+            errors.extend(str(error) for error in field_errors)
+        errors.extend(str(error) for error in programacao_formset.non_form_errors())
+        for schedule_form in programacao_formset.forms:
+            for field_errors in schedule_form.errors.values():
+                errors.extend(str(error) for error in field_errors)
+        return JsonResponse({"errors": errors}, status=400)
+
+    programacoes_novas = [
+        form.cleaned_data
+        for form in programacao_formset.forms
+        if form.cleaned_data and not form.cleaned_data.get("DELETE")
+    ]
+    modalidades_atividade = {
+        valor for valor, _ in atividade.modalidades_disponiveis
+    }
+    if any(
+        programacao.get("modalidade") not in modalidades_atividade
+        for programacao in programacoes_novas
+    ):
+        return JsonResponse(
+            {"errors": ["As programações devem usar uma modalidade disponível nesta atividade."]},
+            status=400,
+        )
+
+    with transaction.atomic():
+        sala = sala_form.save()
+        programacao_formset.instance = sala
+        programacoes = programacao_formset.save()
+        atividade.programacoes.add(*programacoes)
+
+    return JsonResponse(
+        {
+            "message": "Sala e programações adicionadas e vinculadas com sucesso.",
+            "sala": _serializar_sala_atividade(atividade, sala),
+            "programacoes": [
+                _serializar_programacao_atividade(atividade, programacao)
+                for programacao in programacoes
+            ],
+        },
+        status=201,
+    )
+
+
+def _serializar_sala_atividade(atividade, sala):
+    """Converte uma sala nos dados necessários para atualizar a interface."""
+    return {
+        "id": sala.pk,
+        "nome": sala.nome,
+        "add_schedule_url": reverse(
+            "atividade_add_room_schedule",
+            kwargs={"pk": atividade.pk, "sala_pk": sala.pk},
+        ),
+    }
+
+
+def _serializar_programacao_atividade(atividade, programacao):
+    """Converte uma programação e suas URLs no contrato JSON da interface."""
+    return {
+        "id": programacao.pk,
+        "label": str(programacao),
+        "data": programacao.data.strftime("%d/%m/%Y"),
+        "data_iso": programacao.data.isoformat(),
+        "turno": programacao.get_turno_display(),
+        "turno_value": programacao.turno,
+        "modalidade": programacao.get_modalidade_display(),
+        "modalidade_value": programacao.modalidade,
+        "link": programacao.link,
+        "tematica": str(programacao.tematica),
+        "tematica_id": programacao.tematica_id,
+        "descricao": programacao.descricao,
+        "capacidade": programacao.quantidade_max_participantes,
+        "edit_url": reverse(
+            "atividade_edit_room_schedule",
+            kwargs={"pk": atividade.pk, "programacao_pk": programacao.pk},
+        ),
+        "delete_url": reverse(
+            "atividade_delete_room_schedule",
+            kwargs={"pk": atividade.pk, "programacao_pk": programacao.pk},
+        ),
+    }
+
+
+def _programacao_atividade_json(atividade, programacao, status=200):
+    """Cria a resposta usada depois da inclusão ou edição de uma programação."""
+    return JsonResponse(
+        {
+            "message": "Programação salva e vinculada com sucesso.",
+            "sala": _serializar_sala_atividade(atividade, programacao.sala),
+            "programacao": _serializar_programacao_atividade(
+                atividade, programacao
+            ),
+        },
+        status=status,
+    )
+
+
+def _validar_modalidade_programacao(atividade, form):
+    """Confere se a programação usa uma modalidade aceita pela atividade."""
+    modalidade = form.cleaned_data.get("modalidade")
+    if modalidade not in {valor for valor, _ in atividade.modalidades_disponiveis}:
+        form.add_error(
+            "modalidade", "A modalidade não está disponível nesta atividade."
+        )
+        return False
+    return True
+
+
+def _form_errors_json(form):
+    """Converte todos os erros de um formulário em uma resposta JSON uniforme."""
+    errors = [
+        str(error)
+        for field_errors in form.errors.values()
+        for error in field_errors
+    ]
+    return JsonResponse({"errors": errors}, status=400)
+
+
+@login_required
+@permission_required(
+    ("core.change_atividade", "core.add_programacaosala"), raise_exception=True
+)
+def adicionar_programacao_sala_atividade(request, pk, sala_pk):
+    """Adiciona uma programação a uma sala já vinculada à atividade."""
+    if request.method != "POST":
+        raise Http404
+    atividade = get_object_or_404(Atividade, pk=pk)
+    sala = get_object_or_404(
+        Sala, pk=sala_pk, programacoes__atividades=atividade
+    )
+    programacao = ProgramacaoSala(sala=sala)
+    form = ProgramacaoSalaInlineForm(
+        request.POST, instance=programacao, prefix="programacao"
+    )
+    if not form.is_valid() or not _validar_modalidade_programacao(atividade, form):
+        return _form_errors_json(form)
+    with transaction.atomic():
+        programacao = form.save()
+        atividade.programacoes.add(programacao)
+    return _programacao_atividade_json(atividade, programacao, status=201)
+
+
+@login_required
+@permission_required(
+    ("core.change_atividade", "core.change_programacaosala"), raise_exception=True
+)
+def editar_programacao_sala_atividade(request, pk, programacao_pk):
+    """Edita uma programação vinculada à atividade."""
+    if request.method != "POST":
+        raise Http404
+    atividade = get_object_or_404(Atividade, pk=pk)
+    programacao = get_object_or_404(
+        ProgramacaoSala.objects.select_related("sala", "tematica"),
+        pk=programacao_pk,
+        atividades=atividade,
+    )
+    form = ProgramacaoSalaInlineForm(
+        request.POST, instance=programacao, prefix="programacao"
+    )
+    if not form.is_valid() or not _validar_modalidade_programacao(atividade, form):
+        return _form_errors_json(form)
+    programacao = form.save()
+    return _programacao_atividade_json(atividade, programacao)
+
+
+@login_required
+@permission_required(
+    ("core.change_atividade", "core.delete_programacaosala"), raise_exception=True
+)
+def excluir_programacao_sala_atividade(request, pk, programacao_pk):
+    """Remove uma programação da atividade e exclui o registro quando órfão."""
+    if request.method != "POST":
+        raise Http404
+    atividade = get_object_or_404(Atividade, pk=pk)
+    programacao = get_object_or_404(
+        ProgramacaoSala, pk=programacao_pk, atividades=atividade
+    )
+    sala_id = programacao.sala_id
+    with transaction.atomic():
+        atividade.programacoes.remove(programacao)
+        if not programacao.atividades.exists():
+            programacao.delete()
+    sala_sem_programacoes = not atividade.programacoes.filter(sala_id=sala_id).exists()
+    return JsonResponse(
+        {
+            "message": "Programação excluída da atividade.",
+            "programacao_id": programacao_pk,
+            "sala_id": sala_id,
+            "room_empty": sala_sem_programacoes,
+        }
+    )
 
 
 class InscricaoListView(ManagementPermissionMixin, SearchableListMixin, ListView):

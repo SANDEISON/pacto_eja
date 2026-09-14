@@ -6,6 +6,7 @@ from .searchable_list_mixin import SearchableListMixin
 
 
 class EducatorListView(ManagementPermissionMixin, SearchableListMixin, ListView):
+    """Lista vínculos de educadores com busca por pessoa, cidade ou escola."""
     model = EducadorEscola
     permission_required = "core.view_educadorescola"
     template_name = "management/educator_list.html"
@@ -21,6 +22,7 @@ class EducatorListView(ManagementPermissionMixin, SearchableListMixin, ListView)
     )
 
     def get_queryset(self):
+        """Carrega os relacionamentos exibidos sem consultas adicionais por linha."""
         return super().get_queryset().select_related(
             "funcao_educador__educador__usuario",
             "cidade__estado",

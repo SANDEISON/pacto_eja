@@ -48,16 +48,12 @@ class ProgramacaoSalaMultipleChoiceField(forms.ModelMultipleChoiceField):
             '<span><i class="bi bi-calendar3" aria-hidden="true"></i>{}</span>'
             '<span><i class="bi bi-clock" aria-hidden="true"></i>{}</span>'
             '</span>'
-            '<span class="program-card-theme">'
-            '<i class="bi bi-bookmark" aria-hidden="true"></i>{}'
-            '</span>'
             '</span>',
             programacao.sala,
             programacao.modalidade,
             programacao.get_modalidade_display(),
             programacao.data.strftime("%d/%m/%Y"),
             programacao.get_turno_display(),
-            programacao.tematica,
         )
 
 
@@ -67,7 +63,7 @@ class AtividadeForm(BootstrapFormMixin, forms.ModelForm):
         model = Atividade
         fields = (
             "tipo", "modalidade", "titulo", "descricao", "local", "data_inicio", "data_fim",
-            "inscricoes_inicio", "inscricoes_fim", "vagas", "programacoes", "permite_submissao",
+            "inscricoes_inicio", "inscricoes_fim", "vagas", "permite_submissao",
             "modelo_submissao", "submissoes_fim", "ativo",
         )
         widgets = {
@@ -78,7 +74,6 @@ class AtividadeForm(BootstrapFormMixin, forms.ModelForm):
             "inscricoes_inicio": forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"),
             "inscricoes_fim": forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"),
             "submissoes_fim": forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"),
-            "programacoes": ProgramacaoSalaCheckboxSelectMultiple,
         }
 
     def __init__(self, *args, **kwargs):
@@ -88,26 +83,9 @@ class AtividadeForm(BootstrapFormMixin, forms.ModelForm):
             "Informe o endereço completo do local. O sistema criará automaticamente "
             "um link para visualização no Google Maps."
         )
-        self.fields["programacoes"].queryset = ProgramacaoSala.objects.select_related(
-            "sala", "tematica"
-        ).order_by("data", "turno", "sala__nome", "modalidade")
-        self.fields["programacoes"].help_text = (
-            "Selecione as programações que os participantes poderão escolher na inscrição."
-        )
         for name in ("data_inicio", "data_fim", "inscricoes_inicio", "inscricoes_fim", "submissoes_fim"):
             self.fields[name].input_formats = ["%Y-%m-%dT%H:%M"]
         self._apply_bootstrap_classes()
-
-    def clean_programacoes(self):
-        """Aceita somente programações compatíveis com a modalidade da atividade."""
-        programacoes = self.cleaned_data["programacoes"]
-        modalidade = self.cleaned_data.get("modalidade")
-        if modalidade and modalidade != Atividade.ModalidadeParticipacao.AMBAS:
-            if programacoes.exclude(modalidade=modalidade).exists():
-                raise forms.ValidationError(
-                    "Selecione somente programações compatíveis com a modalidade da atividade."
-                )
-        return programacoes
 
 
 class RefeicaoForm(BootstrapFormMixin, forms.ModelForm):

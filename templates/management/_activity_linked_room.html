@@ -1,0 +1,11 @@
+<article class="activity-linked-room" data-activity-linked-room data-room-id="{{ sala.grouper.pk }}">
+  <header><span><i class="bi bi-door-open"></i></span><div><strong>{{ sala.grouper }}</strong><small>{{ sala.list|length }} programaç{{ sala.list|length|pluralize:"ão,ões" }}</small></div>{% if can_add_room_schedule %}<button class="btn btn-sm btn-outline-primary ms-auto" type="button" data-add-linked-schedule data-url="{% url 'atividade_add_room_schedule' object.pk sala.grouper.pk %}" data-room-name="{{ sala.grouper }}"><i class="bi bi-plus-lg"></i> Adicionar programação</button>{% endif %}</header>
+  <div class="activity-linked-schedules" data-activity-linked-schedules>
+    {% for programacao in sala.list %}
+      <div class="activity-linked-schedule" data-program-id="{{ programacao.pk }}" data-date="{{ programacao.data|date:'Y-m-d' }}" data-shift="{{ programacao.turno }}" data-modality="{{ programacao.modalidade }}" data-link="{{ programacao.link }}" data-theme-id="{{ programacao.tematica_id }}" data-description="{{ programacao.descricao }}" data-capacity="{{ programacao.quantidade_max_participantes }}">
+        <div class="activity-linked-schedule-content"><strong>{{ programacao.tematica }}</strong><div><span><i class="bi bi-calendar3"></i> {{ programacao.data|date:"d/m/Y" }}</span><span><i class="bi bi-clock"></i> {{ programacao.get_turno_display }}</span><span><i class="bi bi-broadcast"></i> {{ programacao.get_modalidade_display }}</span><span><i class="bi bi-people"></i> {{ programacao.quantidade_max_participantes }} vagas</span></div></div>
+        <div class="activity-linked-schedule-actions">{% if can_change_room_schedule %}<button class="btn btn-sm btn-outline-primary" type="button" data-edit-linked-schedule data-url="{% url 'atividade_edit_room_schedule' object.pk programacao.pk %}"><i class="bi bi-pencil"></i> Editar</button>{% endif %}{% if can_delete_room_schedule %}<button class="btn btn-sm btn-outline-danger" type="button" data-delete-linked-schedule data-url="{% url 'atividade_delete_room_schedule' object.pk programacao.pk %}"><i class="bi bi-trash"></i> Excluir</button>{% endif %}</div>
+      </div>
+    {% endfor %}
+  </div>
+</article>

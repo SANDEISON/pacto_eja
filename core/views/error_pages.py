@@ -12,27 +12,45 @@ ERROR_MESSAGES = {
 
 
 def error_page(request, status_code, exception=None):
-    title, message = ERROR_MESSAGES.get(status_code, ("Algo não saiu como esperado", "Tente novamente em instantes."))
-    return render(request, "errors/error.html", {"status_code": status_code, "error_title": title, "error_message": message}, status=status_code)
+    """Renderiza uma página de erro uniforme para o código HTTP informado."""
+    titulo, mensagem = ERROR_MESSAGES.get(
+        status_code,
+        ("Algo não saiu como esperado", "Tente novamente em instantes."),
+    )
+    return render(
+        request,
+        "errors/error.html",
+        {
+            "status_code": status_code,
+            "error_title": titulo,
+            "error_message": mensagem,
+        },
+        status=status_code,
+    )
 
 
 def error_400(request, exception):
+    """Trata solicitações inválidas."""
     return error_page(request, 400, exception)
 
 
 def error_403(request, exception):
+    """Trata tentativas de acesso sem permissão."""
     return error_page(request, 403, exception)
 
 
 def error_404(request, exception):
+    """Trata endereços que não correspondem a uma página."""
     return error_page(request, 404, exception)
 
 
 def error_500(request):
+    """Trata falhas internas não capturadas pela aplicação."""
     return error_page(request, 500)
 
 
 def error_preview(request, status_code):
+    """Permite à equipe visualizar o layout de cada erro conhecido."""
     if status_code not in ERROR_MESSAGES:
         status_code = 404
     return error_page(request, status_code)

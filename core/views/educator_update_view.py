@@ -8,6 +8,7 @@ from .management_permission_mixin import ManagementPermissionMixin
 
 
 class EducatorUpdateView(ManagementPermissionMixin, UpdateView):
+    """Atualiza um vínculo administrativo de educador."""
     model = EducadorEscola
     permission_required = "core.change_educadorescola"
     form_class = EducadorEscolaForm
@@ -15,5 +16,6 @@ class EducatorUpdateView(ManagementPermissionMixin, UpdateView):
     success_url = reverse_lazy("educator_list")
 
     def form_valid(self, form):
+        """Confirma a atualização depois que o formulário foi validado."""
         messages.success(self.request, "Cadastro do educador atualizado com sucesso.")
         return super().form_valid(form)

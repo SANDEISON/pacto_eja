@@ -26,9 +26,11 @@ class EducadorEscolaAdmin(admin.ModelAdmin):
     readonly_fields = ("criado_em",)
 
     @admin.display(description="estado", ordering="cidade__estado__sigla")
-    def estado(self, obj):
-        return obj.cidade.estado
+    def estado(self, vinculo):
+        """Exibe o estado derivado da cidade de atuação."""
+        return vinculo.cidade.estado
 
     @admin.display(description="educador", ordering="funcao_educador__educador__nome_completo")
-    def educador(self, obj):
-        return obj.funcao_educador.educador
+    def educador(self, vinculo):
+        """Exibe o educador associado ao vínculo escolar."""
+        return vinculo.funcao_educador.educador

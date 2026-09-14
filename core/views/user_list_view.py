@@ -6,6 +6,7 @@ from .searchable_list_mixin import SearchableListMixin
 
 
 class UserListView(ManagementPermissionMixin, SearchableListMixin, ListView):
+    """Lista contas com busca por identificação, nome ou e-mail."""
     model = get_user_model()
     permission_required = "auth.view_user"
     template_name = "management/user_list.html"
@@ -13,4 +14,5 @@ class UserListView(ManagementPermissionMixin, SearchableListMixin, ListView):
     search_fields = ("username", "first_name", "last_name", "email")
 
     def get_queryset(self):
+        """Carrega os grupos e ordena as contas pelo identificador."""
         return super().get_queryset().prefetch_related("groups").order_by("username")

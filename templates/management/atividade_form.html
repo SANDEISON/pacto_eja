@@ -14,8 +14,9 @@
   <section class="form-section"><h2>Datas e vagas</h2><div class="row g-3">
     {% include "management/_field.html" with field=form.data_inicio column="col-12 col-md-6" %}{% include "management/_field.html" with field=form.data_fim column="col-12 col-md-6" %}{% include "management/_field.html" with field=form.inscricoes_inicio column="col-12 col-md-6" %}{% include "management/_field.html" with field=form.inscricoes_fim column="col-12 col-md-6" %}{% include "management/_field.html" with field=form.vagas column="col-12 col-md-6" %}
   </div></section>
-  <section class="form-section"><div class="section-heading"><span><i class="bi bi-calendar2-week"></i></span><div><h2>Programações disponíveis</h2><p>Defina quais salas e horários poderão ser escolhidos pelos participantes desta atividade.</p></div></div><div class="row g-3">
-    {% include "management/_field.html" with field=form.programacoes column="col-12" %}
+  <section class="form-section"><div class="section-heading activity-programs-heading"><span><i class="bi bi-calendar2-week"></i></span><div><h2>Programações disponíveis</h2><p>Defina quais salas e horários poderão ser escolhidos pelos participantes desta atividade.</p></div>{% if can_add_activity_room %}<button class="btn btn-outline-primary ms-auto" type="button" data-bs-toggle="modal" data-bs-target="#activity-room-modal"><i class="bi bi-plus-lg"></i> Adicionar sala e programação</button>{% elif can_create_activity_room and not object %}<button class="btn btn-outline-primary ms-auto" type="button" disabled title="Salve a atividade antes de adicionar uma sala"><i class="bi bi-plus-lg"></i> Adicionar sala e programação</button>{% endif %}</div><div class="row g-3">
+    <div class="col-12"><div class="alert alert-success mb-0" data-activity-room-success hidden></div></div>
+    <div class="col-12"><div class="activity-linked-heading"><h3>Salas e programações vinculadas</h3><p>Confira as salas e os horários que já fazem parte desta atividade.</p></div>{% regroup programacoes_vinculadas by sala as salas_vinculadas %}<div class="activity-linked-rooms" data-activity-linked-rooms data-can-add="{{ can_add_room_schedule|yesno:'true,false' }}" data-can-edit="{{ can_change_room_schedule|yesno:'true,false' }}" data-can-delete="{{ can_delete_room_schedule|yesno:'true,false' }}">{% for sala in salas_vinculadas %}{% include "management/_activity_linked_room.html" with sala=sala %}{% endfor %}<div class="activity-linked-empty" data-activity-linked-empty{% if salas_vinculadas %} hidden{% endif %}><i class="bi bi-calendar2-x"></i><span>Nenhuma sala ou programação vinculada a esta atividade.</span></div></div></div>
   </div></section>
   <section class="form-section"><div class="section-heading"><span><i class="bi bi-cup-hot"></i></span><div><h2>Refeições disponíveis</h2><p>Informe os tipos de refeições, datas e horários que poderão ser selecionados na inscrição.</p></div></div>
     {{ refeicao_formset.management_form }}
@@ -31,6 +32,42 @@
   </div></section>
   <footer class="form-actions"><a class="btn btn-light" href="{% url 'atividade_list' %}">Cancelar</a><button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Salvar atividade</button></footer>
 </form></div>
+{% if can_add_activity_room %}
+<div class="modal fade" id="activity-room-modal" tabindex="-1" aria-labelledby="activity-room-modal-title" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <form class="modal-content" id="activity-add-room-form" method="post" action="{% url 'atividade_add_room' object.pk %}">
+      {% csrf_token %}
+      <div class="modal-header">
+        <div><h2 class="modal-title fs-5" id="activity-room-modal-title">Adicionar sala e programações</h2><p class="mb-0 text-body-secondary small">As programações cadastradas serão vinculadas automaticamente a esta atividade.</p></div>
+        <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-danger" data-activity-room-errors hidden></div>
+        <div class="row g-3 mb-4">{% include "management/_field.html" with field=nova_sala_form.nome column="col-12" %}</div>
+        <div class="activity-room-modal-heading"><h3>Programações da sala</h3><button class="btn btn-sm btn-outline-primary" type="button" data-add-activity-room-schedule><i class="bi bi-plus-lg"></i> Adicionar programação</button></div>
+        {{ nova_programacao_formset.management_form }}
+        <div class="activity-room-schedules" data-activity-room-schedules>
+          {% for schedule_form in nova_programacao_formset %}{% include "management/_activity_room_schedule_form.html" with schedule_form=schedule_form %}{% endfor %}
+        </div>
+        <template data-activity-room-schedule-template>{% include "management/_activity_room_schedule_form.html" with schedule_form=nova_programacao_formset.empty_form %}</template>
+      </div>
+      <div class="modal-footer"><button class="btn btn-light" type="button" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-primary" type="submit" data-save-activity-room><i class="bi bi-check-lg"></i> Adicionar e vincular</button></div>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% if programacao_atividade_form %}
+<div class="modal fade" id="activity-schedule-modal" tabindex="-1" aria-labelledby="activity-schedule-modal-title" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <form class="modal-content" id="activity-schedule-form" method="post">
+      {% csrf_token %}
+      <div class="modal-header"><div><h2 class="modal-title fs-5" id="activity-schedule-modal-title">Adicionar programação</h2><p class="mb-0 text-body-secondary small" data-activity-schedule-room></p></div><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Fechar"></button></div>
+      <div class="modal-body"><div class="alert alert-danger" data-activity-schedule-errors hidden></div><div class="row g-3">{% for field in programacao_atividade_form.visible_fields %}{% include "management/_field.html" with field=field column="col-12 col-md-6" %}{% endfor %}</div></div>
+      <div class="modal-footer"><button class="btn btn-light" type="button" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-primary" type="submit" data-save-activity-schedule><i class="bi bi-check-lg"></i> Salvar programação</button></div>
+    </form>
+  </div>
+</div>
+{% endif %}
 {% endblock %}
 
-{% block page_js %}<script src="{% static 'js/atividade_refeicoes.js' %}?v=20260914-1"></script>{% endblock %}
+{% block page_js %}<script src="{% static 'js/atividade_refeicoes.js' %}?v=20260914-1"></script><script src="{% static 'js/atividade_salas.js' %}?v=20260914-2"></script>{% endblock %}

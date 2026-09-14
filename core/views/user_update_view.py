@@ -9,6 +9,7 @@ from .management_permission_mixin import ManagementPermissionMixin
 
 
 class UserUpdateView(ManagementPermissionMixin, UpdateView):
+    """Atualiza dados, grupos e estado de uma conta administrativa."""
     model = get_user_model()
     permission_required = "auth.change_user"
     form_class = ManagedUserForm
@@ -16,11 +17,13 @@ class UserUpdateView(ManagementPermissionMixin, UpdateView):
     success_url = reverse_lazy("user_list")
 
     def get_object(self, queryset=None):
-        user = super().get_object(queryset)
-        if user.is_superuser and not self.request.user.is_superuser:
+        """Permite editar superusuários somente a outro superusuário."""
+        usuario = super().get_object(queryset)
+        if usuario.is_superuser and not self.request.user.is_superuser:
             raise PermissionDenied
-        return user
+        return usuario
 
     def form_valid(self, form):
+        """Confirma a atualização da conta."""
         messages.success(self.request, "Usuário atualizado com sucesso.")
         return super().form_valid(form)

@@ -20,5 +20,6 @@ class FuncaoEducadorAdmin(admin.ModelAdmin):
         description="função e caracterização",
         ordering="educador_escola__funcao_caracterizacao_turmas",
     )
-    def funcao_caracterizacao_turmas(self, obj):
-        return obj.educador_escola.funcao_caracterizacao_turmas
+    def funcao_caracterizacao_turmas(self, funcao_educador):
+        """Exibe a caracterização registrada no vínculo escolar."""
+        return funcao_educador.educador_escola.funcao_caracterizacao_turmas

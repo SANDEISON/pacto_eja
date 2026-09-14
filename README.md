@@ -20,6 +20,7 @@ O projeto é uma aplicação Django renderizada no servidor. O PostgreSQL armaze
 - aceite versionado dos termos de publicação, imagem e direitos autorais;
 - chamadas públicas, seleção de avaliadores, distribuição de trabalhos e pareceres;
 - gestão de atividades, salas, programações, refeições, inscrições, educadores e catálogos;
+- relatórios consolidados por município, escola, estado, perfil e tempo de atuação;
 - controle de acesso pelas permissões nativas do Django.
 
 ## Tecnologias e requisitos
@@ -41,6 +42,7 @@ core/
   forms/        formulários e validações de entrada
   migrations/   estrutura e carga inicial do banco
   models/       entidades do domínio
+  tests/        testes organizados por fluxo funcional
   views/        páginas, APIs internas e fluxos da aplicação
 deploy/         arquivos de exemplo para systemd e produção
 pacto_eja/      configurações, URLs raiz, ASGI e WSGI
@@ -62,6 +64,7 @@ Os models são separados por assunto e exportados por `core.models`. O mesmo pad
 6. Quando permitido, o usuário escolhe entre trabalho acadêmico e relato de experiência, aceita os termos vigentes e envia um PDF de até 10 MB. Relatos também registram municípios e até duas evidências em JPG ou PNG.
 7. Em uma chamada de avaliadores, o usuário envia sua candidatura e a coordenação decide pela aprovação ou rejeição.
 8. A coordenação distribui trabalhos somente a avaliadores aprovados. O avaliador pode salvar o parecer como rascunho e concluí-lo até o prazo definido.
+9. Na edição de uma atividade, a equipe pode criar uma sala com suas programações ou acrescentar programações a uma sala já vinculada. Modalidades incompatíveis com a atividade são rejeitadas no servidor.
 
 ### Relações principais do domínio
 

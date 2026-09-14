@@ -8,6 +8,7 @@ from .management_permission_mixin import ManagementPermissionMixin
 
 
 class UserCreateView(ManagementPermissionMixin, CreateView):
+    """Cria uma conta pela área administrativa do sistema."""
     model = get_user_model()
     permission_required = "auth.add_user"
     form_class = ManagedUserForm
@@ -15,5 +16,6 @@ class UserCreateView(ManagementPermissionMixin, CreateView):
     success_url = reverse_lazy("user_list")
 
     def form_valid(self, form):
+        """Confirma a criação da conta."""
         messages.success(self.request, "Usuário cadastrado com sucesso.")
         return super().form_valid(form)

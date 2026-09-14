@@ -30,11 +30,36 @@ class ProgramacaoSalaInlineForm(BootstrapFormMixin, forms.ModelForm):
         self._apply_bootstrap_classes()
 
 
+class SalaAtividadeForm(BootstrapFormMixin, forms.ModelForm):
+    """Cadastra uma sala a partir do formulário de uma atividade."""
+
+    class Meta:
+        model = Sala
+        fields = ("nome",)
+
+    def __init__(self, *args, **kwargs):
+        """Aplica a apresentação visual comum aos campos administrativos."""
+        super().__init__(*args, **kwargs)
+        self._apply_bootstrap_classes()
+
+
 SalaProgramacaoFormSet = forms.inlineformset_factory(
     Sala,
     ProgramacaoSala,
     form=ProgramacaoSalaInlineForm,
     fields=ProgramacaoSalaInlineForm.Meta.fields,
     extra=0,
+    can_delete=True,
+)
+
+
+AtividadeSalaProgramacaoFormSet = forms.inlineformset_factory(
+    Sala,
+    ProgramacaoSala,
+    form=ProgramacaoSalaInlineForm,
+    fields=ProgramacaoSalaInlineForm.Meta.fields,
+    extra=0,
+    min_num=1,
+    validate_min=True,
     can_delete=True,
 )

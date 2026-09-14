@@ -267,8 +267,9 @@ class AtividadeFlowTests(TestCase):
         self.assertContains(page, 'name="dados-programacoes"', count=3)
         self.assertContains(page, 'data-modalidade="online"', count=2)
         self.assertContains(page, 'data-modalidade="presencial"', count=1)
-        self.assertContains(page, 'data-registration-program-theme-filter')
+        self.assertNotContains(page, 'data-registration-program-theme-filter')
         self.assertContains(page, 'data-registration-program-date-filter')
+        self.assertNotContains(page, 'class="program-card-theme"')
         self.assertContains(page, f'data-tematica="{online_um.tematica_id}"', count=3)
         self.assertContains(page, f'data-data="{online_um.data:%Y-%m-%d}"', count=3)
         self.assertRedirects(response, reverse("dashboard"))
@@ -852,6 +853,19 @@ class AtividadeFlowTests(TestCase):
 
 
 class AtividadeManagementTests(TestCase):
+    def create_activity(self, modalidade=Atividade.ModalidadeParticipacao.AMBAS):
+        inicio = timezone.now() + timedelta(days=30)
+        return Atividade.objects.create(
+            tipo=Atividade.Tipo.EVENTO,
+            modalidade=modalidade,
+            titulo="Encontro de formação",
+            descricao="Atividade para formação de educadores.",
+            local="Centro de formação",
+            data_inicio=inicio,
+            data_fim=inicio + timedelta(days=1),
+            inscricoes_fim=inicio - timedelta(days=1),
+        )
+
     def test_management_requires_permission(self):
         regular = get_user_model().objects.create_user(username="regular@example.com", password="SenhaForte2026!")
         self.client.force_login(regular)
@@ -916,4 +930,194 @@ class AtividadeManagementTests(TestCase):
         self.assertEqual(atividade.refeicoes.count(), 2)
         self.assertTrue(
             atividade.refeicoes.filter(tipo=Refeicao.Tipo.CAFE_DA_MANHA).exists()
+        )
+
+    def test_superuser_can_add_room_programs_and_link_them_to_activity(self):
+        admin = get_user_model().objects.create_superuser(
+            username="admin.salas.atividade@example.com",
+            email="admin.salas.atividade@example.com",
+            password="SenhaForte2026!",
+        )
+        self.client.force_login(admin)
+        atividade = self.create_activity()
+        tematica = TematicaSala.objects.create(nome="Alfabetização na EJA")
+        data_programacao = timezone.localdate(atividade.data_inicio)
+        url = reverse("atividade_add_room", args=[atividade.pk])
+
+        page = self.client.get(reverse("atividade_update", args=[atividade.pk]))
+        response = self.client.post(
+            url,
+            {
+                "nova_sala-nome": "Sala de práticas",
+                "nova_programacoes-TOTAL_FORMS": "2",
+                "nova_programacoes-INITIAL_FORMS": "0",
+                "nova_programacoes-MIN_NUM_FORMS": "1",
+                "nova_programacoes-MAX_NUM_FORMS": "1000",
+                "nova_programacoes-0-data": data_programacao.isoformat(),
+                "nova_programacoes-0-turno": ProgramacaoSala.Turno.MANHA,
+                "nova_programacoes-0-modalidade": ProgramacaoSala.Modalidade.PRESENCIAL,
+                "nova_programacoes-0-link": "",
+                "nova_programacoes-0-tematica": str(tematica.pk),
+                "nova_programacoes-0-descricao": "Roda de conversa.",
+                "nova_programacoes-0-quantidade_max_participantes": "30",
+                "nova_programacoes-1-data": data_programacao.isoformat(),
+                "nova_programacoes-1-turno": ProgramacaoSala.Turno.TARDE,
+                "nova_programacoes-1-modalidade": ProgramacaoSala.Modalidade.ONLINE,
+                "nova_programacoes-1-link": "https://example.com/sala-praticas",
+                "nova_programacoes-1-tematica": str(tematica.pk),
+                "nova_programacoes-1-descricao": "Oficina on-line.",
+                "nova_programacoes-1-quantidade_max_participantes": "50",
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertContains(page, "Adicionar sala e programação")
+        self.assertContains(page, 'id="activity-room-modal"')
+        self.assertContains(page, "Salas e programações vinculadas")
+        self.assertContains(page, "Nenhuma sala ou programação vinculada")
+        self.assertNotContains(
+            page,
+            "Selecione as programações que os participantes poderão escolher na inscrição.",
+        )
+        self.assertEqual(response.status_code, 201)
+        sala = Sala.objects.get(nome="Sala de práticas")
+        self.assertEqual(sala.programacoes.count(), 2)
+        self.assertQuerySetEqual(
+            atividade.programacoes.order_by("pk"),
+            sala.programacoes.order_by("pk"),
+        )
+        self.assertEqual(len(response.json()["programacoes"]), 2)
+
+        updated_page = self.client.get(reverse("atividade_update", args=[atividade.pk]))
+        self.assertContains(updated_page, "Sala de práticas")
+        self.assertContains(updated_page, "Alfabetização na EJA")
+        self.assertContains(updated_page, f'data-program-id="{sala.programacoes.first().pk}"')
+        self.assertContains(updated_page, "2 programações")
+
+        update_response = self.client.post(
+            reverse("atividade_update", args=[atividade.pk]),
+            {
+                "tipo": atividade.tipo,
+                "modalidade": atividade.modalidade,
+                "titulo": atividade.titulo,
+                "descricao": atividade.descricao,
+                "local": atividade.local,
+                "data_inicio": timezone.localtime(atividade.data_inicio).strftime("%Y-%m-%dT%H:%M"),
+                "data_fim": timezone.localtime(atividade.data_fim).strftime("%Y-%m-%dT%H:%M"),
+                "inscricoes_inicio": "",
+                "inscricoes_fim": timezone.localtime(atividade.inscricoes_fim).strftime("%Y-%m-%dT%H:%M"),
+                "vagas": "",
+                "modelo_submissao": atividade.modelo_submissao,
+                "submissoes_fim": "",
+                "ativo": "on",
+            },
+        )
+        self.assertRedirects(update_response, reverse("atividade_list"))
+        self.assertEqual(atividade.programacoes.count(), 2)
+
+    def test_add_room_rejects_schedule_with_unavailable_modality(self):
+        admin = get_user_model().objects.create_superuser(
+            username="admin.modalidade.sala@example.com",
+            email="admin.modalidade.sala@example.com",
+            password="SenhaForte2026!",
+        )
+        self.client.force_login(admin)
+        atividade = self.create_activity(Atividade.ModalidadeParticipacao.PRESENCIAL)
+        tematica = TematicaSala.objects.create(nome="Tecnologias educacionais")
+
+        response = self.client.post(
+            reverse("atividade_add_room", args=[atividade.pk]),
+            {
+                "nova_sala-nome": "Sala incompatível",
+                "nova_programacoes-TOTAL_FORMS": "1",
+                "nova_programacoes-INITIAL_FORMS": "0",
+                "nova_programacoes-MIN_NUM_FORMS": "1",
+                "nova_programacoes-MAX_NUM_FORMS": "1000",
+                "nova_programacoes-0-data": timezone.localdate(atividade.data_inicio).isoformat(),
+                "nova_programacoes-0-turno": ProgramacaoSala.Turno.MANHA,
+                "nova_programacoes-0-modalidade": ProgramacaoSala.Modalidade.ONLINE,
+                "nova_programacoes-0-link": "https://example.com/incompativel",
+                "nova_programacoes-0-tematica": str(tematica.pk),
+                "nova_programacoes-0-descricao": "",
+                "nova_programacoes-0-quantidade_max_participantes": "20",
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("modalidade disponível", response.json()["errors"][0])
+        self.assertFalse(Sala.objects.filter(nome="Sala incompatível").exists())
+
+    def test_superuser_can_manage_schedules_from_linked_room_list(self):
+        admin = get_user_model().objects.create_superuser(
+            username="admin.programacoes.atividade@example.com",
+            email="admin.programacoes.atividade@example.com",
+            password="SenhaForte2026!",
+        )
+        self.client.force_login(admin)
+        atividade = self.create_activity()
+        sala = Sala.objects.create(nome="Sala de oficinas")
+        tematica = TematicaSala.objects.create(nome="Práticas pedagógicas")
+        data_programacao = timezone.localdate(atividade.data_inicio)
+        programacao_existente = ProgramacaoSala.objects.create(
+            sala=sala,
+            data=data_programacao,
+            turno=ProgramacaoSala.Turno.MANHA,
+            modalidade=ProgramacaoSala.Modalidade.PRESENCIAL,
+            tematica=tematica,
+            quantidade_max_participantes=25,
+        )
+        atividade.programacoes.add(programacao_existente)
+        payload = {
+            "programacao-data": data_programacao.isoformat(),
+            "programacao-turno": ProgramacaoSala.Turno.TARDE,
+            "programacao-modalidade": ProgramacaoSala.Modalidade.ONLINE,
+            "programacao-link": "https://example.com/oficina",
+            "programacao-tematica": str(tematica.pk),
+            "programacao-descricao": "Oficina inicial.",
+            "programacao-quantidade_max_participantes": "40",
+        }
+
+        page = self.client.get(reverse("atividade_update", args=[atividade.pk]))
+        add_response = self.client.post(
+            reverse("atividade_add_room_schedule", args=[atividade.pk, sala.pk]),
+            payload,
+        )
+
+        self.assertContains(page, "Adicionar programação")
+        self.assertContains(page, "Editar")
+        self.assertContains(page, "Excluir")
+        self.assertEqual(add_response.status_code, 201)
+        nova_programacao = ProgramacaoSala.objects.get(
+            pk=add_response.json()["programacao"]["id"]
+        )
+        self.assertTrue(atividade.programacoes.filter(pk=nova_programacao.pk).exists())
+
+        edit_response = self.client.post(
+            reverse(
+                "atividade_edit_room_schedule",
+                args=[atividade.pk, nova_programacao.pk],
+            ),
+            payload
+            | {
+                "programacao-turno": ProgramacaoSala.Turno.NOITE,
+                "programacao-descricao": "Oficina atualizada.",
+                "programacao-quantidade_max_participantes": "55",
+            },
+        )
+        self.assertEqual(edit_response.status_code, 200)
+        nova_programacao.refresh_from_db()
+        self.assertEqual(nova_programacao.turno, ProgramacaoSala.Turno.NOITE)
+        self.assertEqual(nova_programacao.quantidade_max_participantes, 55)
+
+        delete_response = self.client.post(
+            reverse(
+                "atividade_delete_room_schedule",
+                args=[atividade.pk, nova_programacao.pk],
+            )
+        )
+        self.assertEqual(delete_response.status_code, 200)
+        self.assertFalse(delete_response.json()["room_empty"])
+        self.assertFalse(ProgramacaoSala.objects.filter(pk=nova_programacao.pk).exists())
+        self.assertTrue(
+            atividade.programacoes.filter(pk=programacao_existente.pk).exists()
         )

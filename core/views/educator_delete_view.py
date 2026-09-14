@@ -7,6 +7,7 @@ from .management_permission_mixin import ManagementPermissionMixin
 
 
 class EducatorDeleteView(ManagementPermissionMixin, DeleteView):
+    """Exclui um vínculo administrativo de educador."""
     model = EducadorEscola
     permission_required = "core.delete_educadorescola"
     template_name = "management/confirm_delete.html"
@@ -14,5 +15,6 @@ class EducatorDeleteView(ManagementPermissionMixin, DeleteView):
     extra_context = {"object_label": "cadastro de educador", "cancel_url_name": "educator_list"}
 
     def form_valid(self, form):
+        """Confirma a exclusão do vínculo ao usuário da gestão."""
         messages.success(self.request, "Cadastro do educador excluído com sucesso.")
         return super().form_valid(form)
