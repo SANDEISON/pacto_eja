@@ -19,6 +19,11 @@ logger = logging.getLogger(__name__)
 User = get_user_model()
 CARACTERES_SENHA_TEMPORARIA = string.ascii_letters + string.digits + "!@#$%&*"
 INTERVALO_RECUPERACAO_SEGUNDOS = 5 * 60
+MENSAGEM_RECUPERACAO_SOLICITADA = (
+    "Se o CPF estiver vinculado a uma conta com e-mail, a senha temporária será enviada. "
+    "Caso não receba a mensagem, verifique a caixa de spam e aguarde 5 minutos antes de "
+    "solicitar novamente."
+)
 
 
 def gerar_senha_temporaria(tamanho=14):
@@ -71,10 +76,7 @@ def recover_password(request):
             timeout=INTERVALO_RECUPERACAO_SEGUNDOS,
         )
         if not primeira_tentativa:
-            messages.success(
-                request,
-                "Se o CPF estiver vinculado a uma conta com e-mail, a senha temporária será enviada.",
-            )
+            messages.success(request, MENSAGEM_RECUPERACAO_SOLICITADA)
             return redirect("accounts:signin")
 
         usuario = User.objects.filter(
@@ -112,10 +114,7 @@ def recover_password(request):
                 )
                 return render(request, "accounts/password_recovery.html", {"form": form})
 
-        messages.success(
-            request,
-            "Se o CPF estiver vinculado a uma conta com e-mail, a senha temporária será enviada.",
-        )
+        messages.success(request, MENSAGEM_RECUPERACAO_SOLICITADA)
         return redirect("accounts:signin")
 
     return render(request, "accounts/password_recovery.html", {"form": form})

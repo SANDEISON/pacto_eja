@@ -94,6 +94,7 @@ class AuthenticationTests(TestCase):
         )
 
         self.assertContains(response, "Se o CPF estiver vinculado a uma conta com e-mail")
+        self.assertContains(response, "aguarde 5 minutos antes de solicitar novamente")
         self.assertEqual(mail.outbox, [])
 
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
