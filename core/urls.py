@@ -10,6 +10,7 @@ urlpatterns = [
     path("cadastro-educadores/api/cpf/", views.cpf_lookup, name="cadastro_educador_cpf_lookup"),
     path("cadastro-educadores/api/cidades/", views.cidades_por_estado, name="cadastro_educador_cidades"),
     path("cadastro-educadores/api/escolas/", views.escolas_por_cidade, name="cadastro_educador_escolas"),
+    path("relatorios/", views.reports, name="reports"),
     path("", RedirectView.as_view(pattern_name="cadastro_educador", permanent=False), name="home"),
     path("painel/", views.dashboard, name="dashboard"),
     path("perfil/", views.profile, name="profile"),

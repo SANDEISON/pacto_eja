@@ -150,7 +150,7 @@ ADMINLTE = {
         {"header": "GESTÃO", "can": staff_only},
         {"text": "Formações", "url": "#formacoes", "icon": "bi bi-mortarboard-fill", "can": staff_only},
         {"text": "Educadores", "route": "educator_list", "icon": "bi bi-people-fill", "can": educator_management_access},
-        {"text": "Relatórios", "url": "#relatorios", "icon": "bi bi-bar-chart-fill", "can": staff_only},
+        {"text": "Relatórios", "route": "reports", "icon": "bi bi-bar-chart-fill", "can": staff_only},
         {"header": "SISTEMA", "can": management_access},
         {
             "text": "Administrar",

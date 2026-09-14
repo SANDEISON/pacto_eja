@@ -19,6 +19,7 @@ from .user_list_view import UserListView
 from .user_update_view import UserUpdateView
 
 __all__ = [
+    "reports",
     "cadastro_educador",
     "cadastro_educador_success",
     "cidades_por_estado",
@@ -54,3 +55,4 @@ from .cadastro_educador import cadastro_educador
 from .cadastro_educador_success import cadastro_educador_success
 from .cidades_por_estado import cidades_por_estado
 from .cpf_lookup import cpf_lookup
+from .reports import reports
