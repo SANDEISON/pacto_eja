@@ -195,7 +195,7 @@ ADMINLTE = {
         {"text": "Eventos e atividades", "route": "atividade_list", "icon": "bi bi-calendar2-event-fill", "can": activity_management_access},
         {"text": "Chamadas e avaliações", "route": "chamada_avaliadores_list", "icon": "bi bi-person-check-fill", "can": review_management_access},
         {"text": "Educadores", "route": "educator_list", "icon": "bi bi-people-fill", "can": educator_management_access},
-        {"text": "Relatórios", "url": "#relatorios", "icon": "bi bi-bar-chart-fill", "can": staff_only},
+        {"text": "Relatórios", "route": "reports", "icon": "bi bi-bar-chart-fill", "can": staff_only},
         {"header": "SISTEMA", "can": management_access},
         {
             "text": "Administrar",
