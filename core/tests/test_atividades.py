@@ -267,6 +267,10 @@ class AtividadeFlowTests(TestCase):
         self.assertContains(page, 'name="dados-programacoes"', count=3)
         self.assertContains(page, 'data-modalidade="online"', count=2)
         self.assertContains(page, 'data-modalidade="presencial"', count=1)
+        self.assertContains(page, 'data-registration-program-theme-filter')
+        self.assertContains(page, 'data-registration-program-date-filter')
+        self.assertContains(page, f'data-tematica="{online_um.tematica_id}"', count=3)
+        self.assertContains(page, f'data-data="{online_um.data:%Y-%m-%d}"', count=3)
         self.assertRedirects(response, reverse("dashboard"))
         inscricao = Inscricao.objects.get(atividade=self.atividade, usuario=self.user)
         self.assertQuerySetEqual(

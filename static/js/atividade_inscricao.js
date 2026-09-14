@@ -17,6 +17,8 @@
   const modalitySelect = document.getElementById("id_dados-modalidade_inscricao");
   const mealsSection = form.querySelector("[data-registration-meals]");
   const programsSection = form.querySelector("[data-registration-programs]");
+  const programThemeFilter = form.querySelector("[data-registration-program-theme-filter]");
+  const programDateFilter = form.querySelector("[data-registration-program-date-filter]");
   const workChoiceStep = form.querySelector('[data-registration-step="decisao"]');
   const continueButton = form.querySelector("[data-registration-continue]");
   const modalityContinueButton = form.querySelector("[data-registration-modality-continue]");
@@ -100,17 +102,30 @@
   function updateProgramAvailability() {
     if (!programsSection) return;
     const modality = modalitySelect?.value;
+    const theme = programThemeFilter?.value || "";
+    const date = programDateFilter?.value || "";
     let availablePrograms = 0;
+    let modalityPrograms = 0;
     programsSection.querySelectorAll('[name="dados-programacoes"]').forEach((field) => {
-      const isAvailable = field.dataset.modalidade === modality;
+      const matchesModality = field.dataset.modalidade === modality;
+      const matchesTheme = !theme || field.dataset.tematica === theme;
+      const matchesDate = !date || field.dataset.data === date;
+      const isAvailable = matchesModality && matchesTheme && matchesDate;
       const option = field.closest("li") || field.closest("div");
       if (option) option.hidden = !isAvailable;
-      field.disabled = !isAvailable;
-      if (!isAvailable) field.checked = false;
+      field.disabled = !matchesModality;
+      if (!matchesModality) field.checked = false;
+      if (matchesModality) modalityPrograms += 1;
       if (isAvailable) availablePrograms += 1;
     });
     const emptyMessage = programsSection.querySelector("[data-registration-programs-empty]");
     if (emptyMessage) emptyMessage.hidden = availablePrograms > 0;
+    const emptyText = programsSection.querySelector("[data-registration-programs-empty-text]");
+    if (emptyText) {
+      emptyText.textContent = modalityPrograms > 0
+        ? "Nenhuma programação corresponde aos filtros selecionados."
+        : "Não há programações disponíveis para esta modalidade.";
+    }
     updateProgramSelectionCount();
   }
 
@@ -392,6 +407,8 @@
   addressStateSelect?.addEventListener("change", loadAddressCities);
   modalitySelect?.addEventListener("change", updateMealAvailability);
   modalitySelect?.addEventListener("change", updateProgramAvailability);
+  programThemeFilter?.addEventListener("change", updateProgramAvailability);
+  programDateFilter?.addEventListener("change", updateProgramAvailability);
   programsSection?.addEventListener("change", updateProgramSelectionCount);
   workStateSelect?.addEventListener("change", () => {
     municipalityList?.querySelectorAll("[data-municipality-row]:not([hidden])").forEach(

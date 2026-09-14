@@ -20,14 +20,16 @@ from .bootstrap_form_mixin import BootstrapFormMixin
 
 
 class ProgramacaoSalaCheckboxSelectMultiple(forms.CheckboxSelectMultiple):
-    """Expõe a modalidade de cada programação para a filtragem no navegador."""
+    """Expõe os dados de cada programação para a filtragem no navegador."""
 
     def create_option(self, name, value, *args, **kwargs):
-        """Adiciona a modalidade como atributo HTML de cada opção."""
+        """Adiciona modalidade, temática e data como atributos HTML da opção."""
         option = super().create_option(name, value, *args, **kwargs)
         programacao = getattr(value, "instance", None)
         if programacao is not None:
             option["attrs"]["data-modalidade"] = programacao.modalidade
+            option["attrs"]["data-tematica"] = str(programacao.tematica_id)
+            option["attrs"]["data-data"] = programacao.data.isoformat()
         return option
 
 
@@ -523,9 +525,18 @@ class DadosPessoaisInscricaoForm(BootstrapFormMixin, forms.ModelForm):
         inscricao = kwargs.pop("inscricao", None)
         super().__init__(*args, **kwargs)
         self.fields["modalidade_inscricao"].choices = atividade.modalidades_disponiveis
-        self.fields["programacoes"].queryset = atividade.programacoes.select_related(
+        programacoes = atividade.programacoes.select_related(
             "sala", "tematica"
         ).order_by("data", "turno", "sala__nome", "modalidade")
+        self.fields["programacoes"].queryset = programacoes
+        self.programacoes_tematicas = list(
+            programacoes.order_by("tematica__nome")
+            .values_list("tematica_id", "tematica__nome")
+            .distinct()
+        )
+        self.programacoes_datas = list(
+            programacoes.order_by("data").values_list("data", flat=True).distinct()
+        )
         if atividade.aceita_modalidade(Inscricao.Modalidade.PRESENCIAL):
             self.fields["refeicoes"].queryset = atividade.refeicoes.order_by(
                 "data", "horario", "tipo"

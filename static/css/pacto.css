@@ -59,6 +59,8 @@ body { font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; col
 .registration-programs-heading h4 i { margin-right: .35rem; color: var(--pacto-blue); }
 .registration-programs-heading p { margin: .2rem 0 0; color: #718096; font-size: .78rem; }
 .registration-programs-count { flex: 0 0 auto; padding: .3rem .65rem; border-radius: 999px; background: #e8f3fc; color: #17689a; font-size: .72rem; font-weight: 800; }
+.registration-programs-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; margin-bottom: 1rem; padding: .85rem; border: 1px solid #e3ebf3; border-radius: 10px; background: #fff; }
+.registration-programs-filters .form-label { margin-bottom: .35rem; color: #536273; font-size: .78rem; font-weight: 700; }
 .registration-programs .certificate-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
 .registration-programs .certificate-options > div { min-width: 0; }
 .registration-programs .certificate-options label { position: relative; display: block; height: 100%; margin: 0; cursor: pointer; }
