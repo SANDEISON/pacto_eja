@@ -90,6 +90,7 @@ class EducadorEscolaForm(BootstrapFormMixin, forms.ModelForm):
 
     @staticmethod
     def _educador_label(educador):
+        """Monta um rótulo que diferencia homônimos na busca administrativa."""
         identificacao = educador.cpf or educador.usuario.email or educador.usuario.username
         return f"{educador} — {identificacao}"
 

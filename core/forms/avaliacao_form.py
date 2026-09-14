@@ -8,6 +8,7 @@ ESCALA_AVALIACAO = [(valor, str(valor)) for valor in range(1, 6)]
 
 
 class ChamadaAvaliadoresForm(BootstrapFormMixin, forms.ModelForm):
+    """Configura o período de seleção e o prazo de trabalho dos avaliadores."""
     class Meta:
         model = ChamadaAvaliadores
         fields = (
@@ -23,6 +24,7 @@ class ChamadaAvaliadoresForm(BootstrapFormMixin, forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        """Limita a escolha às atividades que aceitam submissão de trabalhos."""
         super().__init__(*args, **kwargs)
         self.fields["atividade"].queryset = self.fields["atividade"].queryset.filter(permite_submissao=True)
         for name in ("inscricoes_inicio", "inscricoes_fim", "avaliacoes_fim"):
@@ -31,6 +33,7 @@ class ChamadaAvaliadoresForm(BootstrapFormMixin, forms.ModelForm):
 
 
 class CandidaturaAvaliadorForm(BootstrapFormMixin, forms.ModelForm):
+    """Coleta experiência, interesses e conflitos do candidato a avaliador."""
     declaracao = forms.BooleanField(
         label="Declaro que informarei qualquer conflito de interesse antes de aceitar uma avaliação."
     )
@@ -45,11 +48,13 @@ class CandidaturaAvaliadorForm(BootstrapFormMixin, forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        """Aplica a apresentação visual comum aos campos da candidatura."""
         super().__init__(*args, **kwargs)
         self._apply_bootstrap_classes()
 
 
 class AvaliacaoForm(BootstrapFormMixin, forms.ModelForm):
+    """Registra notas e parecer, permitindo rascunho ou conclusão definitiva."""
     class Meta:
         model = Avaliacao
         fields = (
@@ -66,6 +71,7 @@ class AvaliacaoForm(BootstrapFormMixin, forms.ModelForm):
         }
 
     def __init__(self, *args, finalizar=False, **kwargs):
+        """Exige todos os critérios apenas quando o avaliador conclui o parecer."""
         super().__init__(*args, **kwargs)
         self.finalizar = finalizar
         for nome in self.fields:
@@ -73,6 +79,7 @@ class AvaliacaoForm(BootstrapFormMixin, forms.ModelForm):
         self._apply_bootstrap_classes()
 
     def clean(self):
+        """Garante que notas finais permaneçam dentro da escala de um a cinco."""
         cleaned_data = super().clean()
         if self.finalizar:
             for nome in ("nota_relevancia", "nota_metodologia", "nota_clareza", "nota_contribuicao"):

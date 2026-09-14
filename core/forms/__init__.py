@@ -1,4 +1,13 @@
-from .atividade_form import AtividadeForm, CoautorFormSet, DadosPessoaisInscricaoForm, TrabalhoForm
+from .atividade_form import (
+    AtividadeForm,
+    AtividadeRefeicaoFormSet,
+    CoautorFormSet,
+    DadosPessoaisInscricaoForm,
+    EvidenciaTrabalhoFormSet,
+    TrabalhoForm,
+    TrabalhoMunicipioFormSet,
+    RefeicaoForm,
+)
 from .avaliacao_form import AvaliacaoForm, CandidaturaAvaliadorForm, ChamadaAvaliadoresForm
 from .bootstrap_form_mixin import BootstrapFormMixin
 from .educador_escola_cadastro_form import EducadorEscolaCadastroForm
@@ -10,9 +19,11 @@ from .managed_group_form import ManagedGroupForm
 from .managed_user_form import ManagedUserForm
 from .profile_password_change_form import ProfilePasswordChangeForm
 from .profile_user_form import ProfileUserForm
+from .sala_form import ProgramacaoSalaInlineForm, SalaProgramacaoFormSet
 
 __all__ = [
     "AtividadeForm",
+    "AtividadeRefeicaoFormSet",
     "AvaliacaoForm",
     "BootstrapFormMixin",
     "CoautorFormSet",
@@ -22,6 +33,7 @@ __all__ = [
     "EducadorEscolaCadastroForm",
     "EducadorEscolaForm",
     "EducadorForm",
+    "EvidenciaTrabalhoFormSet",
     "EnderecoForm",
     "FormacaoForm",
     "FormacaoFormSet",
@@ -30,5 +42,9 @@ __all__ = [
     "ManagedUserForm",
     "ProfilePasswordChangeForm",
     "ProfileUserForm",
+    "RefeicaoForm",
+    "ProgramacaoSalaInlineForm",
+    "SalaProgramacaoFormSet",
     "TrabalhoForm",
+    "TrabalhoMunicipioFormSet",
 ]

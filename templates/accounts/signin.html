@@ -6,6 +6,7 @@
 <h1>Olá!</h1>
 <p class="auth-subtitle">Entre para acessar seu painel.</p>
 
+{% for message in messages %}<div class="alert alert-{{ message.tags|default:'info' }}" role="status">{{ message }}</div>{% endfor %}
 {% if form.non_field_errors %}<div class="alert alert-danger" role="alert">CPF ou senha inválidos. Verifique os dados e tente novamente.</div>{% endif %}
 <form method="post" novalidate>
   {% csrf_token %}
@@ -22,8 +23,9 @@
     <input type="password" name="{{ form.password.html_name }}" id="{{ form.password.id_for_label }}" placeholder="Senha" autocomplete="current-password" required>
   </div>
   {% for error in form.password.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+  <p class="auth-help-link"><a href="{% url 'accounts:password_recovery' %}">Esqueci minha senha</a></p>
   <button type="submit" class="auth-submit">Entrar <i class="bi bi-arrow-right"></i></button>
 </form>
 <p class="auth-switch">Ainda não possui uma conta? <a href="{% url 'accounts:signup' %}">Cadastre-se</a></p>
-<p class="auth-switch"><a href="{% url 'cadastro_educador' %}">Acessar o cadastro público de educadores</a></p>
+<!--<p class="auth-switch"><a href="{% url 'cadastro_educador' %}">Acessar o cadastro público de educadores</a></p>-->
 {% endblock %}

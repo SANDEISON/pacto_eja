@@ -28,6 +28,8 @@
   const assignmentTypeSelect = document.getElementById("id_funcao_caracterizacao_turmas");
   const experienceTimeSelect = document.getElementById("id_tempo_atuacao");
   const assignmentsInput = document.getElementById("id_atuacoes_json");
+  const certificateInputs = Array.from(document.querySelectorAll('input[name="curso_certificado"]'));
+  const certificateOptOut = document.getElementById("id_nao_solicitar_certificado");
   const assignmentsList = document.getElementById("assignment-list");
   const assignmentsCount = document.getElementById("assignment-count");
   const editorTitle = document.getElementById("assignment-editor-title");
@@ -452,6 +454,12 @@
   });
   addAssignmentButton.addEventListener("click", addOrUpdateAssignment);
   cancelAssignmentButton.addEventListener("click", clearEditor);
+  certificateInputs.forEach(input => input.addEventListener("change", function () {
+    if (input.checked && certificateOptOut) certificateOptOut.checked = false;
+  }));
+  if (certificateOptOut) certificateOptOut.addEventListener("change", function () {
+    if (certificateOptOut.checked) certificateInputs.forEach(input => { input.checked = false; });
+  });
   assignmentsList.addEventListener("click", function (event) {
     const button = event.target.closest("button[data-action]");
     if (!button) return;

@@ -57,6 +57,10 @@ class FormacaoForm(BootstrapFormMixin, forms.ModelForm):
 class BaseFormacaoFormSet(BaseInlineFormSet):
     """Valida em conjunto todas as formações enviadas no perfil."""
 
+    def __init__(self, *args, **kwargs):
+        self.require_one = kwargs.pop("require_one", False)
+        super().__init__(*args, **kwargs)
+
     def clean(self):
         """Impede formações repetidas na mesma submissão."""
         super().clean()
@@ -64,9 +68,11 @@ class BaseFormacaoFormSet(BaseInlineFormSet):
             return
 
         formacoes = set()
+        total_formacoes = 0
         for form in self.forms:
             if not form.cleaned_data or form.cleaned_data.get("DELETE"):
                 continue
+            total_formacoes += 1
             chave = (
                 form.cleaned_data["nivel"],
                 form.cleaned_data["nome_curso"].strip().casefold(),
@@ -76,6 +82,8 @@ class BaseFormacaoFormSet(BaseInlineFormSet):
             if chave in formacoes:
                 raise forms.ValidationError("Há uma formação duplicada na lista.")
             formacoes.add(chave)
+        if self.require_one and total_formacoes == 0:
+            raise forms.ValidationError("Adicione pelo menos uma formação acadêmica.")
 
 
 FormacaoFormSet = inlineformset_factory(

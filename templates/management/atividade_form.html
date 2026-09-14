@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}{% if object %}Editar{% else %}Cadastrar{% endif %} atividade | Pacto EJA{% endblock %}
 {% block page_title %}{% if object %}Editar{% else %}Cadastrar{% endif %} evento ou atividade{% endblock %}
@@ -8,14 +9,28 @@
 <div class="management-shell"><form method="post" class="management-card management-form" novalidate>{% csrf_token %}
   {% include "management/_form_errors.html" %}
   <section class="form-section"><div class="section-heading"><span><i class="bi bi-calendar2-event"></i></span><div><h2>Informações da atividade</h2><p>Cadastre um evento, palestra ou curso que será exibido no dashboard.</p></div></div><div class="row g-3">
-    {% include "management/_field.html" with field=form.tipo column="col-12 col-md-4" %}{% include "management/_field.html" with field=form.titulo column="col-12 col-md-8" %}{% include "management/_field.html" with field=form.descricao column="col-12" %}{% include "management/_field.html" with field=form.local column="col-12 col-md-6" %}{% include "management/_field.html" with field=form.link column="col-12 col-md-6" %}
+    {% include "management/_field.html" with field=form.tipo column="col-12 col-md-4" %}{% include "management/_field.html" with field=form.modalidade column="col-12 col-md-4" %}{% include "management/_field.html" with field=form.titulo column="col-12 col-md-4" %}{% include "management/_field.html" with field=form.descricao column="col-12" %}{% include "management/_field.html" with field=form.local column="col-12" %}
   </div></section>
   <section class="form-section"><h2>Datas e vagas</h2><div class="row g-3">
     {% include "management/_field.html" with field=form.data_inicio column="col-12 col-md-6" %}{% include "management/_field.html" with field=form.data_fim column="col-12 col-md-6" %}{% include "management/_field.html" with field=form.inscricoes_inicio column="col-12 col-md-6" %}{% include "management/_field.html" with field=form.inscricoes_fim column="col-12 col-md-6" %}{% include "management/_field.html" with field=form.vagas column="col-12 col-md-6" %}
   </div></section>
+  <section class="form-section"><div class="section-heading"><span><i class="bi bi-calendar2-week"></i></span><div><h2>Programações disponíveis</h2><p>Defina quais salas e horários poderão ser escolhidos pelos participantes desta atividade.</p></div></div><div class="row g-3">
+    {% include "management/_field.html" with field=form.programacoes column="col-12" %}
+  </div></section>
+  <section class="form-section"><div class="section-heading"><span><i class="bi bi-cup-hot"></i></span><div><h2>Refeições disponíveis</h2><p>Informe os tipos de refeições, datas e horários que poderão ser selecionados na inscrição.</p></div></div>
+    {{ refeicao_formset.management_form }}
+    {% for error in refeicao_formset.non_form_errors %}<div class="alert alert-danger py-2">{{ error }}</div>{% endfor %}
+    <div class="activity-meals" data-meal-list>
+      {% for meal_form in refeicao_formset %}<div class="activity-meal-row" data-meal-row><div class="row g-3 flex-grow-1">{% include "management/_field.html" with field=meal_form.tipo column="col-12 col-md-5" %}{% include "management/_field.html" with field=meal_form.data column="col-12 col-md-4" %}{% include "management/_field.html" with field=meal_form.horario column="col-12 col-md-3" %}{% for hidden in meal_form.hidden_fields %}{{ hidden }}{% endfor %}</div><div class="activity-meal-delete">{{ meal_form.DELETE }}<button class="btn btn-outline-danger" type="button" data-remove-meal title="Remover refeição"><i class="bi bi-trash"></i></button></div></div>{% endfor %}
+    </div>
+    <button class="btn btn-sm btn-outline-primary mt-3" type="button" data-add-meal><i class="bi bi-plus-lg"></i> Adicionar refeição</button>
+    <template data-meal-template><div class="activity-meal-row" data-meal-row><div class="row g-3 flex-grow-1">{% include "management/_field.html" with field=refeicao_formset.empty_form.tipo column="col-12 col-md-5" %}{% include "management/_field.html" with field=refeicao_formset.empty_form.data column="col-12 col-md-4" %}{% include "management/_field.html" with field=refeicao_formset.empty_form.horario column="col-12 col-md-3" %}{% for hidden in refeicao_formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}</div><div class="activity-meal-delete">{{ refeicao_formset.empty_form.DELETE }}<button class="btn btn-outline-danger" type="button" data-remove-meal title="Remover refeição"><i class="bi bi-trash"></i></button></div></div></template>
+  </section>
   <section class="form-section"><h2>Submissão e publicação</h2><div class="row g-3 align-items-end">
-    {% include "management/_field.html" with field=form.permite_submissao column="col-12 col-md-4" %}{% include "management/_field.html" with field=form.submissoes_fim column="col-12 col-md-5" %}{% include "management/_field.html" with field=form.ativo column="col-12 col-md-3" %}
+    {% include "management/_field.html" with field=form.permite_submissao column="col-12 col-md-3" %}{% include "management/_field.html" with field=form.modelo_submissao column="col-12 col-md-4" %}{% include "management/_field.html" with field=form.submissoes_fim column="col-12 col-md-3" %}{% include "management/_field.html" with field=form.ativo column="col-12 col-md-2" %}
   </div></section>
   <footer class="form-actions"><a class="btn btn-light" href="{% url 'atividade_list' %}">Cancelar</a><button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Salvar atividade</button></footer>
 </form></div>
 {% endblock %}
+
+{% block page_js %}<script src="{% static 'js/atividade_refeicoes.js' %}?v=20260914-1"></script>{% endblock %}

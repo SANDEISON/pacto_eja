@@ -43,7 +43,11 @@ class EnderecoForm(BootstrapFormMixin, forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         """Carrega apenas municípios válidos para a UF informada."""
+        required_for_registration = kwargs.pop("required_for_registration", False)
         super().__init__(*args, **kwargs)
+        if required_for_registration:
+            for field_name in ("cep", "logradouro", "numero", "bairro", "estado", "cidade"):
+                self.fields[field_name].required = True
         estado_id = self.data.get(self.add_prefix("estado")) if self.is_bound else self.initial.get("estado")
         if not estado_id and self.instance.cidade_id:
             estado_id = self.instance.cidade.estado_id

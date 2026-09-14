@@ -1,0 +1,16 @@
+<article class="room-schedule-summary-card" data-room-schedule-summary data-form-index="{{ schedule_form.prefix }}">
+  <div class="room-schedule-summary-icon"><i class="bi bi-calendar2-event"></i></div>
+  <div class="room-schedule-summary-content">
+    <strong data-summary-theme>{{ schedule_form.instance.tematica }}</strong>
+    <div class="room-schedule-summary-meta">
+      <span data-summary-date><i class="bi bi-calendar3"></i> {{ schedule_form.instance.data|date:"d/m/Y" }}</span>
+      <span data-summary-shift><i class="bi bi-clock"></i> {{ schedule_form.instance.get_turno_display }}</span>
+      <span data-summary-modality><i class="bi bi-broadcast"></i> {{ schedule_form.instance.get_modalidade_display }}</span>
+      <span data-summary-capacity><i class="bi bi-people"></i> {{ schedule_form.instance.quantidade_max_participantes }} vagas</span>
+    </div>
+  </div>
+  <div class="room-schedule-summary-actions">
+    <button class="btn btn-sm btn-outline-primary" type="button" data-edit-schedule><i class="bi bi-pencil"></i> Editar</button>
+    <button class="btn btn-sm btn-outline-danger" type="button" data-delete-schedule><i class="bi bi-trash"></i> Excluir</button>
+  </div>
+</article>

@@ -1,11 +1,27 @@
 from django.contrib import messages
+from django.db import transaction
 from django.db.models.deletion import ProtectedError
 from django.forms import modelform_factory
 from django.http import Http404, HttpResponseRedirect
 from django.urls import reverse
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
-from ..models import Cidade, CorRaca, CursoCertificado, Educador, EducadorGenero, Escola, Estado, Modalidade, Nivel, Situacao
+from ..forms import SalaProgramacaoFormSet
+from ..models import (
+    Cidade,
+    CorRaca,
+    CursoCertificado,
+    Educador,
+    EducadorGenero,
+    Escola,
+    Estado,
+    Modalidade,
+    Nivel,
+    ProgramacaoSala,
+    Sala,
+    Situacao,
+    TematicaSala,
+)
 from .management_permission_mixin import ManagementPermissionMixin
 from .searchable_list_mixin import SearchableListMixin
 
@@ -104,17 +120,79 @@ CATALOGS = {
         "columns": (("ID", "pk"), ("Nome", "nome"), ("Código", "codigo")),
         "list_url_name": "situation_list",
     },
+    "salas": {
+        "model": Sala,
+        "title": "Salas",
+        "singular": "sala",
+        "fields": ("nome",),
+        "search_fields": ("nome",),
+        "columns": (("ID", "pk"), ("Sala", "nome")),
+        "list_url_name": "room_list",
+    },
+    "programacoes-salas": {
+        "model": ProgramacaoSala,
+        "title": "Programações das salas",
+        "singular": "programação da sala",
+        "fields": (
+            "sala",
+            "data",
+            "turno",
+            "modalidade",
+            "link",
+            "tematica",
+            "descricao",
+            "quantidade_max_participantes",
+        ),
+        "search_fields": (
+            "sala__nome",
+            "tematica__nome",
+            "tematica__mediador",
+            "descricao",
+        ),
+        "columns": (
+            ("Sala", "sala"),
+            ("Data", "data"),
+            ("Turno", "get_turno_display"),
+            ("Modalidade", "get_modalidade_display"),
+            ("Link", "link"),
+            ("Temática", "tematica"),
+            ("Vagas", "quantidade_max_participantes"),
+        ),
+        "select_related": ("sala", "tematica"),
+        "list_url_name": "room_schedule_list",
+    },
+    "tematicas-salas": {
+        "model": TematicaSala,
+        "title": "Temáticas das salas",
+        "singular": "temática da sala",
+        "fields": ("nome", "mediador"),
+        "search_fields": ("nome", "mediador"),
+        "columns": (("Temática", "nome"), ("Mediador", "mediador")),
+        "list_url_name": "room_theme_list",
+    },
 }
 
 
-def resolve_attr(obj, accessor):
+def resolve_attr(registro, caminho_atributo):
     """Resolve acessos como ``estado__sigla`` para montar tabelas genéricas."""
-    value = obj
-    for part in accessor.split("__"):
-        value = getattr(value, part, None)
-        if value is None:
+    valor_atual = registro
+    for atributo in caminho_atributo.split("__"):
+        valor_atual = getattr(valor_atual, atributo, None)
+        if valor_atual is None:
             return "—"
-    return value if value not in (None, "") else "—"
+        if callable(valor_atual):
+            valor_atual = valor_atual()
+    return valor_atual if valor_atual not in (None, "") else "—"
+
+
+def bootstrap_widget_class(widget):
+    """Retorna a classe Bootstrap adequada ao tipo de widget do Django."""
+    input_type = getattr(widget, "input_type", "")
+    if input_type == "checkbox":
+        return "form-check-input"
+    if input_type == "select":
+        return "form-select"
+    return "form-control"
 
 
 class CatalogMixin(ManagementPermissionMixin):
@@ -146,6 +224,7 @@ class CatalogMixin(ManagementPermissionMixin):
         return super().has_permission()
 
     def get_context_data(self, **kwargs):
+        """Disponibiliza a configuração do catálogo para todos os templates."""
         context = super().get_context_data(**kwargs)
         context.update(
             catalog=self.catalog,
@@ -163,6 +242,7 @@ class CatalogListView(CatalogMixin, SearchableListMixin, ListView):
     paginate_by = 20
 
     def get_queryset(self):
+        """Aplica busca e carrega relacionamentos usados nas colunas da tabela."""
         self.search_fields = self.catalog["search_fields"]
         queryset = super().get_queryset()
         if self.catalog.get("select_related"):
@@ -170,11 +250,18 @@ class CatalogListView(CatalogMixin, SearchableListMixin, ListView):
         return queryset
 
     def get_context_data(self, **kwargs):
+        """Transforma os registros nas linhas da tabela e calcula as ações permitidas."""
         context = super().get_context_data(**kwargs)
         context["table_columns"] = [label for label, _ in self.catalog["columns"]]
         context["table_rows"] = [
-            {"object": obj, "cells": [resolve_attr(obj, accessor) for _, accessor in self.catalog["columns"]]}
-            for obj in context["objects"]
+            {
+                "object": registro,
+                "cells": [
+                    resolve_attr(registro, caminho_atributo)
+                    for _, caminho_atributo in self.catalog["columns"]
+                ],
+            }
+            for registro in context["objects"]
         ]
         opts = self.model._meta
         context.update(
@@ -190,6 +277,7 @@ class CatalogFormMixin(CatalogMixin):
     template_name = "management/catalog_form.html"
 
     def get_form_class(self):
+        """Cria o ModelForm a partir dos campos declarados no catálogo."""
         return modelform_factory(self.model, fields=self.catalog["fields"])
 
     def get_form(self, form_class=None):
@@ -197,18 +285,67 @@ class CatalogFormMixin(CatalogMixin):
         form = super().get_form(form_class)
         for field in form.fields.values():
             widget = field.widget
-            css_class = "form-check-input" if widget.input_type == "checkbox" else "form-select" if widget.input_type == "select" else "form-control"
+            css_class = bootstrap_widget_class(widget)
             widget.attrs["class"] = f'{widget.attrs.get("class", "")} {css_class}'.strip()
         if "data_nascimento" in form.fields:
             form.fields["data_nascimento"].widget.input_type = "date"
+        if "data" in form.fields:
+            form.fields["data"].widget.input_type = "date"
         if self.model is Escola and self.object and self.object.pk:
             form.fields["id_escola"].disabled = True
         return form
 
     def get_success_url(self):
+        """Retorna à lista do mesmo catálogo depois de salvar."""
         return reverse(self.catalog["list_url_name"])
 
+    def can_manage_room_schedules(self):
+        """Indica se o formulário de sala também pode editar suas programações."""
+        return self.model is Sala and self.request.user.has_perms(
+            (
+                "core.add_programacaosala",
+                "core.change_programacaosala",
+                "core.delete_programacaosala",
+            )
+        )
+
+    def get_room_schedule_formset(self):
+        """Monta o formset de programações associado à sala atual."""
+        kwargs = {
+            "instance": self.object if self.object is not None else Sala(),
+            "prefix": "programacoes",
+        }
+        if self.request.method in ("POST", "PUT"):
+            kwargs.update(data=self.request.POST, files=self.request.FILES)
+        return SalaProgramacaoFormSet(**kwargs)
+
+    def get_context_data(self, **kwargs):
+        """Inclui as programações somente quando o usuário tem todas as permissões."""
+        context = super().get_context_data(**kwargs)
+        context["can_manage_room_schedules"] = self.can_manage_room_schedules()
+        if context["can_manage_room_schedules"]:
+            context["programacao_formset"] = kwargs.get(
+                "programacao_formset"
+            ) or self.get_room_schedule_formset()
+        return context
+
     def form_valid(self, form):
+        """Salva sala e programações na mesma transação quando aplicável."""
+        if self.can_manage_room_schedules():
+            formset = self.get_room_schedule_formset()
+            if not formset.is_valid():
+                return self.render_to_response(
+                    self.get_context_data(form=form, programacao_formset=formset)
+                )
+            with transaction.atomic():
+                self.object = form.save()
+                formset.instance = self.object
+                formset.save()
+            messages.success(
+                self.request,
+                f"{self.catalog['singular'].capitalize()} e programações salvas com sucesso.",
+            )
+            return HttpResponseRedirect(self.get_success_url())
         messages.success(self.request, f"{self.catalog['singular'].capitalize()} salvo(a) com sucesso.")
         return super().form_valid(form)
 
@@ -218,6 +355,7 @@ class CatalogCreateView(CatalogFormMixin, CreateView):
     action = "add"
 
     def dispatch(self, request, *args, **kwargs):
+        """Bloqueia inclusão nos catálogos definidos apenas para consulta."""
         if not self.catalog.get("allow_add", True):
             raise Http404("Inclusão indisponível para este cadastro.")
         return super().dispatch(request, *args, **kwargs)
@@ -234,14 +372,17 @@ class CatalogDeleteView(CatalogMixin, DeleteView):
     template_name = "management/confirm_delete.html"
 
     def get_success_url(self):
+        """Retorna à lista depois da exclusão."""
         return reverse(self.catalog["list_url_name"])
 
     def get_context_data(self, **kwargs):
+        """Informa ao template o nome do registro e o destino de cancelamento."""
         context = super().get_context_data(**kwargs)
         context.update(object_label=self.catalog["singular"], cancel_url_name=self.catalog["list_url_name"])
         return context
 
     def form_valid(self, form):
+        """Converte vínculos protegidos em uma mensagem compreensível ao usuário."""
         try:
             response = super().form_valid(form)
         except ProtectedError:

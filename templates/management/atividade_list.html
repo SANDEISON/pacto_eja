@@ -14,11 +14,11 @@
     </header>
     <div class="table-responsive">
       <table class="table management-table align-middle mb-0">
-        <thead><tr><th>Atividade</th><th>Tipo</th><th>Data</th><th>Prazo de inscrição</th><th>Inscritos</th><th>Status</th><th class="text-end">Ações</th></tr></thead>
+        <thead><tr><th>Atividade</th><th>Tipo</th><th>Modalidade</th><th>Data</th><th>Prazo de inscrição</th><th>Inscritos</th><th>Status</th><th class="text-end">Ações</th></tr></thead>
         <tbody>
           {% for atividade in atividades %}<tr>
-            <td><strong>{{ atividade.titulo }}</strong>{% if atividade.local %}<small class="d-block text-body-secondary"><i class="bi bi-geo-alt"></i> {{ atividade.local }}</small>{% endif %}{% if atividade.link %}<small class="d-block text-body-secondary"><i class="bi bi-camera-video"></i> On-line</small>{% endif %}</td>
-            <td>{{ atividade.get_tipo_display }}</td><td>{{ atividade.data_inicio|date:"d/m/Y H:i" }}</td><td>{{ atividade.inscricoes_fim|date:"d/m/Y H:i" }}</td>
+            <td><strong>{{ atividade.titulo }}</strong>{% if atividade.local %}<small class="d-block text-body-secondary"><i class="bi bi-geo-alt"></i> {{ atividade.local }}</small>{% endif %}</td>
+            <td>{{ atividade.get_tipo_display }}</td><td>{{ atividade.get_modalidade_display }}</td><td>{{ atividade.data_inicio|date:"d/m/Y H:i" }}</td><td>{{ atividade.inscricoes_fim|date:"d/m/Y H:i" }}</td>
             <td>{% if perms.core.view_inscricao %}<a href="{% url 'atividade_inscricoes' atividade.pk %}">{{ atividade.total_inscricoes }}</a>{% else %}{{ atividade.total_inscricoes }}{% endif %}{% if atividade.vagas %} / {{ atividade.vagas }}{% endif %}</td>
             <td>{% if atividade.ativo %}<span class="status-pill status-active">Ativa</span>{% else %}<span class="status-pill status-inactive">Inativa</span>{% endif %}</td>
             <td class="text-end text-nowrap">
@@ -27,7 +27,7 @@
               {% if perms.core.change_atividade %}<a class="btn btn-sm btn-outline-primary" href="{% url 'atividade_update' atividade.pk %}" title="Editar"><i class="bi bi-pencil"></i></a>{% endif %}
               {% if perms.core.delete_atividade and not atividade.total_inscricoes %}<a class="btn btn-sm btn-outline-danger" href="{% url 'atividade_delete' atividade.pk %}" title="Excluir"><i class="bi bi-trash"></i></a>{% endif %}
             </td>
-          </tr>{% empty %}<tr><td colspan="7" class="empty-state">Nenhuma atividade cadastrada.</td></tr>{% endfor %}
+          </tr>{% empty %}<tr><td colspan="8" class="empty-state">Nenhuma atividade cadastrada.</td></tr>{% endfor %}
         </tbody>
       </table>
     </div>

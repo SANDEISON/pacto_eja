@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import (
+from ..models import (
     Cidade, CorRaca, CursoCertificado, Educador, EducadorEscola, EducadorGenero, Endereco,
     Escola, Estado, Funcao, FuncaoCaracterizacaoTurma, FuncaoEducador,
 )
@@ -100,12 +100,15 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         self.assertContains(response, "Solicito liberação do Certificado do Curso:")
         self.assertContains(
             response,
-            "Selecione abaixo o(s) curso(s) para o(s) qual(is) deseja solicitar o certificado. "
+            "Selecione abaixo o(s) curso(s) para o(s) qual(is) deseja solicitar o certificado "
+            "ou informe que não deseja solicitá-lo. "
             "Você pode optar por um ou mais de um curso simultaneamente.",
         )
+        self.assertContains(response, "Não desejo solicitar certificado")
         self.assertContains(response, "Alfabetização de Jovens, Adultos e Idosos - 80 horas")
         self.assertContains(response, "Formação em Serviço para Formadores Regionais - 360 horas")
         self.assertContains(response, 'type="checkbox"')
+        self.assertNotContains(response, "Fazer login")
 
     def test_cor_raca_options_are_ordered_by_id(self):
         response = self.client.get(reverse("cadastro_educador"))
@@ -191,7 +194,7 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
             [self.curso_certificado, self.outro_curso_certificado],
         )
 
-    def test_registration_requires_at_least_one_certificate(self):
+    def test_registration_requires_certificate_choice(self):
         response = self.client.post(
             reverse("cadastro_educador"),
             self.registration_data(curso_certificado=[]),
@@ -201,9 +204,44 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         self.assertFormError(
             response.context["form"],
             "curso_certificado",
-            "Este campo é obrigatório.",
+            "Selecione pelo menos um curso ou informe que não deseja solicitar certificado.",
         )
         self.assertFalse(Educador.objects.filter(cpf="52998224725").exists())
+
+    def test_registration_allows_not_requesting_certificate(self):
+        response = self.client.post(
+            reverse("cadastro_educador"),
+            self.registration_data(
+                curso_certificado=[],
+                nao_solicitar_certificado="on",
+            ),
+        )
+
+        self.assertRedirects(response, reverse("cadastro_educador_success"))
+        educador = Educador.objects.get(cpf="52998224725")
+        self.assertFalse(educador.cursos_certificados.exists())
+
+    def test_registration_rejects_certificate_and_opt_out_together(self):
+        response = self.client.post(
+            reverse("cadastro_educador"),
+            self.registration_data(nao_solicitar_certificado="on"),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFormError(
+            response.context["form"],
+            "curso_certificado",
+            "Escolha os cursos desejados ou a opção de não solicitar certificado.",
+        )
+        self.assertFalse(Educador.objects.filter(cpf="52998224725").exists())
+
+    def test_success_page_does_not_offer_login(self):
+        response = self.client.get(reverse("cadastro_educador_success"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "O cadastro foi concluído.")
+        self.assertNotContains(response, "Fazer login")
+        self.assertNotContains(response, "utilize o CPF como usuário e senha")
 
     def test_registration_requires_complete_address(self):
         data = self.registration_data()

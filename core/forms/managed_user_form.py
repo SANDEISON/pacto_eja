@@ -9,6 +9,7 @@ from .bootstrap_form_mixin import BootstrapFormMixin
 
 
 class ManagedUserForm(BootstrapFormMixin, forms.ModelForm):
+    """Cria ou edita usuários administrativos identificados pelo CPF."""
     password1 = forms.CharField(
         label="Senha",
         required=False,
@@ -41,6 +42,7 @@ class ManagedUserForm(BootstrapFormMixin, forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        """Exige senha apenas na criação e ordena os grupos disponíveis."""
         super().__init__(*args, **kwargs)
         self.fields["groups"].queryset = Group.objects.order_by("name")
         if not self.instance.pk:
@@ -49,11 +51,13 @@ class ManagedUserForm(BootstrapFormMixin, forms.ModelForm):
         self._apply_bootstrap_classes()
 
     def clean_username(self):
+        """Valida o CPF usado como nome de usuário e o salva sem máscara."""
         cpf = "".join(character for character in self.cleaned_data["username"] if character.isdigit())
         validate_cpf(cpf)
         return cpf
 
     def clean(self):
+        """Confirma a nova senha e aplica os validadores configurados no Django."""
         cleaned_data = super().clean()
         password1 = cleaned_data.get("password1")
         password2 = cleaned_data.get("password2")

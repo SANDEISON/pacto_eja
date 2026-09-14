@@ -30,6 +30,29 @@ class CPFAuthenticationForm(AuthenticationForm):
         return cpf
 
 
+class PasswordRecoveryForm(forms.Form):
+    """Solicita somente o CPF, sem revelar se ele pertence a uma conta."""
+
+    cpf = forms.CharField(
+        label="CPF",
+        max_length=14,
+        widget=forms.TextInput(
+            attrs={
+                "autocomplete": "username",
+                "autofocus": True,
+                "inputmode": "numeric",
+                "placeholder": "000.000.000-00",
+            }
+        ),
+    )
+
+    def clean_cpf(self):
+        """Retira a máscara e rejeita números de CPF estruturalmente inválidos."""
+        cpf = somente_digitos(self.cleaned_data["cpf"])
+        validate_cpf(cpf)
+        return cpf
+
+
 class SignUpForm(UserCreationForm):
     """Cria, em uma única operação, a conta e o perfil de educador associado."""
     full_name = forms.CharField(label="Nome completo", max_length=150)

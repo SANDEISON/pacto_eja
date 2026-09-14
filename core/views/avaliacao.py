@@ -127,6 +127,7 @@ def preencher_avaliacao(request, pk):
 
 
 class ChamadaAvaliadoresListView(ManagementPermissionMixin, SearchableListMixin, ListView):
+    """Lista chamadas e totais de candidaturas para a coordenação."""
     model = ChamadaAvaliadores
     permission_required = "core.view_chamadaavaliadores"
     template_name = "management/chamada_list.html"
@@ -134,6 +135,7 @@ class ChamadaAvaliadoresListView(ManagementPermissionMixin, SearchableListMixin,
     search_fields = ("titulo", "atividade__titulo", "descricao", "requisitos")
 
     def get_queryset(self):
+        """Carrega a atividade e contabiliza candidaturas totais e aprovadas."""
         return (
             super().get_queryset()
             .select_related("atividade")
@@ -146,31 +148,37 @@ class ChamadaAvaliadoresListView(ManagementPermissionMixin, SearchableListMixin,
 
 
 class ChamadaAvaliadoresFormMixin(ManagementPermissionMixin):
+    """Compartilha a configuração de criação e edição de chamadas."""
     model = ChamadaAvaliadores
     form_class = ChamadaAvaliadoresForm
     template_name = "management/chamada_form.html"
     success_url = reverse_lazy("chamada_avaliadores_list")
 
     def get_initial(self):
+        """Pré-seleciona a atividade recebida pela URL, quando válida."""
         initial = super().get_initial()
         if self.request.GET.get("atividade", "").isdigit():
             initial["atividade"] = self.request.GET["atividade"]
         return initial
 
     def form_valid(self, form):
+        """Confirma ao usuário que a chamada foi persistida."""
         messages.success(self.request, "Chamada de avaliadores salva com sucesso.")
         return super().form_valid(form)
 
 
 class ChamadaAvaliadoresCreateView(ChamadaAvaliadoresFormMixin, CreateView):
+    """Cria uma chamada de avaliadores."""
     permission_required = "core.add_chamadaavaliadores"
 
 
 class ChamadaAvaliadoresUpdateView(ChamadaAvaliadoresFormMixin, UpdateView):
+    """Atualiza uma chamada de avaliadores existente."""
     permission_required = "core.change_chamadaavaliadores"
 
 
 class CandidaturaManagementListView(ManagementPermissionMixin, SearchableListMixin, ListView):
+    """Lista candidaturas de uma chamada para análise da coordenação."""
     model = CandidaturaAvaliador
     permission_required = "core.view_candidaturaavaliador"
     template_name = "management/candidatura_list.html"
@@ -178,28 +186,37 @@ class CandidaturaManagementListView(ManagementPermissionMixin, SearchableListMix
     search_fields = ("usuario__first_name", "usuario__last_name", "usuario__email", "area_atuacao", "temas_interesse")
 
     def dispatch(self, request, *args, **kwargs):
+        """Carrega a chamada uma vez para reutilizá-la nos demais métodos."""
         self.chamada = get_object_or_404(ChamadaAvaliadores.objects.select_related("atividade"), pk=kwargs["pk"])
         return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
+        """Restringe candidaturas à chamada e aplica o filtro de status."""
         queryset = super().get_queryset().filter(chamada=self.chamada).select_related("usuario", "analisada_por")
-        status = self.request.GET.get("status")
-        return queryset.filter(status=status) if status in CandidaturaAvaliador.Status.values else queryset
+        status_filtro = self.request.GET.get("status")
+        if status_filtro in CandidaturaAvaliador.Status.values:
+            return queryset.filter(status=status_filtro)
+        return queryset
 
     def get_context_data(self, **kwargs):
+        """Expõe a chamada e o filtro atual para o template."""
         return super().get_context_data(**kwargs, chamada=self.chamada, status_filtro=self.request.GET.get("status", ""))
 
 
 @permission_required("core.change_candidaturaavaliador", raise_exception=True)
 @transaction.atomic
 def decidir_candidatura(request, pk):
+    """Aprova ou rejeita uma candidatura e registra quem tomou a decisão."""
     if request.method != "POST":
         raise PermissionDenied
     candidatura = get_object_or_404(CandidaturaAvaliador.objects.select_for_update(), pk=pk)
-    acao = request.POST.get("acao")
-    if acao not in {CandidaturaAvaliador.Status.APROVADA, CandidaturaAvaliador.Status.REJEITADA}:
+    novo_status = request.POST.get("acao")
+    if novo_status not in {
+        CandidaturaAvaliador.Status.APROVADA,
+        CandidaturaAvaliador.Status.REJEITADA,
+    }:
         raise PermissionDenied
-    candidatura.status = acao
+    candidatura.status = novo_status
     candidatura.justificativa_decisao = request.POST.get("justificativa_decisao", "").strip()
     candidatura.analisada_por = request.user
     candidatura.analisada_em = timezone.now()
@@ -210,6 +227,7 @@ def decidir_candidatura(request, pk):
 
 @permission_required("core.view_designacaoavaliacao", raise_exception=True)
 def gerenciar_designacoes(request, pk):
+    """Inclui ou remove avaliadores dos trabalhos pertencentes à chamada."""
     chamada = get_object_or_404(ChamadaAvaliadores.objects.select_related("atividade"), pk=pk)
     atividade = chamada.atividade
     if request.method == "POST":

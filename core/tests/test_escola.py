@@ -1,6 +1,6 @@
 from django.test import TestCase
 
-from .models import Escola
+from ..models import Escola
 
 
 class EscolaModelTests(TestCase):

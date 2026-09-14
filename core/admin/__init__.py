@@ -9,6 +9,8 @@ from .estado_admin import EstadoAdmin
 from .formacao_admin import FormacaoAdmin
 from .funcao_educador_admin import FuncaoEducadorAdmin
 from .opcoes_dominio_admin import OpcaoDominioAdmin
+from .refeicao_admin import RefeicaoAdmin
+from .sala_admin import ProgramacaoSalaAdmin, SalaAdmin, TematicaSalaAdmin
 
 __all__ = [
     "CidadeAdmin",
@@ -22,4 +24,8 @@ __all__ = [
     "FormacaoAdmin",
     "FuncaoEducadorAdmin",
     "OpcaoDominioAdmin",
+    "ProgramacaoSalaAdmin",
+    "RefeicaoAdmin",
+    "SalaAdmin",
+    "TematicaSalaAdmin",
 ]

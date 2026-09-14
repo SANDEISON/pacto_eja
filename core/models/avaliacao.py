@@ -31,6 +31,7 @@ class ChamadaAvaliadores(models.Model):
         return self.titulo
 
     def clean(self):
+        """Valida a ordem dos prazos e a compatibilidade com a atividade."""
         errors = {}
         if self.inscricoes_fim and self.inscricoes_inicio and self.inscricoes_fim < self.inscricoes_inicio:
             errors["inscricoes_fim"] = "O encerramento deve ocorrer depois da abertura das candidaturas."
@@ -43,6 +44,7 @@ class ChamadaAvaliadores(models.Model):
 
     @property
     def candidaturas_abertas(self):
+        """Informa se a chamada aceita novas candidaturas neste momento."""
         agora = timezone.now()
         return bool(self.ativa and self.inscricoes_inicio <= agora <= self.inscricoes_fim)
 
@@ -131,6 +133,7 @@ class DesignacaoAvaliacao(models.Model):
         return f"{self.trabalho} — {self.avaliador}"
 
     def clean(self):
+        """Exige avaliador aprovado e impede avaliação do próprio trabalho."""
         errors = {}
         atividade = self.trabalho.inscricao.atividade
         candidatura_aprovada = CandidaturaAvaliador.objects.filter(
@@ -149,6 +152,7 @@ class DesignacaoAvaliacao(models.Model):
 
     @property
     def concluida(self):
+        """Indica se a designação já possui um parecer concluído."""
         return hasattr(self, "avaliacao") and self.avaliacao.status == Avaliacao.Status.CONCLUIDA
 
 
@@ -188,5 +192,6 @@ class Avaliacao(models.Model):
 
     @property
     def media(self):
+        """Calcula a média apenas quando os quatro critérios foram avaliados."""
         notas = (self.nota_relevancia, self.nota_metodologia, self.nota_clareza, self.nota_contribuicao)
         return sum(notas) / len(notas) if all(notas) else None

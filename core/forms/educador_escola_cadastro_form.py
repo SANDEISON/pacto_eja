@@ -134,7 +134,11 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
         label="Solicito liberação do Certificado do Curso:",
         queryset=CursoCertificado.objects.all(),
         widget=forms.CheckboxSelectMultiple(),
-        required=True,
+        required=False,
+    )
+    nao_solicitar_certificado = forms.BooleanField(
+        label="Não desejo solicitar certificado",
+        required=False,
     )
 
     def __init__(self, *args, **kwargs):
@@ -216,6 +220,19 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
         endereco_cidade = cleaned_data.get("endereco_cidade")
         if endereco_estado and endereco_cidade and endereco_cidade.estado_id != endereco_estado.pk:
             self.add_error("endereco_cidade", "O município selecionado não pertence à UF informada.")
+
+        cursos_certificados = cleaned_data.get("curso_certificado")
+        nao_solicitar_certificado = cleaned_data.get("nao_solicitar_certificado")
+        if not cursos_certificados and not nao_solicitar_certificado:
+            self.add_error(
+                "curso_certificado",
+                "Selecione pelo menos um curso ou informe que não deseja solicitar certificado.",
+            )
+        elif cursos_certificados and nao_solicitar_certificado:
+            self.add_error(
+                "curso_certificado",
+                "Escolha os cursos desejados ou a opção de não solicitar certificado.",
+            )
 
         return cleaned_data
 

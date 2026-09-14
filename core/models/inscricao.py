@@ -22,11 +22,33 @@ def validate_pdf_size(file):
 
 class Inscricao(models.Model):
     """Relaciona um usuário a uma atividade, permitindo somente um vínculo por par."""
+    class Modalidade(models.TextChoices):
+        ONLINE = "online", "On-line"
+        PRESENCIAL = "presencial", "Presencial"
+
     atividade = models.ForeignKey(
         "Atividade", on_delete=models.PROTECT, related_name="inscricoes", verbose_name="atividade"
     )
     usuario = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="inscricoes_atividades", verbose_name="usuário"
+    )
+    modalidade = models.CharField(
+        "modalidade",
+        max_length=10,
+        choices=Modalidade.choices,
+        default=Modalidade.PRESENCIAL,
+    )
+    refeicoes = models.ManyToManyField(
+        "Refeicao",
+        verbose_name="refeições selecionadas",
+        related_name="inscricoes",
+        blank=True,
+    )
+    programacoes = models.ManyToManyField(
+        "ProgramacaoSala",
+        verbose_name="programações selecionadas",
+        related_name="inscricoes",
+        blank=True,
     )
     inscrito_em = models.DateTimeField(auto_now_add=True)
 
@@ -41,3 +63,11 @@ class Inscricao(models.Model):
 
     def __str__(self):
         return f"{self.usuario} — {self.atividade}"
+
+    def clean(self):
+        """Impede uma modalidade incompatível com a configuração da atividade."""
+        super().clean()
+        if self.atividade_id and not self.atividade.aceita_modalidade(self.modalidade):
+            raise ValidationError(
+                {"modalidade": "Esta modalidade não está disponível para a atividade."}
+            )

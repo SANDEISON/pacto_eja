@@ -20,6 +20,7 @@ from .atividade import (
     InscricaoListView,
     baixar_trabalho,
     buscar_coautores,
+    cancelar_inscricao_atividade,
     inscricao_atividade,
 )
 from .catalog_management import CatalogCreateView, CatalogDeleteView, CatalogListView, CatalogUpdateView
@@ -64,6 +65,7 @@ __all__ = [
     "dashboard",
     "baixar_trabalho",
     "buscar_coautores",
+    "cancelar_inscricao_atividade",
     "inscricao_atividade",
     "InscricaoListView",
     "CatalogCreateView",

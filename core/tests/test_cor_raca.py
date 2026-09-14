@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from .models import CorRaca, Educador
+from ..models import CorRaca, Educador
 
 
 class CorRacaModelTests(TestCase):

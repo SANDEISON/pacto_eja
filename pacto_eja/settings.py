@@ -136,6 +136,27 @@ STORAGES = {
 }
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Em desenvolvimento, a senha temporária é impressa no terminal. Em produção,
+# configure o backend SMTP e as credenciais por variáveis de ambiente.
+EMAIL_BACKEND = os.environ.get(
+    "DJANGO_EMAIL_BACKEND",
+    (
+        "django.core.mail.backends.console.EmailBackend"
+        if DEBUG
+        else "django.core.mail.backends.smtp.EmailBackend"
+    ),
+)
+EMAIL_HOST = os.environ.get("DJANGO_EMAIL_HOST", "localhost")
+EMAIL_PORT = int(os.environ.get("DJANGO_EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.environ.get("DJANGO_EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("DJANGO_EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = env_flag("DJANGO_EMAIL_USE_TLS", default=not DEBUG)
+EMAIL_TIMEOUT = 10
+DEFAULT_FROM_EMAIL = os.environ.get(
+    "DJANGO_DEFAULT_FROM_EMAIL",
+    "Pacto EJA <nao-responda@pactoeja.local>",
+)
+
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SESSION_COOKIE_SECURE = True
@@ -193,6 +214,8 @@ ADMINLTE = {
                 {"text": "Níveis", "route": "level_list", "icon": "bi bi-mortarboard", "can": "core.view_nivel"},
                 {"text": "Modalidades", "route": "modality_list", "icon": "bi bi-diagram-3", "can": "core.view_modalidade"},
                 {"text": "Situações", "route": "situation_list", "icon": "bi bi-ui-checks", "can": "core.view_situacao"},
+                {"text": "Salas", "route": "room_list", "icon": "bi bi-door-open", "can": ["core.view_sala", "core.change_sala"]},
+                {"text": "Temáticas das salas", "route": "room_theme_list", "icon": "bi bi-tags", "can": ["core.view_tematicasala", "core.change_tematicasala"]},
             ],
         },
         {"text": "Meu perfil", "route": "profile", "icon": "bi bi-person-circle"},

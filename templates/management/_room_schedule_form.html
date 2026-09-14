@@ -1,0 +1,20 @@
+<article class="room-schedule-card" data-room-schedule-form data-form-index="{{ schedule_form.prefix }}" hidden>
+  <header>
+    <div>
+      <strong><i class="bi bi-calendar2-event"></i> <span data-editor-title>{% if schedule_form.instance.pk %}Editar{% else %}Adicionar{% endif %} programação</span></strong>
+      <p>Preencha os dados da atividade e clique em concluir.</p>
+    </div>
+    <button class="btn-close" type="button" data-cancel-schedule aria-label="Fechar"></button>
+  </header>
+  {% for hidden in schedule_form.hidden_fields %}{{ hidden }}{% endfor %}
+  {% if schedule_form.non_field_errors %}<div class="alert alert-danger">{% for error in schedule_form.non_field_errors %}<div>{{ error }}</div>{% endfor %}</div>{% endif %}
+  <div class="row g-3">
+    {% for field in schedule_form.visible_fields %}
+      {% if field.name == "DELETE" %}<div hidden>{{ field }}</div>{% else %}{% include "management/_field.html" with field=field column="col-12 col-md-6" %}{% endif %}
+    {% endfor %}
+  </div>
+  <footer>
+    <button class="btn btn-light" type="button" data-cancel-schedule>Cancelar</button>
+    <button class="btn btn-primary" type="button" data-finish-schedule><i class="bi bi-check-lg"></i> Concluir</button>
+  </footer>
+</article>

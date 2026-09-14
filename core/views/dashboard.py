@@ -1,11 +1,9 @@
-from datetime import date
-
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.shortcuts import render
 from django.utils import timezone
 
-from ..models import Atividade, ChamadaAvaliadores
+from ..models import Atividade, ChamadaAvaliadores, RascunhoInscricao
 
 
 @login_required
@@ -32,9 +30,17 @@ def dashboard(request):
             atividade__in=atividades_disponiveis
         ).select_related("trabalho")
     }
+    rascunhos_usuario = {
+        rascunho.atividade_id: rascunho
+        for rascunho in RascunhoInscricao.objects.filter(
+            usuario=request.user,
+            atividade__in=atividades_disponiveis,
+        )
+    }
     # A anotação em memória simplifica o template sem introduzir regra de negócio nele.
     for atividade in atividades_disponiveis:
         atividade.inscricao_usuario = inscricoes_usuario.get(atividade.pk)
+        atividade.rascunho_usuario = rascunhos_usuario.get(atividade.pk)
 
     chamadas_avaliadores = []
     if not request.user.is_staff:
@@ -57,12 +63,6 @@ def dashboard(request):
         for chamada in chamadas_avaliadores:
             chamada.candidatura_usuario = candidaturas_usuario.get(chamada.pk)
     context = {
-        "year": date.today().year,
-        "stats": [
-            {"value": 806, "label": "Educadores em formação", "icon": "bi-people-fill", "color": "info"},
-            {"value": 7, "label": "Formações em andamento", "icon": "bi-mortarboard-fill", "color": "success"},
-            {"value": 11441, "label": "Participações registradas", "icon": "bi-journal-check", "color": "danger"},
-        ],
         "atividades_disponiveis": atividades_disponiveis,
         "chamadas_avaliadores": chamadas_avaliadores,
     }

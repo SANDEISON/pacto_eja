@@ -17,8 +17,13 @@ from .funcao_educador import FuncaoEducador
 from .inscricao import Inscricao
 from .modalidade import Modalidade
 from .nivel import Nivel
+from .programacao_sala import ProgramacaoSala
+from .rascunho_inscricao import RascunhoInscricao
+from .refeicao import Refeicao
+from .sala import Sala
 from .situacao import Situacao
-from .trabalho import Trabalho
+from .tematica_sala import TematicaSala
+from .trabalho import EvidenciaTrabalho, Trabalho, TrabalhoMunicipio
 from .coautor import Coautor
 
 __all__ = [
@@ -35,6 +40,7 @@ __all__ = [
     "EducadorEscola",
     "EducadorEstadoCivil",
     "EducadorGenero",
+    "EvidenciaTrabalho",
     "Endereco",
     "Escola",
     "Estado",
@@ -45,6 +51,12 @@ __all__ = [
     "Modalidade",
     "Nivel",
     "Inscricao",
+    "RascunhoInscricao",
+    "Refeicao",
+    "ProgramacaoSala",
+    "Sala",
     "Situacao",
+    "TematicaSala",
     "Trabalho",
+    "TrabalhoMunicipio",
 ]

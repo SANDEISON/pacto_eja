@@ -2,7 +2,7 @@ from django.db import IntegrityError, transaction
 from django.db.models.deletion import ProtectedError
 from django.test import TestCase
 
-from .models import Cidade, Estado
+from ..models import Cidade, Estado
 
 
 class EstadoCidadeModelTests(TestCase):

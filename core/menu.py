@@ -93,6 +93,12 @@ def management_access(request):
                 "core.view_nivel",
                 "core.view_modalidade",
                 "core.view_situacao",
+                "core.view_sala",
+                "core.change_sala",
+                "core.view_programacaosala",
+                "core.change_programacaosala",
+                "core.view_tematicasala",
+                "core.change_tematicasala",
             )
         )
     )

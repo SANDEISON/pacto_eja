@@ -35,6 +35,8 @@ class DashboardTests(TestCase):
         self.assertNotContains(response, "PAINEL DE ACOMPANHAMENTO")
         self.assertNotContains(response, "Acompanhe em um só lugar os principais indicadores do Pacto EJA.")
         self.assertNotContains(response, "Educadores em formação")
+        self.assertNotContains(response, "Formações em andamento")
+        self.assertNotContains(response, "Participações registradas")
         self.assertNotContains(response, "Participações por mês")
         self.assertNotContains(response, "Próximas atividades")
         self.assertNotContains(response, "Acesso rápido")
@@ -51,8 +53,15 @@ class DashboardTests(TestCase):
         )
         self.assertNotContains(response, "PAINEL DE ACOMPANHAMENTO")
         self.assertNotContains(response, "Acompanhe em um só lugar os principais indicadores do Pacto EJA.")
-        self.assertContains(response, "Educadores em formação")
-        self.assertContains(response, "Participações por mês")
+        self.assertContains(response, "AGENDA")
+        self.assertContains(response, "Inscrições abertas")
+        self.assertContains(response, "Escolha uma atividade e confirme seus dados para participar.")
+        self.assertNotContains(response, "Educadores em formação")
+        self.assertNotContains(response, "Formações em andamento")
+        self.assertNotContains(response, "Participações registradas")
+        self.assertNotContains(response, "Participações por mês")
+        self.assertNotContains(response, "Próximas atividades")
+        self.assertNotContains(response, "Acesso rápido")
 
     def test_all_error_pages_render(self):
         for code in (400, 401, 403, 404, 500, 503):

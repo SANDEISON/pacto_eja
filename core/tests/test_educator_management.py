@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import Cidade, EducadorEscola, Escola, Estado, FuncaoCaracterizacaoTurma, FuncaoEducador
+from ..models import Cidade, EducadorEscola, Escola, Estado, FuncaoCaracterizacaoTurma, FuncaoEducador
 
 
 User = get_user_model()

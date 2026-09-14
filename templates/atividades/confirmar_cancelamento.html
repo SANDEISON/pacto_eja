@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Cancelar inscrição — {{ atividade.titulo }} | Pacto EJA{% endblock %}
+{% block page_title %}Cancelar inscrição{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Início</a></li><li class="breadcrumb-item active">Cancelar inscrição</li>{% endblock %}
+
+{% block content %}
+<section class="management-card delete-confirmation">
+  <span class="delete-icon"><i class="bi bi-x-circle"></i></span>
+  <h2>Deseja cancelar sua inscrição?</h2>
+  <p>Sua inscrição em <strong>{{ atividade.titulo }}</strong> será removida.{% if inscricao.trabalho %} O trabalho submetido e os coautores vinculados também serão excluídos.{% endif %}</p>
+  <p class="text-body-secondary">Esta ação só pode ser realizada durante o período de inscrições.</p>
+  <form method="post">{% csrf_token %}<a class="btn btn-light" href="{% url 'dashboard' %}">Voltar</a><button class="btn btn-danger" type="submit"><i class="bi bi-x-circle"></i> Confirmar cancelamento</button></form>
+</section>
+{% endblock %}

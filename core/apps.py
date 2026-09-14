@@ -7,4 +7,5 @@ class CoreConfig(AppConfig):
     verbose_name = "Painel"
 
     def ready(self):
-        from . import signals  # noqa: F401
+        """Registra os signals assim que a aplicação Django estiver pronta."""
+        from . import signals  # noqa: F401  # A importação executa o registro dos handlers.
