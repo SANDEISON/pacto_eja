@@ -1,5 +1,6 @@
 from .atividade import Atividade
 from .avaliacao import Avaliacao, CandidaturaAvaliador, ChamadaAvaliadores, DesignacaoAvaliacao
+from .cadastro_pendente import CadastroPendente
 from .cidade import Cidade
 from .cor_raca import CorRaca
 from .curso_certificado import CursoCertificado
@@ -31,6 +32,7 @@ __all__ = [
     "Avaliacao",
     "CandidaturaAvaliador",
     "ChamadaAvaliadores",
+    "CadastroPendente",
     "Cidade",
     "CorRaca",
     "CursoCertificado",

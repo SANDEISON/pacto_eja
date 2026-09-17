@@ -1,16 +1,21 @@
 import logging
 import secrets
 import string
+from datetime import timedelta
 from hashlib import sha256
 
 from django.contrib import messages
-from django.contrib.auth import get_user_model, login
+from django.contrib.auth import get_user_model
 from django.contrib.auth.views import LoginView, LogoutView
+from django.core import signing
 from django.core.cache import cache
 from django.core.mail import send_mail
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.shortcuts import redirect, render
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
+from django.utils import timezone
+
+from core.models import CadastroPendente
 
 from .forms import CPFAuthenticationForm, PasswordRecoveryForm, SignUpForm
 
@@ -24,6 +29,8 @@ MENSAGEM_RECUPERACAO_SOLICITADA = (
     "Caso não receba a mensagem, verifique a caixa de spam e aguarde 5 minutos antes de "
     "solicitar novamente."
 )
+VALIDADE_CONFIRMACAO_SEGUNDOS = 24 * 60 * 60
+SALT_CONFIRMACAO_CONTA = "cadastro-conta-email"
 
 
 def gerar_senha_temporaria(tamanho=14):
@@ -121,13 +128,127 @@ def recover_password(request):
 
 
 def signup(request):
-    """Cadastra uma conta pública e inicia a sessão do novo usuário."""
+    """Guarda a conta como pendente e envia a confirmação do e-mail."""
     if request.user.is_authenticated:
         return redirect("dashboard")
     form = SignUpForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
-        user = form.save()
-        login(request, user)
-        messages.success(request, "Sua conta foi criada. Boas-vindas ao Pacto EJA!")
-        return redirect("dashboard")
+        CadastroPendente.objects.filter(
+            tipo=CadastroPendente.Tipo.CONTA,
+            criado_em__lt=timezone.now() - timedelta(seconds=VALIDADE_CONFIRMACAO_SEGUNDOS),
+        ).delete()
+        usuario_nao_salvo = form.save(commit=False)
+        pendente = CadastroPendente.objects.create(
+            tipo=CadastroPendente.Tipo.CONTA,
+            cpf=form.cleaned_data["cpf"],
+            email=form.cleaned_data["email"],
+            dados={"full_name": form.cleaned_data["full_name"].strip()},
+            senha_hash=usuario_nao_salvo.password,
+        )
+        token = signing.dumps(
+            {"cadastro_id": str(pendente.pk)},
+            salt=SALT_CONFIRMACAO_CONTA,
+            compress=True,
+        )
+        confirmacao_url = request.build_absolute_uri(
+            f'{reverse("accounts:signup_confirm")}?token={token}'
+        )
+        try:
+            send_mail(
+                subject="Confirme sua conta — Pacto EJA",
+                message=(
+                    f"Olá, {pendente.dados['full_name']}!\n\n"
+                    "Para confirmar seu e-mail e criar sua conta no Pacto EJA, "
+                    "acesse o link abaixo:\n\n"
+                    f"{confirmacao_url}\n\n"
+                    "O link é válido por 24 horas. Se você não solicitou esta conta, "
+                    "ignore esta mensagem."
+                ),
+                from_email=None,
+                recipient_list=[pendente.email],
+                fail_silently=False,
+            )
+        except Exception:
+            pendente.delete()
+            logger.exception("Falha ao enviar e-mail de confirmação da conta")
+            form.add_error("email", "Não foi possível enviar a confirmação. Confira o e-mail e tente novamente.")
+        else:
+            return redirect("accounts:signup_confirmation_sent")
     return render(request, "accounts/signup.html", {"form": form})
+
+
+def signup_confirmation_sent(request):
+    if request.user.is_authenticated:
+        return redirect("dashboard")
+    return render(request, "accounts/signup_confirmation_sent.html")
+
+
+def signup_confirm(request):
+    """Cria a conta somente após a confirmação explícita do endereço de e-mail."""
+    if request.user.is_authenticated:
+        return redirect("dashboard")
+    token = request.GET.get("token") or request.POST.get("token", "")
+    try:
+        dados_token = signing.loads(
+            token,
+            salt=SALT_CONFIRMACAO_CONTA,
+            max_age=VALIDADE_CONFIRMACAO_SEGUNDOS,
+        )
+        pendente = CadastroPendente.objects.get(
+            pk=dados_token["cadastro_id"],
+            tipo=CadastroPendente.Tipo.CONTA,
+        )
+    except (signing.BadSignature, signing.SignatureExpired, CadastroPendente.DoesNotExist, KeyError):
+        return render(
+            request,
+            "accounts/signup_confirm.html",
+            {"confirmacao_invalida": True},
+            status=400,
+        )
+
+    if request.method == "POST":
+        if (
+            User.objects.filter(username=pendente.cpf).exists()
+            or User.objects.filter(email__iexact=pendente.email).exists()
+        ):
+            pendente.delete()
+            return render(
+                request,
+                "accounts/signup_confirm.html",
+                {"confirmacao_invalida": True},
+                status=409,
+            )
+
+        full_name = pendente.dados["full_name"].strip()
+        first_name, _, last_name = full_name.partition(" ")
+        try:
+            with transaction.atomic():
+                user = User(
+                    username=pendente.cpf,
+                    email=pendente.email,
+                    first_name=first_name,
+                    last_name=last_name,
+                    password=pendente.senha_hash,
+                )
+                user.save()
+                educador = user.educador
+                educador.cpf = pendente.cpf
+                educador.nome_completo = full_name
+                educador.save(update_fields=("cpf", "nome_completo"))
+                pendente.delete()
+        except (IntegrityError, KeyError):
+            return render(
+                request,
+                "accounts/signup_confirm.html",
+                {"confirmacao_invalida": True},
+                status=409,
+            )
+
+        messages.success(request, "E-mail confirmado. Sua conta foi criada e já pode ser acessada.")
+        return redirect("accounts:signin")
+
+    return render(
+        request,
+        "accounts/signup_confirm.html",
+        {"token": token, "email": pendente.email},
+    )

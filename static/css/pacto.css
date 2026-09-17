@@ -64,14 +64,23 @@ body { font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; col
 .registration-programs-count { flex: 0 0 auto; padding: .3rem .65rem; border-radius: 999px; background: #e8f3fc; color: #17689a; font-size: .72rem; font-weight: 800; }
 .registration-programs-filters { display: grid; grid-template-columns: minmax(0, 1fr); gap: .75rem; margin-bottom: 1rem; padding: .85rem; border: 1px solid #e3ebf3; border-radius: 10px; background: #fff; }
 .registration-programs-filters .form-label { margin-bottom: .35rem; color: #536273; font-size: .78rem; font-weight: 700; }
-.registration-programs .certificate-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
-.registration-programs .certificate-options > div { min-width: 0; }
+.registration-programs div.certificate-options { display: grid; gap: 1rem; }
+.registration-program-day { display: grid; gap: .85rem; padding: 1rem; border: 1px solid #d9e4ee; border-radius: 12px; background: #fff; }
+.registration-program-day > h5 { margin: 0; padding-bottom: .7rem; border-bottom: 1px solid #e6edf3; color: var(--pacto-ink); font-size: .95rem; font-weight: 800; }
+.registration-program-day > h5 i, .registration-program-period > h6 i { margin-right: .25rem; color: var(--pacto-blue); }
+.registration-program-period { display: grid; gap: .6rem; }
+.registration-program-period > h6 { margin: 0; color: #526476; font-size: .8rem; font-weight: 800; text-transform: uppercase; }
+.registration-program-period-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+.registration-program-period-options > .program-option-wrapper { min-width: 0; }
 .registration-programs .certificate-options label { position: relative; display: block; height: 100%; margin: 0; cursor: pointer; }
 .registration-programs input[type="checkbox"] { position: absolute; z-index: 1; top: .9rem; right: .9rem; width: 1.1rem; height: 1.1rem; margin: 0; accent-color: var(--pacto-blue); cursor: pointer; }
 .program-card-content { display: grid; height: 100%; gap: .7rem; padding: .9rem 2.7rem .9rem .9rem; border: 1px solid #d9e4ee; border-radius: 11px; background: #fff; box-shadow: 0 2px 7px rgba(29, 43, 71, .04); transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
 .registration-programs label:hover .program-card-content { border-color: #91c4e6; box-shadow: 0 7px 18px rgba(29, 94, 137, .1); transform: translateY(-1px); }
 .registration-programs input:focus-visible + .program-card-content { outline: 3px solid rgba(38, 132, 193, .2); outline-offset: 2px; }
 .registration-programs input:checked + .program-card-content { border-color: var(--pacto-blue); background: linear-gradient(145deg, #fff 35%, #edf8ff); box-shadow: 0 0 0 2px rgba(38, 132, 193, .12), 0 8px 20px rgba(29, 94, 137, .12); }
+.registration-programs .program-option-conflict label { cursor: not-allowed; }
+.registration-programs .program-option-conflict .program-card-content { border-style: dashed; background: #f2f5f7; box-shadow: none; opacity: .58; }
+.registration-program-conflict[hidden] { display: none; }
 .program-card-heading { display: flex; min-width: 0; flex-direction: column; align-items: flex-start; gap: .4rem; }
 .program-card-heading strong { padding-right: .25rem; color: var(--pacto-ink); font-size: .92rem; line-height: 1.25; overflow-wrap: anywhere; }
 .program-modality { display: inline-flex; align-items: center; padding: .2rem .5rem; border-radius: 999px; font-size: .64rem; font-weight: 800; letter-spacing: .025em; text-transform: uppercase; }
@@ -85,7 +94,7 @@ body { font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; col
 .registration-programs-empty[hidden] { display: none; }
 
 @media (max-width: 767px) {
-  .registration-programs .certificate-options { grid-template-columns: 1fr; }
+  .registration-program-period-options { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 575px) {

@@ -21,16 +21,10 @@ def cpf_lookup(request):
     if educador is None:
         return JsonResponse({"valid": True, "exists": False, "registered": False})
 
-    usuario = educador.usuario
     return JsonResponse(
         {
             "valid": True,
             "exists": True,
             "registered": FuncaoEducador.objects.filter(educador=educador).exists(),
-            "nome_completo": educador.nome_completo or usuario.get_full_name() or usuario.first_name or usuario.username,
-            "email": usuario.email,
-            "cor_raca_id": educador.cor_raca_id,
-            "genero": educador.genero_id,
-            "data_nascimento": educador.data_nascimento.isoformat() if educador.data_nascimento else "",
         }
     )

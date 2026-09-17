@@ -79,7 +79,7 @@
     cpfStatus.innerHTML = `<i class="bi ${icon}"></i><span>${message}</span>`;
   }
   async function lookupCpf() {
-    // Reaproveita perfis existentes e bloqueia a edição de identidade retornada pelo servidor.
+    // Consulta apenas a existência do CPF; dados pessoais nunca são retornados publicamente.
     const cpf = digits(cpfInput.value);
     if (cpf.length !== 11) {
       setCpfStatus("", "bi-search", "Digite o CPF completo para consultar.");
@@ -92,18 +92,13 @@
       if (!response.ok || !data.valid) throw new Error(data.message || "CPF inválido.");
       const wasExisting = form.dataset.existingPerson === "true";
       if (data.exists) {
-        nameInput.value = data.nome_completo;
-        emailInput.value = data.email;
-        birthDateInput.value = data.data_nascimento || "";
-        corRacaSelect.value = data.cor_raca_id ? String(data.cor_raca_id) : "";
-        genderSelect.value = data.genero || "";
-        nameInput.readOnly = true;
-        emailInput.readOnly = true;
+        nameInput.readOnly = false;
+        emailInput.readOnly = false;
         form.dataset.existingPerson = "true";
         submitButton.disabled = false;
         const message = data.registered
-          ? "Pessoa localizada. Você pode adicionar outro vínculo com escola."
-          : "Pessoa localizada. Os dados foram preenchidos.";
+          ? "CPF já cadastrado. Os dados pessoais foram protegidos; você pode adicionar outro vínculo."
+          : "CPF já cadastrado. Os dados pessoais foram protegidos.";
         setCpfStatus("success", "bi-check-circle-fill", message);
       } else {
         if (wasExisting) { nameInput.value = ""; emailInput.value = ""; birthDateInput.value = ""; corRacaSelect.value = ""; genderSelect.value = ""; clearAddress(); }

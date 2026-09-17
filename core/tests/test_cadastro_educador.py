@@ -1,12 +1,15 @@
 from datetime import date
 import json
+from urllib.parse import parse_qs, urlparse
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.core import mail
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from ..models import (
-    Cidade, CorRaca, CursoCertificado, Educador, EducadorEscola, EducadorGenero, Endereco,
+    CadastroPendente, Cidade, CorRaca, CursoCertificado, Educador, EducadorEscola, EducadorGenero, Endereco,
     Escola, Estado, Funcao, FuncaoCaracterizacaoTurma, FuncaoEducador,
 )
 
@@ -14,6 +17,7 @@ from ..models import (
 User = get_user_model()
 
 
+@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
 class EducadorEscolaCadastroPublicoTests(TestCase):
     @classmethod
     def setUpTestData(cls):
@@ -72,11 +76,33 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         data.update(overrides)
         return data
 
+    def submit_and_confirm(self, data):
+        response = self.client.post(reverse("cadastro_educador"), data)
+        self.assertRedirects(response, reverse("cadastro_educador_confirmacao_enviada"))
+        self.assertFalse(User.objects.filter(username="52998224725").exists())
+        self.assertEqual(len(mail.outbox), 1)
+        confirmation_url = next(
+            line for line in mail.outbox[0].body.splitlines() if line.startswith("http")
+        )
+        token = parse_qs(urlparse(confirmation_url).query)["token"][0]
+        confirmation_page = self.client.get(
+            reverse("cadastro_educador_confirmar_email"), {"token": token}
+        )
+        self.assertContains(confirmation_page, "Confirmar e concluir cadastro")
+        response = self.client.post(
+            reverse("cadastro_educador_confirmar_email"), {"token": token}
+        )
+        self.assertRedirects(response, reverse("cadastro_educador_success"))
+        return token
+
     def test_public_form_does_not_require_login(self):
         response = self.client.get(reverse("cadastro_educador"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Cadastro de Participantes")
+        self.assertContains(
+            response,
+            "Solicitação de certificado de participação nos cursos da Educação de Jovens e Adultos",
+        )
         self.assertContains(response, "Cor/raça")
         self.assertContains(response, "Pardo")
         self.assertContains(response, 'id="id_cor_raca"')
@@ -144,9 +170,8 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         )
 
     def test_new_cpf_creates_user_person_and_registration(self):
-        response = self.client.post(reverse("cadastro_educador"), self.registration_data())
+        token = self.submit_and_confirm(self.registration_data())
 
-        self.assertRedirects(response, reverse("cadastro_educador_success"))
         usuario = User.objects.get(username="52998224725")
         self.assertEqual(usuario.first_name, "Maria")
         self.assertEqual(usuario.last_name, "Educadora da Silva")
@@ -175,10 +200,14 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         self.assertEqual(cadastro.escola, self.escola)
         self.assertEqual(cadastro.funcao, self.funcao)
         self.assertEqual(cadastro.tempo_atuacao, "4_6_anos")
+        self.assertFalse(CadastroPendente.objects.exists())
+        self.assertEqual(
+            self.client.post(reverse("cadastro_educador_confirmar_email"), {"token": token}).status_code,
+            400,
+        )
 
     def test_registration_allows_requesting_both_certificates(self):
-        response = self.client.post(
-            reverse("cadastro_educador"),
+        self.submit_and_confirm(
             self.registration_data(
                 curso_certificado=[
                     self.curso_certificado.pk,
@@ -187,7 +216,6 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
             ),
         )
 
-        self.assertRedirects(response, reverse("cadastro_educador_success"))
         educador = Educador.objects.get(cpf="52998224725")
         self.assertQuerySetEqual(
             educador.cursos_certificados.all(),
@@ -209,15 +237,13 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         self.assertFalse(Educador.objects.filter(cpf="52998224725").exists())
 
     def test_registration_allows_not_requesting_certificate(self):
-        response = self.client.post(
-            reverse("cadastro_educador"),
+        self.submit_and_confirm(
             self.registration_data(
                 curso_certificado=[],
                 nao_solicitar_certificado="on",
             ),
         )
 
-        self.assertRedirects(response, reverse("cadastro_educador_success"))
         educador = Educador.objects.get(cpf="52998224725")
         self.assertFalse(educador.cursos_certificados.exists())
 
@@ -264,12 +290,10 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         self.assertFalse(User.objects.filter(username="52998224725").exists())
 
     def test_registration_accepts_empty_address_complement(self):
-        response = self.client.post(
-            reverse("cadastro_educador"),
+        self.submit_and_confirm(
             self.registration_data(endereco_complemento=""),
         )
 
-        self.assertRedirects(response, reverse("cadastro_educador_success"))
         educador = Educador.objects.get(cpf="52998224725")
         self.assertEqual(educador.endereco.complemento, "")
 
@@ -307,12 +331,10 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
             ),
         ]
 
-        response = self.client.post(
-            reverse("cadastro_educador"),
+        self.submit_and_confirm(
             self.registration_data(atuacoes_json=json.dumps(atuacoes)),
         )
 
-        self.assertRedirects(response, reverse("cadastro_educador_success"))
         educador = User.objects.get(username="52998224725").educador
         self.assertEqual(FuncaoEducador.objects.filter(educador=educador).count(), 2)
         self.assertEqual(
@@ -446,7 +468,7 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         self.assertEqual(educador.endereco.logradouro, "Avenida Fernandes Lima")
         self.assertEqual(educador.endereco.numero, "1000")
 
-    def test_cpf_lookup_returns_saved_person_data(self):
+    def test_cpf_lookup_does_not_return_personal_data(self):
         usuario = User.objects.create_user(
             username="consulta@example.com",
             email="consulta@example.com",
@@ -468,10 +490,17 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
                 "valid": True,
                 "exists": True,
                 "registered": False,
-                "nome_completo": "Pessoa Localizada",
-                "email": "consulta@example.com",
-                "cor_raca_id": self.cor_raca.pk,
-                "genero": self.genero_nao_binario.pk,
-                "data_nascimento": "1985-08-20",
             },
         )
+
+    def test_email_failure_does_not_create_user_or_keep_pending_cpf(self):
+        with self.assertLogs("core.views.cadastro_educador", level="ERROR"):
+            with patch("core.views.cadastro_educador.send_mail", side_effect=OSError("SMTP indisponível")):
+                response = self.client.post(
+                    reverse("cadastro_educador"), self.registration_data()
+                )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Não foi possível enviar a confirmação")
+        self.assertFalse(User.objects.filter(username="52998224725").exists())
+        self.assertFalse(CadastroPendente.objects.filter(cpf="52998224725").exists())

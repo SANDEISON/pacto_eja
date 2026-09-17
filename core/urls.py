@@ -6,6 +6,8 @@ from . import views
 
 urlpatterns = [
     path("cadastro-educadores/", views.cadastro_educador, name="cadastro_educador"),
+    path("cadastro-educadores/confirmacao-enviada/", views.cadastro_educador_confirmacao_enviada, name="cadastro_educador_confirmacao_enviada"),
+    path("cadastro-educadores/confirmar-email/", views.cadastro_educador_confirmar_email, name="cadastro_educador_confirmar_email"),
     path("cadastro-educadores/concluido/", views.cadastro_educador_success, name="cadastro_educador_success"),
     path("cadastro-educadores/api/cpf/", views.cpf_lookup, name="cadastro_educador_cpf_lookup"),
     path("cadastro-educadores/api/cidades/", views.cidades_por_estado, name="cadastro_educador_cidades"),

@@ -1,0 +1,20 @@
+{% extends "accounts/auth_base.html" %}
+
+{% block title %}Confirmar conta | Pacto EJA{% endblock %}
+{% block form_content %}
+{% if confirmacao_invalida %}
+  <span class="auth-kicker">LINK INVÁLIDO</span>
+  <h1>Não foi possível confirmar</h1>
+  <p class="auth-subtitle">O link expirou, já foi utilizado ou os dados não estão mais disponíveis.</p>
+  <p class="auth-switch"><a href="{% url 'accounts:signup' %}">Refazer o cadastro</a></p>
+{% else %}
+  <span class="auth-kicker">E-MAIL RECEBIDO</span>
+  <h1>Confirme sua conta</h1>
+  <p class="auth-subtitle">O endereço <strong>{{ email }}</strong> foi validado pelo acesso a este link.</p>
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="token" value="{{ token }}">
+    <button type="submit" class="auth-submit">Confirmar e criar conta <i class="bi bi-check2-circle"></i></button>
+  </form>
+{% endif %}
+{% endblock %}

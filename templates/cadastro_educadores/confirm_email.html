@@ -1,0 +1,31 @@
+{% extends "adminlte/auth/auth-master.html" %}
+{% load static %}
+
+{% block title %}Confirmar e-mail | Pacto EJA{% endblock %}
+{% block body_class %}educator-public-page{% endblock %}
+{% block box_class %}educator-page-shell{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/cadastro_educadores.css' %}?v=20260916-1">{% endblock %}
+
+{% block auth_body %}
+<main class="educator-success-page">
+  <section class="educator-success-card">
+    {% if confirmacao_invalida %}
+      <div class="success-icon"><i class="bi bi-exclamation-lg"></i></div>
+      <span class="intro-kicker">LINK INVÁLIDO</span>
+      <h1>Não foi possível confirmar</h1>
+      <p>O link expirou, já foi utilizado ou os dados do cadastro não estão mais disponíveis.</p>
+      <a class="btn btn-primary" href="{% url 'cadastro_educador' %}">Refazer o cadastro</a>
+    {% else %}
+      <div class="success-icon"><i class="bi bi-envelope-check"></i></div>
+      <span class="intro-kicker">E-MAIL RECEBIDO</span>
+      <h1>Confirme seu cadastro</h1>
+      <p>O endereço <strong>{{ email }}</strong> foi validado pelo acesso a este link.</p>
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="token" value="{{ token }}">
+        <button class="btn btn-primary" type="submit"><i class="bi bi-check2-circle"></i> Confirmar e concluir cadastro</button>
+      </form>
+    {% endif %}
+  </section>
+</main>
+{% endblock %}

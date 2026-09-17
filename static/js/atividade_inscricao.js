@@ -84,10 +84,12 @@
 
   function modalityIsValid() {
     const field = modalityStep?.querySelector("select, input");
-    if (!field || field.checkValidity()) return true;
-    field.reportValidity();
-    field.focus();
-    return false;
+    if (field && !field.checkValidity()) {
+      field.reportValidity();
+      field.focus();
+      return false;
+    }
+    return programSelectionIsValid();
   }
 
   function updateMealAvailability() {
@@ -99,33 +101,128 @@
     });
   }
 
+  function programOptionWrapper(field) {
+    return field.closest("li") || field.parentElement?.parentElement;
+  }
+
+  function groupProgramOptions() {
+    if (!programsSection) return;
+    const fields = [...programsSection.querySelectorAll('[name="dados-programacoes"]')];
+    // O mixin de formulários também aplica `certificate-options` a cada
+    // checkbox. Restringir a busca a uma div evita confundir o input com a
+    // raiz das opções.
+    const optionsRoot = fields[0]?.closest("div.certificate-options");
+    if (!optionsRoot || optionsRoot.dataset.grouped === "true") return;
+
+    const days = new Map();
+    fields.forEach((field) => {
+      const option = programOptionWrapper(field);
+      if (!option || option === optionsRoot) return;
+      option.classList.add("program-option-wrapper");
+      const dayKey = field.dataset.data;
+      const periodKey = `${dayKey}-${field.dataset.turno}`;
+      if (!days.has(dayKey)) {
+        const day = document.createElement("section");
+        day.className = "registration-program-day";
+        day.dataset.programDay = dayKey;
+        const heading = document.createElement("h5");
+        heading.innerHTML = '<i class="bi bi-calendar3" aria-hidden="true"></i>';
+        heading.append(document.createTextNode(` ${field.dataset.dataLabel}`));
+        day.append(heading);
+        days.set(dayKey, { element: day, periods: new Map() });
+      }
+      const day = days.get(dayKey);
+      if (!day.periods.has(periodKey)) {
+        const period = document.createElement("div");
+        period.className = "registration-program-period";
+        period.dataset.programPeriod = periodKey;
+        const heading = document.createElement("h6");
+        heading.innerHTML = '<i class="bi bi-clock" aria-hidden="true"></i>';
+        heading.append(document.createTextNode(` ${field.dataset.turnoLabel}`));
+        const options = document.createElement("div");
+        options.className = "registration-program-period-options";
+        period.append(heading, options);
+        day.element.append(period);
+        day.periods.set(periodKey, options);
+      }
+      day.periods.get(periodKey).append(option);
+    });
+    optionsRoot.replaceChildren(...[...days.values()].map((day) => day.element));
+    optionsRoot.dataset.grouped = "true";
+  }
+
+  function updateProgramGroupVisibility() {
+    programsSection?.querySelectorAll("[data-program-period]").forEach((period) => {
+      period.hidden = !period.querySelector(".program-option-wrapper:not([hidden])");
+    });
+    programsSection?.querySelectorAll("[data-program-day]").forEach((day) => {
+      day.hidden = !day.querySelector("[data-program-period]:not([hidden])");
+    });
+  }
+
+  function selectedProgramConflicts() {
+    const occupied = new Set();
+    let hasConflict = false;
+    programsSection?.querySelectorAll('[name="dados-programacoes"]:checked').forEach((field) => {
+      const slot = `${field.dataset.data}-${field.dataset.turno}`;
+      if (occupied.has(slot)) hasConflict = true;
+      occupied.add(slot);
+    });
+    return { occupied, hasConflict };
+  }
+
+  function updateProgramConflicts() {
+    if (!programsSection) return true;
+    const { occupied, hasConflict } = selectedProgramConflicts();
+    programsSection.querySelectorAll('[name="dados-programacoes"]').forEach((field) => {
+      const slot = `${field.dataset.data}-${field.dataset.turno}`;
+      const blocked = !field.checked && occupied.has(slot);
+      field.disabled = blocked;
+      const option = programOptionWrapper(field);
+      option?.classList.toggle("program-option-conflict", blocked);
+      if (blocked) {
+        field.title = "Já existe uma sala selecionada nesta data e turno.";
+      } else {
+        field.removeAttribute("title");
+      }
+    });
+    const message = programsSection.querySelector("[data-registration-program-conflict]");
+    if (message) message.hidden = !hasConflict;
+    return !hasConflict;
+  }
+
+  function programSelectionIsValid() {
+    if (updateProgramConflicts()) return true;
+    const firstConflict = programsSection?.querySelector('[name="dados-programacoes"]:checked');
+    firstConflict?.focus();
+    return false;
+  }
+
   function updateProgramAvailability() {
     if (!programsSection) return;
-    const modality = modalitySelect?.value;
+    const modality = modalitySelect?.value || "";
     const theme = programThemeFilter?.value || "";
     const date = programDateFilter?.value || "";
     let availablePrograms = 0;
-    let modalityPrograms = 0;
     programsSection.querySelectorAll('[name="dados-programacoes"]').forEach((field) => {
-      const matchesModality = field.dataset.modalidade === modality;
+      const matchesModality = !modality || field.dataset.modalidade === modality;
       const matchesTheme = !theme || field.dataset.tematica === theme;
       const matchesDate = !date || field.dataset.data === date;
       const isAvailable = matchesModality && matchesTheme && matchesDate;
-      const option = field.closest("li") || field.closest("div");
+      const option = programOptionWrapper(field);
       if (option) option.hidden = !isAvailable;
-      field.disabled = !matchesModality;
-      if (!matchesModality) field.checked = false;
-      if (matchesModality) modalityPrograms += 1;
       if (isAvailable) availablePrograms += 1;
     });
+    updateProgramGroupVisibility();
     const emptyMessage = programsSection.querySelector("[data-registration-programs-empty]");
     if (emptyMessage) emptyMessage.hidden = availablePrograms > 0;
     const emptyText = programsSection.querySelector("[data-registration-programs-empty-text]");
     if (emptyText) {
-      emptyText.textContent = modalityPrograms > 0
-        ? "Nenhuma programação corresponde aos filtros selecionados."
-        : "Não há programações disponíveis para esta modalidade.";
+      emptyText.textContent = modality
+        ? "Não há programações disponíveis para esta modalidade e os filtros selecionados."
+        : "Nenhuma programação corresponde aos filtros selecionados.";
     }
+    updateProgramConflicts();
     updateProgramSelectionCount();
   }
 
@@ -409,7 +506,11 @@
   modalitySelect?.addEventListener("change", updateProgramAvailability);
   programThemeFilter?.addEventListener("change", updateProgramAvailability);
   programDateFilter?.addEventListener("change", updateProgramAvailability);
-  programsSection?.addEventListener("change", updateProgramSelectionCount);
+  programsSection?.addEventListener("change", (event) => {
+    if (!event.target.matches('[name="dados-programacoes"]')) return;
+    updateProgramConflicts();
+    updateProgramSelectionCount();
+  });
   workStateSelect?.addEventListener("change", () => {
     municipalityList?.querySelectorAll("[data-municipality-row]:not([hidden])").forEach(
       (row) => loadMunicipalityOptions(row),
@@ -449,6 +550,7 @@
 
   async function initialize() {
     await restoreDraft();
+    groupProgramOptions();
     updateMealAvailability();
     updateProgramAvailability();
     const initialStep = location.hash === "#trabalho-pane"

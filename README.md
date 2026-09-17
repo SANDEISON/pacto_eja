@@ -56,7 +56,7 @@ Os models são separados por assunto e exportados por `core.models`. O mesmo pad
 
 ### Fluxos principais
 
-1. O cadastro público cria uma conta cujo `username` é o CPF sem máscara e cria o perfil `Educador` associado.
+1. O cadastro público envia um link de confirmação válido por 24 horas e, somente após a confirmação do e-mail, cria uma conta cujo `username` e senha inicial são o CPF sem máscara, além do perfil `Educador` associado.
 2. O usuário entra por `/conta/entrar/` e acessa o painel em `/painel/`.
 3. Uma atividade ativa aparece quando o período de inscrição está aberto ou quando o usuário já está inscrito.
 4. Durante a inscrição, o usuário informa a modalidade, escolhe programações compatíveis e, quando presencial, as refeições desejadas. Um rascunho permite retomar o preenchimento.
@@ -155,7 +155,7 @@ Endereços úteis:
 
 O servidor de desenvolvimento recarrega o código automaticamente. CSS e JavaScript são servidos diretamente da pasta `static/`, sem `npm`, bundler ou etapa de compilação.
 
-No ambiente local, os e-mails de recuperação são exibidos no terminal onde o `runserver` está em execução. Em produção, configure as variáveis SMTP no arquivo de ambiente; sem um servidor de e-mail válido, a senha da conta não será alterada. Para impedir redefinições sucessivas, o sistema aceita uma solicitação por CPF a cada cinco minutos.
+No ambiente local, os e-mails de confirmação de cadastro e recuperação são exibidos no terminal onde o `runserver` está em execução. Em produção, configure as variáveis SMTP no arquivo de ambiente. Sem um servidor de e-mail válido, novas contas do cadastro público não são criadas e a senha das contas existentes não é alterada. Para impedir redefinições sucessivas, o sistema aceita uma solicitação de recuperação por CPF a cada cinco minutos.
 
 ## Qualidade e testes
 

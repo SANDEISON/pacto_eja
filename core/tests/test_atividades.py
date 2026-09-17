@@ -107,11 +107,11 @@ class AtividadeFlowTests(TestCase):
             "trabalho-aceitou_originalidade": "on",
         }
 
-    def create_programacao(self, modalidade, nome_sala):
+    def create_programacao(self, modalidade, nome_sala, *, turno=None, data=None):
         return ProgramacaoSala.objects.create(
             sala=Sala.objects.create(nome=nome_sala),
-            data=timezone.localdate(self.atividade.data_inicio),
-            turno=ProgramacaoSala.Turno.MANHA,
+            data=data or timezone.localdate(self.atividade.data_inicio),
+            turno=turno or ProgramacaoSala.Turno.MANHA,
             modalidade=modalidade,
             link="https://example.com/sala" if modalidade == ProgramacaoSala.Modalidade.ONLINE else "",
             tematica=TematicaSala.objects.first(),
@@ -149,7 +149,7 @@ class AtividadeFlowTests(TestCase):
         self.assertContains(response, "Etapa 3")
         self.assertContains(response, 'data-registration-step="trabalho"')
         self.assertContains(response, "Etapa 4")
-        self.assertContains(response, "Escolha como deseja participar desta atividade")
+        self.assertContains(response, "Escolha como deseja participar e monte sua programação")
         self.assertContains(response, "data-registration-modality-continue hidden")
         self.assertContains(response, 'data-work-choice="yes"')
         self.assertContains(response, 'data-work-choice="no"')
@@ -162,6 +162,12 @@ class AtividadeFlowTests(TestCase):
         self.assertContains(response, "Abrir endereço no Google Maps")
         self.assertContains(response, "Auditório central")
         self.assertContains(response, "Modalidade de participação")
+        self.assertContains(response, "Selecione a modalidade de participação")
+        self.assertContains(
+            response,
+            '<option value="" selected>Selecione a modalidade de participação</option>',
+            html=True,
+        )
         self.assertContains(response, "Presencial")
         self.assertContains(response, "Salvar e continuar depois")
 
@@ -244,7 +250,11 @@ class AtividadeFlowTests(TestCase):
         self.atividade.modalidade = Atividade.ModalidadeParticipacao.AMBAS
         self.atividade.save(update_fields=("modalidade",))
         online_um = self.create_programacao(ProgramacaoSala.Modalidade.ONLINE, "Sala virtual 1")
-        online_dois = self.create_programacao(ProgramacaoSala.Modalidade.ONLINE, "Sala virtual 2")
+        online_dois = self.create_programacao(
+            ProgramacaoSala.Modalidade.ONLINE,
+            "Sala virtual 2",
+            turno=ProgramacaoSala.Turno.TARDE,
+        )
         presencial = self.create_programacao(ProgramacaoSala.Modalidade.PRESENCIAL, "Auditório 1")
         self.atividade.programacoes.set((online_um, online_dois, presencial))
         url = reverse("atividade_inscricao", args=[self.atividade.pk])
@@ -261,7 +271,7 @@ class AtividadeFlowTests(TestCase):
         )
 
         self.assertContains(page, "Escolha as programações")
-        self.assertContains(page, "Você pode marcar mais de uma opção.")
+        self.assertContains(page, "Selecione no máximo uma sala por turno em cada data.")
         self.assertContains(page, 'class="program-card-content"', count=3)
         self.assertContains(page, 'data-registration-programs-count')
         self.assertContains(page, 'name="dados-programacoes"', count=3)
@@ -272,6 +282,8 @@ class AtividadeFlowTests(TestCase):
         self.assertNotContains(page, 'class="program-card-theme"')
         self.assertContains(page, f'data-tematica="{online_um.tematica_id}"', count=3)
         self.assertContains(page, f'data-data="{online_um.data:%Y-%m-%d}"', count=3)
+        self.assertContains(page, 'data-turno="manha"', count=2)
+        self.assertContains(page, 'data-turno="tarde"', count=1)
         self.assertRedirects(response, reverse("dashboard"))
         inscricao = Inscricao.objects.get(atividade=self.atividade, usuario=self.user)
         self.assertQuerySetEqual(
@@ -279,11 +291,16 @@ class AtividadeFlowTests(TestCase):
             [online_um, online_dois],
         )
 
-    def test_registration_rejects_program_from_another_modality(self):
+    def test_registration_allows_online_and_in_person_programs_without_time_conflict(self):
         self.atividade.modalidade = Atividade.ModalidadeParticipacao.AMBAS
         self.atividade.save(update_fields=("modalidade",))
-        presencial = self.create_programacao(ProgramacaoSala.Modalidade.PRESENCIAL, "Auditório 2")
-        self.atividade.programacoes.add(presencial)
+        online = self.create_programacao(ProgramacaoSala.Modalidade.ONLINE, "Sala virtual 3")
+        presencial = self.create_programacao(
+            ProgramacaoSala.Modalidade.PRESENCIAL,
+            "Auditório 2",
+            turno=ProgramacaoSala.Turno.TARDE,
+        )
+        self.atividade.programacoes.add(online, presencial)
 
         response = self.client.post(
             reverse("atividade_inscricao", args=[self.atividade.pk]),
@@ -291,7 +308,33 @@ class AtividadeFlowTests(TestCase):
             | {
                 "acao": "inscrever",
                 "dados-modalidade_inscricao": Inscricao.Modalidade.ONLINE,
-                "dados-programacoes": [str(presencial.pk)],
+                "dados-programacoes": [str(online.pk), str(presencial.pk)],
+            },
+        )
+
+        self.assertRedirects(response, reverse("dashboard"))
+        inscricao = Inscricao.objects.get(atividade=self.atividade, usuario=self.user)
+        self.assertQuerySetEqual(
+            inscricao.programacoes.order_by("pk"),
+            sorted((online, presencial), key=lambda programacao: programacao.pk),
+        )
+
+    def test_registration_rejects_two_programs_in_the_same_date_and_shift(self):
+        self.atividade.modalidade = Atividade.ModalidadeParticipacao.AMBAS
+        self.atividade.save(update_fields=("modalidade",))
+        online = self.create_programacao(ProgramacaoSala.Modalidade.ONLINE, "Sala virtual 4")
+        presencial = self.create_programacao(
+            ProgramacaoSala.Modalidade.PRESENCIAL,
+            "Auditório 3",
+        )
+        self.atividade.programacoes.add(online, presencial)
+
+        response = self.client.post(
+            reverse("atividade_inscricao", args=[self.atividade.pk]),
+            self.personal_data()
+            | {
+                "acao": "inscrever",
+                "dados-programacoes": [str(online.pk), str(presencial.pk)],
             },
         )
 
@@ -299,7 +342,7 @@ class AtividadeFlowTests(TestCase):
         self.assertFormError(
             response.context["dados_form"],
             "programacoes",
-            "Selecione somente programações da modalidade escolhida.",
+            "Escolha apenas uma programação por turno em cada data.",
         )
         self.assertEqual(response.context["active_tab"], "modalidade")
         self.assertFalse(Inscricao.objects.filter(atividade=self.atividade).exists())

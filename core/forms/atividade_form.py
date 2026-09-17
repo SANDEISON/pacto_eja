@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib.auth import get_user_model
+from django.db.models import Case, IntegerField, Value, When
 from django.utils.html import format_html
 from django.utils import timezone
 
@@ -23,13 +24,16 @@ class ProgramacaoSalaCheckboxSelectMultiple(forms.CheckboxSelectMultiple):
     """Expõe os dados de cada programação para a filtragem no navegador."""
 
     def create_option(self, name, value, *args, **kwargs):
-        """Adiciona modalidade, temática e data como atributos HTML da opção."""
+        """Adiciona os metadados usados para agrupar e validar as opções."""
         option = super().create_option(name, value, *args, **kwargs)
         programacao = getattr(value, "instance", None)
         if programacao is not None:
             option["attrs"]["data-modalidade"] = programacao.modalidade
             option["attrs"]["data-tematica"] = str(programacao.tematica_id)
             option["attrs"]["data-data"] = programacao.data.isoformat()
+            option["attrs"]["data-data-label"] = programacao.data.strftime("%d/%m/%Y")
+            option["attrs"]["data-turno"] = programacao.turno
+            option["attrs"]["data-turno-label"] = programacao.get_turno_display()
         return option
 
 
@@ -475,7 +479,10 @@ class DadosPessoaisInscricaoForm(BootstrapFormMixin, forms.ModelForm):
         queryset=ProgramacaoSala.objects.none(),
         required=False,
         widget=ProgramacaoSalaCheckboxSelectMultiple,
-        help_text="Marque uma ou mais programações disponíveis para a modalidade escolhida.",
+        help_text=(
+            "Escolha no máximo uma sala por turno em cada data. Você pode combinar "
+            "programações presenciais e on-line quando ocorrerem em horários diferentes."
+        ),
     )
 
     class Meta:
@@ -502,10 +509,27 @@ class DadosPessoaisInscricaoForm(BootstrapFormMixin, forms.ModelForm):
         atividade = kwargs.pop("atividade")
         inscricao = kwargs.pop("inscricao", None)
         super().__init__(*args, **kwargs)
-        self.fields["modalidade_inscricao"].choices = atividade.modalidades_disponiveis
+        modalidades_atividade = tuple(atividade.modalidades_disponiveis)
+        self._modalidades_atividade = {valor for valor, _rotulo in modalidades_atividade}
+        self.fields["modalidade_inscricao"].choices = (
+            ("", "Selecione a modalidade de participação"),
+            *modalidades_atividade,
+        )
+        modalidades_disponiveis = [
+            valor for valor, _rotulo in modalidades_atividade
+        ]
+        ordem_turnos = Case(
+            When(turno=ProgramacaoSala.Turno.MANHA, then=Value(1)),
+            When(turno=ProgramacaoSala.Turno.TARDE, then=Value(2)),
+            When(turno=ProgramacaoSala.Turno.NOITE, then=Value(3)),
+            default=Value(4),
+            output_field=IntegerField(),
+        )
         programacoes = atividade.programacoes.select_related(
             "sala", "tematica"
-        ).order_by("data", "turno", "sala__nome", "modalidade")
+        ).filter(modalidade__in=modalidades_disponiveis).annotate(
+            _ordem_turno=ordem_turnos
+        ).order_by("data", "_ordem_turno", "sala__nome", "modalidade")
         self.fields["programacoes"].queryset = programacoes
         self.programacoes_tematicas = list(
             programacoes.order_by("tematica__nome")
@@ -523,8 +547,8 @@ class DadosPessoaisInscricaoForm(BootstrapFormMixin, forms.ModelForm):
             self.fields["modalidade_inscricao"].initial = inscricao.modalidade
             self.fields["programacoes"].initial = inscricao.programacoes.all()
             self.fields["refeicoes"].initial = inscricao.refeicoes.all()
-        elif len(atividade.modalidades_disponiveis) == 1:
-            self.fields["modalidade_inscricao"].initial = atividade.modalidades_disponiveis[0][0]
+        else:
+            self.fields["modalidade_inscricao"].initial = ""
         for name in (
             "cpf",
             "data_nascimento",
@@ -540,22 +564,34 @@ class DadosPessoaisInscricaoForm(BootstrapFormMixin, forms.ModelForm):
     def clean_modalidade_inscricao(self):
         """Valida novamente a escolha contra as modalidades da atividade."""
         modalidade = self.cleaned_data["modalidade_inscricao"]
-        if modalidade not in dict(self.fields["modalidade_inscricao"].choices):
+        if modalidade not in self._modalidades_atividade:
             raise forms.ValidationError("Esta modalidade não está disponível para a atividade.")
         return modalidade
 
     def clean(self):
-        """Valida programações e refeições contra a modalidade de participação."""
+        """Valida conflitos de horário e refeições contra a modalidade geral."""
         cleaned_data = super().clean()
         modalidade = cleaned_data.get("modalidade_inscricao")
         programacoes = cleaned_data.get("programacoes")
         refeicoes = cleaned_data.get("refeicoes")
-        if programacoes and modalidade:
-            programacoes_incompativeis = programacoes.exclude(modalidade=modalidade)
-            if programacoes_incompativeis.exists():
+        if programacoes:
+            horarios = set()
+            for programacao in programacoes:
+                horario = (programacao.data, programacao.turno)
+                if horario in horarios:
+                    self.add_error(
+                        "programacoes",
+                        "Escolha apenas uma programação por turno em cada data.",
+                    )
+                    break
+                horarios.add(horario)
+            if any(
+                programacao.modalidade not in self._modalidades_atividade
+                for programacao in programacoes
+            ):
                 self.add_error(
                     "programacoes",
-                    "Selecione somente programações da modalidade escolhida.",
+                    "Uma das programações selecionadas não está disponível para esta atividade.",
                 )
         if refeicoes and modalidade != Inscricao.Modalidade.PRESENCIAL:
             self.add_error(

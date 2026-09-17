@@ -1,0 +1,20 @@
+{% extends "adminlte/auth/auth-master.html" %}
+{% load static %}
+
+{% block title %}Confirme seu e-mail | Pacto EJA{% endblock %}
+{% block body_class %}educator-public-page{% endblock %}
+{% block box_class %}educator-page-shell{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/cadastro_educadores.css' %}?v=20260916-1">{% endblock %}
+
+{% block auth_body %}
+<main class="educator-success-page">
+  <section class="educator-success-card">
+    <div class="success-icon"><i class="bi bi-envelope-check"></i></div>
+    <span class="intro-kicker">CONFIRMAÇÃO NECESSÁRIA</span>
+    <h1>Verifique seu e-mail</h1>
+    <p>Enviamos um link de confirmação. O cadastro somente será criado depois que você abrir o link e confirmar.</p>
+    <p>O link é válido por 24 horas. Confira também a caixa de spam.</p>
+    <a class="btn btn-outline-primary" href="{% url 'cadastro_educador' %}">Corrigir o e-mail ou refazer o cadastro</a>
+  </section>
+</main>
+{% endblock %}

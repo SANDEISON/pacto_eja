@@ -1,0 +1,10 @@
+{% extends "accounts/auth_base.html" %}
+
+{% block title %}Confirme seu e-mail | Pacto EJA{% endblock %}
+{% block form_content %}
+<span class="auth-kicker">CONFIRMAÇÃO NECESSÁRIA</span>
+<h1>Verifique seu e-mail</h1>
+<p class="auth-subtitle">Enviamos um link de confirmação. Sua conta ainda não foi criada.</p>
+<p class="auth-subtitle">O link é válido por 24 horas. Confira também a caixa de spam.</p>
+<p class="auth-switch"><a href="{% url 'accounts:signup' %}">Corrigir o e-mail ou refazer o cadastro</a></p>
+{% endblock %}
