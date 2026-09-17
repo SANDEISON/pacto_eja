@@ -1,3 +1,4 @@
+from .atividade_admin import AtividadeAdmin
 from .cidade_admin import CidadeAdmin
 from .cor_raca_admin import CorRacaAdmin
 from .curso_certificado_admin import CursoCertificadoAdmin
@@ -14,6 +15,7 @@ from .refeicao_admin import RefeicaoAdmin
 from .sala_admin import ProgramacaoSalaAdmin, SalaAdmin, TematicaSalaAdmin
 
 __all__ = [
+    "AtividadeAdmin",
     "CidadeAdmin",
     "CorRacaAdmin",
     "CursoCertificadoAdmin",
