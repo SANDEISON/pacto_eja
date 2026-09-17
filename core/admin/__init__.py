@@ -8,6 +8,7 @@ from .escola_admin import EscolaAdmin
 from .estado_admin import EstadoAdmin
 from .formacao_admin import FormacaoAdmin
 from .funcao_educador_admin import FuncaoEducadorAdmin
+from .inscricao_admin import InscricaoAdmin
 from .opcoes_dominio_admin import OpcaoDominioAdmin
 from .refeicao_admin import RefeicaoAdmin
 from .sala_admin import ProgramacaoSalaAdmin, SalaAdmin, TematicaSalaAdmin
@@ -23,6 +24,7 @@ __all__ = [
     "EstadoAdmin",
     "FormacaoAdmin",
     "FuncaoEducadorAdmin",
+    "InscricaoAdmin",
     "OpcaoDominioAdmin",
     "ProgramacaoSalaAdmin",
     "RefeicaoAdmin",
