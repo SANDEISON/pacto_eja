@@ -34,6 +34,11 @@ def organizar_autorias_existentes(apps, schema_editor):
 
 class Migration(migrations.Migration):
 
+    # The data migration writes rows with foreign keys to this table. PostgreSQL
+    # defers the related constraint-trigger events until the transaction commits,
+    # so the following ALTER TABLE operations cannot run in the same transaction.
+    atomic = False
+
     dependencies = [
         ("core", "0034_trabalho_detalhamento_obrigatorio"),
     ]
