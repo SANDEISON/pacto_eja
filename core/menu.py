@@ -30,15 +30,20 @@ def educator_management_access(request):
 
 
 def evaluator_portal_access(request):
-    """Exibe o espaço de avaliação quando o usuário recebeu ao menos um trabalho."""
+    """Exibe o espaço de avaliação apenas à equipe administrativa designada."""
     user = getattr(request, "user", None)
-    return bool(user and user.is_authenticated and user.designacoes_avaliacao.exists())
+    return bool(
+        user
+        and user.is_authenticated
+        and user.is_staff
+        and user.designacoes_avaliacao.exists()
+    )
 
 
 def evaluator_opportunities_access(request):
-    """Exibe chamadas quando existe uma oportunidade publicada ou candidatura própria."""
+    """Exibe chamadas somente à equipe administrativa."""
     user = getattr(request, "user", None)
-    if not user or not user.is_authenticated:
+    if not user or not user.is_authenticated or not user.is_staff:
         return False
     from django.utils import timezone
 

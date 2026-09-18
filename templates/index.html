@@ -8,18 +8,8 @@
 <section class="mb-4" aria-labelledby="atividades-title">
   <div class="dashboard-section-heading"><div><span class="eyebrow">AGENDA</span><h2 id="atividades-title">Inscrições abertas</h2><p>Escolha uma atividade e confirme seus dados para participar.</p></div></div>
 {% else %}
-<section class="mb-4" aria-labelledby="oportunidades-title">
-  <div class="dashboard-section-heading dashboard-opportunities-heading"><div><span class="eyebrow">OPORTUNIDADES</span><h2 id="oportunidades-title">Inscrições e chamadas abertas</h2><p>Escolha abaixo como deseja participar.</p></div></div>
-  <div class="dashboard-opportunities">
-  <nav class="dashboard-opportunity-tabs" aria-label="Tipos de oportunidade">
-    <div class="nav nav-pills" role="tablist">
-      <button class="nav-link active" id="atividades-tab" data-bs-toggle="pill" data-bs-target="#atividades-pane" type="button" role="tab" aria-controls="atividades-pane" aria-selected="true"><i class="bi bi-calendar2-event"></i><span>Eventos e atividades</span><small>{{ atividades_disponiveis|length }}</small></button>
-      <button class="nav-link" id="avaliadores-tab" data-bs-toggle="pill" data-bs-target="#avaliadores-pane" type="button" role="tab" aria-controls="avaliadores-pane" aria-selected="false"><i class="bi bi-person-check"></i><span>Chamadas para avaliadores</span><small>{{ chamadas_avaliadores|length }}</small></button>
-    </div>
-  </nav>
-  <div class="tab-content dashboard-opportunity-content">
-    <div class="tab-pane fade show active" id="atividades-pane" role="tabpanel" aria-labelledby="atividades-tab" tabindex="0">
-      <div class="dashboard-tab-heading"><h3>Eventos, palestras e cursos</h3><p>Consulte as atividades disponíveis e faça sua inscrição.</p></div>
+<section class="mb-4" aria-labelledby="atividades-title">
+  <div class="dashboard-section-heading dashboard-opportunities-heading"><div><span class="eyebrow">OPORTUNIDADES</span><h2 id="atividades-title">Inscrições abertas</h2><p>Consulte os eventos, palestras e cursos disponíveis.</p></div></div>
 {% endif %}
   <div class="row g-3">
     {% for atividade in atividades_disponiveis %}
@@ -54,38 +44,6 @@
       <div class="col-12"><div class="activity-empty"><i class="bi bi-calendar2-check"></i><strong>Nenhuma inscrição aberta no momento</strong><span>Novas atividades aparecerão aqui assim que forem publicadas.</span></div></div>
     {% endfor %}
   </div>
-{% if request.user.is_staff %}
 </section>
-{% else %}
-    </div>
-    <div class="tab-pane fade" id="avaliadores-pane" role="tabpanel" aria-labelledby="avaliadores-tab" tabindex="0">
-      <div class="dashboard-tab-heading dashboard-tab-heading-action"><div><h3>Chamadas para avaliadores</h3><p>Candidate-se para colaborar na avaliação dos trabalhos submetidos.</p></div>{% if chamadas_avaliadores %}<a class="btn btn-sm btn-outline-primary" href="{% url 'chamadas_avaliadores' %}">Ver todas</a>{% endif %}</div>
-  <div class="row g-3">
-    {% for chamada in chamadas_avaliadores %}
-      <div class="col-12 col-lg-6 col-xxl-4">
-        <article class="activity-card review-dashboard-card h-100">
-          <header><span class="activity-type">Chamada de avaliadores</span>{% if chamada.candidaturas_abertas %}<span class="status-pill status-active">Aberta</span>{% else %}<span class="status-pill status-inactive">Encerrada</span>{% endif %}</header>
-          <div class="activity-card-body">
-            <h3>{{ chamada.titulo }}</h3>
-            <p>{{ chamada.descricao|truncatewords:24 }}</p>
-            <dl>
-              <div><dt><i class="bi bi-calendar2-event"></i><span class="visually-hidden">Evento</span></dt><dd>{{ chamada.atividade.titulo }}</dd></div>
-              <div><dt><i class="bi bi-clock"></i><span class="visually-hidden">Prazo</span></dt><dd>Candidaturas até {{ chamada.inscricoes_fim|date:"d/m/Y H:i" }}</dd></div>
-            </dl>
-          </div>
-          <footer>
-            {% if chamada.candidatura_usuario %}<span class="candidate-state candidate-state-{{ chamada.candidatura_usuario.status }}"><i class="bi bi-info-circle-fill"></i> Candidatura {{ chamada.candidatura_usuario.get_status_display|lower }}</span><a class="btn btn-sm btn-outline-primary" href="{% url 'chamadas_avaliadores' %}">Ver detalhes</a>
-            {% elif chamada.candidaturas_abertas %}<a class="btn btn-primary w-100" href="{% url 'candidatar_avaliador' chamada.pk %}"><i class="bi bi-send"></i> Quero ser avaliador(a)</a>
-            {% else %}<span class="text-body-secondary">Período de candidatura encerrado</span>{% endif %}
-          </footer>
-        </article>
-      </div>
-    {% empty %}<div class="col-12"><div class="activity-empty"><i class="bi bi-person-check"></i><strong>Nenhuma chamada para avaliadores no momento</strong><span>Novas oportunidades aparecerão aqui assim que forem publicadas.</span></div></div>{% endfor %}
-  </div>
-    </div>
-  </div>
-  </div>
-</section>
-{% endif %}
 
 {% endblock %}

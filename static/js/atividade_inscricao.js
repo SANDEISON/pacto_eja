@@ -83,18 +83,15 @@
   }
 
   function modalityIsValid() {
-    const field = modalityStep?.querySelector("select, input");
-    if (field && !field.checkValidity()) {
-      field.reportValidity();
-      field.focus();
-      return false;
-    }
     return programSelectionIsValid();
   }
 
   function updateMealAvailability() {
     if (!mealsSection) return;
-    const isInPerson = modalitySelect?.value === "presencial";
+    const hasInPersonProgram = Boolean(
+      programsSection?.querySelector('[name="dados-programacoes"]:checked[data-modalidade="presencial"]'),
+    );
+    const isInPerson = modalitySelect?.value === "presencial" || hasInPersonProgram;
     mealsSection.hidden = !isInPerson;
     mealsSection.querySelectorAll('[name="dados-refeicoes"]').forEach((field) => {
       if (!isInPerson) field.checked = false;
@@ -192,6 +189,15 @@
   }
 
   function programSelectionIsValid() {
+    const programFields = programsSection?.querySelectorAll('[name="dados-programacoes"]') || [];
+    const selectedProgram = programsSection?.querySelector('[name="dados-programacoes"]:checked');
+    const requiredMessage = programsSection?.querySelector("[data-registration-programs-required]");
+    const hasRequiredSelection = !programFields.length || Boolean(selectedProgram);
+    requiredMessage?.classList.toggle("d-block", !hasRequiredSelection);
+    if (!hasRequiredSelection) {
+      programFields[0]?.focus();
+      return false;
+    }
     if (updateProgramConflicts()) return true;
     const firstConflict = programsSection?.querySelector('[name="dados-programacoes"]:checked');
     firstConflict?.focus();
@@ -508,8 +514,10 @@
   programDateFilter?.addEventListener("change", updateProgramAvailability);
   programsSection?.addEventListener("change", (event) => {
     if (!event.target.matches('[name="dados-programacoes"]')) return;
+    programsSection.querySelector("[data-registration-programs-required]")?.classList.remove("d-block");
     updateProgramConflicts();
     updateProgramSelectionCount();
+    updateMealAvailability();
   });
   workStateSelect?.addEventListener("change", () => {
     municipalityList?.querySelectorAll("[data-municipality-row]:not([hidden])").forEach(

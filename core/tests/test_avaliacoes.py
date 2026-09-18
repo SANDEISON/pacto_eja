@@ -189,17 +189,21 @@ class AvaliacaoFlowTests(TestCase):
             ):
                 self.assertEqual(self.client.get(url).status_code, 200)
 
-    def test_dashboard_do_usuario_comum_exibe_chamada_para_avaliadores(self):
+    def test_dashboard_do_usuario_comum_oculta_avaliacoes_e_chamadas(self):
         self.client.force_login(self.avaliador)
         response = self.client.get(reverse("dashboard"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Inscrições e chamadas abertas")
-        self.assertContains(response, self.chamada.titulo)
-        self.assertContains(response, "Quero ser avaliador(a)")
-        self.assertContains(response, 'id="atividades-tab"')
-        self.assertContains(response, 'data-bs-target="#atividades-pane"')
-        self.assertContains(response, 'id="avaliadores-tab"')
-        self.assertContains(response, 'data-bs-target="#avaliadores-pane"')
+        self.assertContains(response, "Inscrições abertas")
+        self.assertNotContains(response, self.chamada.titulo)
+        self.assertNotContains(response, "Quero ser avaliador(a)")
+        self.assertNotContains(response, "Chamadas para avaliadores")
+        menu_texts = [
+            item.get("text") or item.get("header")
+            for item in response.context["adminlte_menu_sidebar"]
+        ]
+        self.assertNotIn("AVALIAÇÃO", menu_texts)
+        self.assertNotIn("Chamadas para avaliadores", menu_texts)
+        self.assertNotIn("Meus trabalhos para avaliar", menu_texts)
 
         self.admin.is_staff = True
         self.client.force_login(self.admin)

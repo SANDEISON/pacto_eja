@@ -13,7 +13,7 @@ class DashboardTests(TestCase):
         response = self.client.get(reverse("dashboard"))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "index.html")
-        self.assertContains(response, "Inscrições e chamadas abertas", html=False)
+        self.assertContains(response, "Inscrições abertas", html=False)
         self.assertNotContains(response, "Olá, Educador!", html=False)
         self.assertNotContains(response, '<div class="app-content-header')
 
