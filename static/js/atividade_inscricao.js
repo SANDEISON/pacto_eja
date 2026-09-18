@@ -17,6 +17,7 @@
   const modalitySelect = document.getElementById("id_dados-modalidade_inscricao");
   const mealsSection = form.querySelector("[data-registration-meals]");
   const programsSection = form.querySelector("[data-registration-programs]");
+  const programRequiredModal = document.getElementById("registration-program-required-modal");
   const programThemeFilter = form.querySelector("[data-registration-program-theme-filter]");
   const programDateFilter = form.querySelector("[data-registration-program-date-filter]");
   const workChoiceStep = form.querySelector('[data-registration-step="decisao"]');
@@ -37,12 +38,23 @@
   const formationsRequiredError = form.querySelector("[data-formations-required]");
   const currentStepInput = form.querySelector("[data-current-registration-step]");
   const workStateSelect = document.getElementById("id_trabalho-estado");
+  const workPresentationSelect = document.getElementById("id_trabalho-modalidade_apresentacao");
+  const proposalAxisContainer = form.querySelector("[data-proposal-axis-container]");
+  const proposalAxisSelect = document.getElementById("id_trabalho-eixo_proposta");
   const municipalityList = form.querySelector("[data-municipality-list]");
   const municipalityTemplate = form.querySelector("[data-municipality-template]");
   const municipalityTotalForms = document.getElementById("id_municipio-TOTAL_FORMS");
   const draftScript = document.getElementById("registration-draft-data");
   const draftData = draftScript ? JSON.parse(draftScript.textContent) : {};
   let searchTimer;
+
+  function updateProposalAxisAvailability() {
+    if (!proposalAxisContainer || !proposalAxisSelect) return;
+    const isOnline = workPresentationSelect?.value === "online";
+    proposalAxisContainer.hidden = !isOnline;
+    proposalAxisSelect.disabled = !isOnline;
+    if (!isOnline) proposalAxisSelect.value = "";
+  }
 
   function showStep(stepName) {
     steps.forEach((step) => {
@@ -195,7 +207,11 @@
     const hasRequiredSelection = !programFields.length || Boolean(selectedProgram);
     requiredMessage?.classList.toggle("d-block", !hasRequiredSelection);
     if (!hasRequiredSelection) {
-      programFields[0]?.focus();
+      if (programRequiredModal && window.bootstrap?.Modal) {
+        window.bootstrap.Modal.getOrCreateInstance(programRequiredModal).show();
+      } else {
+        programFields[0]?.focus();
+      }
       return false;
     }
     if (updateProgramConflicts()) return true;
@@ -328,6 +344,59 @@
     coauthorList.append(row);
     totalFormsInput.value = String(formIndex + 1);
     return row;
+  }
+
+  function activeAuthorshipRows() {
+    return [...(coauthorList?.querySelectorAll(".coauthor-row") || [])].filter((row) => {
+      const user = row.querySelector('input[name$="-usuario"]');
+      const deleted = row.querySelector('input[name$="-DELETE"]')?.checked;
+      return user?.value && !deleted && !row.hidden;
+    });
+  }
+
+  function normalizeAuthorship(preferredAuthor = null) {
+    const rows = activeAuthorshipRows();
+    if (!rows.length) return;
+    const author = preferredAuthor
+      || rows.find((row) => row.querySelector('select[name$="-papel"]')?.value === "autor")
+      || rows[0];
+    const others = rows
+      .filter((row) => row !== author)
+      .sort((left, right) => (
+        Number(left.querySelector('input[name$="-ordem"]')?.value || 999)
+        - Number(right.querySelector('input[name$="-ordem"]')?.value || 999)
+      ));
+    [author, ...others].forEach((row, index) => {
+      const role = row.querySelector('select[name$="-papel"]');
+      const order = row.querySelector('input[name$="-ordem"]');
+      if (role) role.value = index === 0 ? "autor" : "coautor";
+      if (order) order.value = String(index + 1);
+    });
+  }
+
+  function moveAuthorshipRow(row) {
+    const rows = activeAuthorshipRows();
+    const author = rows.find(
+      (item) => item.querySelector('select[name$="-papel"]')?.value === "autor",
+    );
+    if (!author || row === author) {
+      normalizeAuthorship(author || row);
+      return;
+    }
+    const coauthors = rows
+      .filter((item) => item !== author && item !== row)
+      .sort((left, right) => (
+        Number(left.querySelector('input[name$="-ordem"]')?.value || 999)
+        - Number(right.querySelector('input[name$="-ordem"]')?.value || 999)
+      ));
+    const desiredPosition = Math.max(
+      0,
+      Math.min(coauthors.length, Number(row.querySelector('input[name$="-ordem"]')?.value || 2) - 2),
+    );
+    coauthors.splice(desiredPosition, 0, row);
+    [author, ...coauthors].forEach((item, index) => {
+      item.querySelector('input[name$="-ordem"]').value = String(index + 1);
+    });
   }
 
   async function loadMunicipalityOptions(row, selectedCity = "") {
@@ -475,7 +544,7 @@
         && !input.closest(".coauthor-row").querySelector('input[name$="-DELETE"]')?.checked,
     );
     if (isDuplicate) {
-      searchResults.textContent = "Este coautor já foi adicionado.";
+      searchResults.textContent = "Esta pessoa já foi adicionada à autoria.";
       return;
     }
 
@@ -484,6 +553,7 @@
     row.querySelector('input[name$="-nome"]').value = option.dataset.name;
     row.querySelector('input[name$="-email"]').value = option.dataset.email;
     row.hidden = false;
+    normalizeAuthorship();
     coauthorSearch.value = "";
     searchResults.replaceChildren();
   }
@@ -524,6 +594,7 @@
       (row) => loadMunicipalityOptions(row),
     );
   });
+  workPresentationSelect?.addEventListener("change", updateProposalAxisAvailability);
   form.querySelector("[data-add-municipality]")?.addEventListener(
     "click", () => appendMunicipalityRow(),
   );
@@ -543,6 +614,23 @@
     const deleteInput = row.querySelector('input[name$="-DELETE"]');
     if (deleteInput) deleteInput.checked = true;
     row.hidden = true;
+    normalizeAuthorship();
+  });
+  coauthorList?.addEventListener("change", (event) => {
+    const row = event.target.closest(".coauthor-row");
+    if (!row) return;
+    if (event.target.matches('select[name$="-papel"]')) {
+      if (event.target.value === "autor") {
+        normalizeAuthorship(row);
+      } else {
+        const replacement = activeAuthorshipRows().find(
+          (item) => item !== row
+            && item.querySelector('select[name$="-papel"]')?.value === "autor",
+        ) || activeAuthorshipRows().find((item) => item !== row) || row;
+        normalizeAuthorship(replacement);
+      }
+    }
+    if (event.target.matches('input[name$="-ordem"]')) moveAuthorshipRow(row);
   });
   coauthorSearch?.addEventListener("input", () => {
     searchResults.replaceChildren();
@@ -561,6 +649,7 @@
     groupProgramOptions();
     updateMealAvailability();
     updateProgramAvailability();
+    updateProposalAxisAvailability();
     const initialStep = location.hash === "#trabalho-pane"
       ? "trabalho"
       : (form.dataset.initialStep || "pessoal");

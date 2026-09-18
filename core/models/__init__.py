@@ -9,6 +9,7 @@ from .educador_escola import EducadorEscola
 from .educador_estado_civil import EducadorEstadoCivil
 from .educador_genero import EducadorGenero
 from .endereco import Endereco
+from .eixo_proposta import EixoProposta
 from .escola import Escola
 from .estado import Estado
 from .formacao import Formacao
@@ -44,6 +45,7 @@ __all__ = [
     "EducadorGenero",
     "EvidenciaTrabalho",
     "Endereco",
+    "EixoProposta",
     "Escola",
     "Estado",
     "Formacao",

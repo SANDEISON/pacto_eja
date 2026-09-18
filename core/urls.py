@@ -61,6 +61,7 @@ urlpatterns = [
     path("administracao/cadastros-educadores/", views.CatalogListView.as_view(catalog_key="cadastros-educadores"), name="educator_model_list"),
     path("administracao/escolas/", views.CatalogListView.as_view(catalog_key="escolas"), name="school_list"),
     path("administracao/estados/", views.CatalogListView.as_view(catalog_key="estados"), name="state_list"),
+    path("administracao/eixos-proposta/", views.CatalogListView.as_view(catalog_key="eixos-proposta"), name="proposal_axis_list"),
     path("administracao/niveis/", views.CatalogListView.as_view(catalog_key="niveis"), name="level_list"),
     path("administracao/modalidades/", views.CatalogListView.as_view(catalog_key="modalidades"), name="modality_list"),
     path("administracao/situacoes/", views.CatalogListView.as_view(catalog_key="situacoes"), name="situation_list"),

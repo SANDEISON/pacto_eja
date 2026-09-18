@@ -13,6 +13,7 @@ from ..models import (
     CursoCertificado,
     Educador,
     EducadorGenero,
+    EixoProposta,
     Escola,
     Estado,
     Modalidade,
@@ -92,6 +93,15 @@ CATALOGS = {
         "search_fields": ("nome_estado", "sigla"),
         "columns": (("ID", "pk"), ("Estado", "nome_estado"), ("Sigla", "sigla")),
         "list_url_name": "state_list",
+    },
+    "eixos-proposta": {
+        "model": EixoProposta,
+        "title": "Eixos da proposta",
+        "singular": "eixo da proposta",
+        "fields": ("nome", "descricao", "link_acesso"),
+        "search_fields": ("nome", "descricao", "link_acesso"),
+        "columns": (("Nome", "nome"), ("Descrição", "descricao"), ("Link de acesso", "link_acesso")),
+        "list_url_name": "proposal_axis_list",
     },
     "niveis": {
         "model": Nivel,

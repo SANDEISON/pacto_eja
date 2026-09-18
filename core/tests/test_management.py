@@ -7,6 +7,7 @@ from django.urls import reverse
 from ..models import (
     CursoCertificado,
     EducadorGenero,
+    EixoProposta,
     Nivel,
     ProgramacaoSala,
     Sala,
@@ -41,6 +42,7 @@ class ManagementAccessTests(TestCase):
                 "Educadores",
                 "Escolas",
                 "Estados",
+                "Eixo da proposta",
                 "Níveis",
                 "Modalidades",
                 "Situações",
@@ -57,6 +59,7 @@ class ManagementAccessTests(TestCase):
         self.assertEqual(routes["Cidades"], "city_list")
         self.assertEqual(routes["Cursos para certificados"], "certificate_course_list")
         self.assertEqual(routes["Gêneros"], "educator_gender_list")
+        self.assertEqual(routes["Eixo da proposta"], "proposal_axis_list")
         self.assertEqual(routes["Níveis"], "level_list")
         self.assertNotIn("admin:", routes["Níveis"])
 
@@ -95,6 +98,7 @@ class CatalogManagementTests(TestCase):
             "educator_model_list",
             "school_list",
             "state_list",
+            "proposal_axis_list",
             "level_list",
             "modality_list",
             "situation_list",
@@ -148,6 +152,47 @@ class CatalogManagementTests(TestCase):
         )
         self.assertEqual(TematicaSala.objects.count(), 8)
         self.assertTrue(TematicaSala.objects.filter(nome="EJA como direito").exists())
+
+    def test_initial_proposal_axes_are_available(self):
+        self.assertQuerySetEqual(
+            EixoProposta.objects.values_list("nome", flat=True),
+            [
+                "Eixo 1: Planejamento com o Projeto Didático",
+                "Eixo 2: Apropriação do Sistema da Escrita Alfabética",
+                "Eixo 3: Aprendendo com a Matemática",
+                "Eixo 4: Conectado com as Tecnologias",
+            ],
+        )
+
+    def test_proposal_axis_crud_uses_custom_pages(self):
+        create_response = self.client.post(
+            reverse("catalog_create", args=("eixos-proposta",)),
+            {
+                "nome": "Eixo adicional",
+                "descricao": "Descrição inicial.",
+                "link_acesso": "https://example.com/eixo",
+            },
+        )
+        self.assertRedirects(create_response, reverse("proposal_axis_list"))
+        eixo = EixoProposta.objects.get(nome="Eixo adicional")
+
+        update_response = self.client.post(
+            reverse("catalog_update", args=("eixos-proposta", eixo.pk)),
+            {
+                "nome": "Eixo atualizado",
+                "descricao": "Descrição atualizada.",
+                "link_acesso": "https://example.com/eixo-atualizado",
+            },
+        )
+        self.assertRedirects(update_response, reverse("proposal_axis_list"))
+        eixo.refresh_from_db()
+        self.assertEqual(eixo.nome, "Eixo atualizado")
+
+        delete_response = self.client.post(
+            reverse("catalog_delete", args=("eixos-proposta", eixo.pk))
+        )
+        self.assertRedirects(delete_response, reverse("proposal_axis_list"))
+        self.assertFalse(EixoProposta.objects.filter(pk=eixo.pk).exists())
 
     def test_room_crud_uses_custom_pages(self):
         tematica = TematicaSala.objects.get(nome="Tecnologias")

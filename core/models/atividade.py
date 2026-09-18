@@ -47,7 +47,7 @@ class Atividade(models.Model):
         choices=ModeloSubmissao.choices,
         default=ModeloSubmissao.ACADEMICO,
         help_text=(
-            "O trabalho acadêmico solicita eixo, resumo e palavras-chave. O relato de "
+            "O trabalho acadêmico solicita modalidade, eixo da proposta e apresentação. O relato de "
             "experiência solicita a caracterização e a proposta detalhada."
         ),
     )

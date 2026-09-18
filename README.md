@@ -13,9 +13,9 @@ O projeto é uma aplicação Django renderizada no servidor. O PostgreSQL armaze
 - painel do educador com atividades disponíveis e inscrições realizadas;
 - inscrição em eventos, palestras e cursos, com salvamento automático de rascunho;
 - escolha de modalidade, programação de sala e refeições disponíveis;
-- submissão de trabalho com PDF e coautores cadastrados na plataforma;
-- modelos de submissão configuráveis por atividade: trabalho acadêmico (eixo, resumo e
-  palavras-chave) ou relato de experiência (público, período, objetivos, metodologia,
+- submissão de trabalho com PDF, autor, coautores e ordem de autoria cadastrados na plataforma;
+- modelos de submissão configuráveis por atividade: trabalho acadêmico (modalidade, eixo da proposta e apresentação)
+  ou relato de experiência (público, período, objetivos, metodologia,
   resultados, referências e evidências);
 - aceite versionado dos termos de publicação, imagem e direitos autorais;
 - chamadas públicas, seleção de avaliadores, distribuição de trabalhos e pareceres;

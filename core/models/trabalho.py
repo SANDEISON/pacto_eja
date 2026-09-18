@@ -11,6 +11,10 @@ from .inscricao import trabalho_upload_path, validate_pdf_size
 class Trabalho(models.Model):
     """Trabalho submetido com PDF e metadados estruturados para avaliação."""
 
+    class ModalidadeApresentacao(models.TextChoices):
+        ONLINE = "online", "On-line"
+        PRESENCIAL = "presencial", "Presencial"
+
     class AutorizacaoImagens(models.TextChoices):
         COM_IMAGENS = "com", "Autorizo publicação com uso das imagens"
         SEM_IMAGENS = "sem", "Autorizo publicação sem o uso das imagens"
@@ -19,24 +23,38 @@ class Trabalho(models.Model):
     inscricao = models.OneToOneField(
         "Inscricao", on_delete=models.CASCADE, related_name="trabalho", verbose_name="inscrição"
     )
-    titulo = models.CharField("título do trabalho", max_length=250)
-    eixo_tematico = models.CharField("eixo temático", max_length=200, blank=True)
-    resumo = models.TextField("resumo", blank=True)
-    palavras_chave = models.CharField(
-        "palavras-chave",
-        max_length=300,
+    titulo = models.CharField("Título da proposta/prática", max_length=200)
+    modalidade_apresentacao = models.CharField(
+        "Apresentação do trabalho",
+        max_length=10,
+        choices=ModalidadeApresentacao.choices,
         blank=True,
-        help_text="Separe de três a cinco palavras-chave por ponto e vírgula.",
+    )
+    eixo_proposta = models.ForeignKey(
+        "EixoProposta",
+        on_delete=models.PROTECT,
+        related_name="trabalhos",
+        verbose_name="Eixo da proposta",
+        null=True,
+        blank=True,
+    )
+    resumo = models.TextField(
+        "Apresentação",
+        blank=True,
+        max_length=1100,
     )
 
     apresentacao = models.TextField(
-        "apresentação e justificativa dos conteúdos abordados", blank=True
+        "Apresentação",
+        blank=True,
+        max_length=1100,
     )
-    periodo_inicio = models.DateField("início da realização", null=True, blank=True)
-    periodo_fim = models.DateField("fim da realização", null=True, blank=True)
-    turnos = models.JSONField("turnos", default=list, blank=True)
+    periodo_inicio = models.DateField("Data de início (dia/mês/ano)", null=True, blank=True)
+    periodo_fim = models.DateField("Data de término (dia/mês/ano)", null=True, blank=True)
+    turnos = models.JSONField("Turno", default=list, blank=True)
+    duracao = models.CharField("Duração", max_length=100, blank=True)
     carga_horaria = models.PositiveIntegerField(
-        "carga horária", null=True, blank=True, validators=[MinValueValidator(1)]
+        "Carga horária (em horas)", null=True, blank=True, validators=[MinValueValidator(1)]
     )
     estado = models.ForeignKey(
         "Estado",
@@ -49,13 +67,20 @@ class Trabalho(models.Model):
     n_participantes = models.PositiveIntegerField(
         "total de participantes", default=0
     )
-    objetivo_geral = models.TextField("objetivo geral", blank=True)
-    objetivos_especificos = models.TextField("objetivos específicos", blank=True)
-    desenvolvimento_metodologico = models.TextField(
-        "desenvolvimento metodológico", blank=True
+    caracterizacao_publico = models.TextField(
+        "Caracterização do Público", max_length=500, blank=True
     )
-    consideracoes = models.TextField("considerações e avaliação do processo", blank=True)
-    referencias = models.TextField("referências", blank=True)
+    objetivo_geral = models.TextField("Objetivo Geral", max_length=300, blank=True)
+    objetivos_especificos = models.TextField(
+        "Objetivos Específicos", max_length=500, blank=True
+    )
+    desenvolvimento_metodologico = models.TextField(
+        "Desenvolvimento metodológico da ação de ensino", max_length=6000, blank=True
+    )
+    consideracoes = models.TextField(
+        "Considerações e avaliação do processo", max_length=2000, blank=True
+    )
+    referencias = models.TextField("Referências", max_length=1000, blank=True)
 
     autorizacao_imagens = models.CharField(
         "uso de imagens na publicação",
@@ -67,13 +92,14 @@ class Trabalho(models.Model):
         "li e aceito o Termo de Uso de Imagem", default=False
     )
     aceitou_termo_relato = models.BooleanField(
-        "li e aceito o Termo de Uso e Publicação do Trabalho", default=False
+        "Declaro CIÊNCIA e CONCORDÂNCIA com os 3 (três) termos acima, sobre uso de imagem, cessão de direitos autorais e declaração de originalidade.",
+        default=False,
     )
     aceitou_termo_cessao = models.BooleanField(
         "li e aceito o Termo de Cessão de Direitos Autorais", default=False
     )
     aceitou_originalidade = models.BooleanField(
-        "declaro que o trabalho é original e de minha responsabilidade", default=False
+        "Declaro a originalidade da atividade", default=False
     )
     deseja_participar_publicacao = models.BooleanField(
         "tenho interesse em participar da publicação", default=False
@@ -147,7 +173,7 @@ def evidencia_upload_path(evidencia, nome_arquivo):
 
 
 class EvidenciaTrabalho(models.Model):
-    """Imagem que documenta a realização de um relato de experiência."""
+    """Imagem que documenta a efetivação da ação apresentada no trabalho."""
 
     trabalho = models.ForeignKey(
         Trabalho, on_delete=models.CASCADE, related_name="evidencias", verbose_name="trabalho"

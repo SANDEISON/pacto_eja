@@ -5,6 +5,7 @@ from .curso_certificado_admin import CursoCertificadoAdmin
 from .educador_admin import EducadorAdmin
 from .educador_escola_admin import EducadorEscolaAdmin
 from .endereco_admin import EnderecoAdmin
+from .eixo_proposta_admin import EixoPropostaAdmin
 from .escola_admin import EscolaAdmin
 from .estado_admin import EstadoAdmin
 from .formacao_admin import FormacaoAdmin
@@ -22,6 +23,7 @@ __all__ = [
     "EducadorAdmin",
     "EducadorEscolaAdmin",
     "EnderecoAdmin",
+    "EixoPropostaAdmin",
     "EscolaAdmin",
     "EstadoAdmin",
     "FormacaoAdmin",

@@ -108,7 +108,14 @@ class AvaliacaoFlowTests(TestCase):
             with self.assertRaises(ValidationError):
                 designacao.full_clean()
 
-            Coautor.objects.create(trabalho=trabalho, usuario=self.avaliador, nome="Ana Avaliadora", email="avaliador@example.com")
+            Coautor.objects.create(
+                trabalho=trabalho,
+                usuario=self.avaliador,
+                nome="Ana Avaliadora",
+                email="avaliador@example.com",
+                papel=Coautor.Papel.COAUTOR,
+                ordem=2,
+            )
             self.aprovar_avaliador(self.avaliador)
             designacao = DesignacaoAvaliacao(trabalho=trabalho, avaliador=self.avaliador, liberada_por=self.admin)
             with self.assertRaises(ValidationError):

@@ -147,6 +147,7 @@ class TrabalhoForm(BootstrapFormMixin, forms.ModelForm):
     LIMITES = {
         "resumo": 1100,
         "apresentacao": 1100,
+        "caracterizacao_publico": 500,
         "objetivo_geral": 300,
         "objetivos_especificos": 500,
         "desenvolvimento_metodologico": 6000,
@@ -158,24 +159,24 @@ class TrabalhoForm(BootstrapFormMixin, forms.ModelForm):
         "titulo",
         "arquivo",
         "aceitou_termo_relato",
-        "aceitou_termo_cessao",
         "aceitou_originalidade",
-    )
-    CAMPOS_TRABALHO_ACADEMICO = ("eixo_tematico", "resumo", "palavras_chave")
-    CAMPOS_RELATO_EXPERIENCIA = (
-        "apresentacao",
         "periodo_inicio",
         "periodo_fim",
         "turnos",
+        "duracao",
         "carga_horaria",
-        "estado",
+        "caracterizacao_publico",
         "objetivo_geral",
         "objetivos_especificos",
         "desenvolvimento_metodologico",
         "consideracoes",
         "referencias",
+    )
+    CAMPOS_TRABALHO_ACADEMICO = ("modalidade_apresentacao", "resumo")
+    CAMPOS_RELATO_EXPERIENCIA = (
+        "apresentacao",
+        "estado",
         "autorizacao_imagens",
-        "aceitou_termo_imagem",
     )
 
     turnos = forms.MultipleChoiceField(
@@ -189,15 +190,17 @@ class TrabalhoForm(BootstrapFormMixin, forms.ModelForm):
         model = Trabalho
         fields = (
             "titulo",
-            "eixo_tematico",
+            "modalidade_apresentacao",
+            "eixo_proposta",
             "resumo",
-            "palavras_chave",
             "apresentacao",
             "periodo_inicio",
             "periodo_fim",
             "turnos",
+            "duracao",
             "carga_horaria",
             "estado",
+            "caracterizacao_publico",
             "objetivo_geral",
             "objetivos_especificos",
             "desenvolvimento_metodologico",
@@ -209,24 +212,42 @@ class TrabalhoForm(BootstrapFormMixin, forms.ModelForm):
             "aceitou_termo_relato",
             "aceitou_termo_cessao",
             "aceitou_originalidade",
-            "deseja_participar_publicacao",
         )
         widgets = {
-            "titulo": forms.TextInput(attrs={"placeholder": "Informe o título completo do trabalho"}),
-            "eixo_tematico": forms.TextInput(
-                attrs={"placeholder": "Informe o eixo temático do evento"}
-            ),
-            "resumo": forms.Textarea(attrs={"rows": 7}),
-            "palavras_chave": forms.TextInput(
-                attrs={"placeholder": "Educação de jovens e adultos; formação; território"}
+            "titulo": forms.TextInput(attrs={"placeholder": "Informe o título da proposta/prática"}),
+            "resumo": forms.Textarea(
+                attrs={
+                    "rows": 7,
+                    "placeholder": "justificativa dos conteúdo(s) abordado(s)",
+                }
             ),
             "apresentacao": forms.Textarea(attrs={"rows": 7}),
             "periodo_inicio": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
             "periodo_fim": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
-            "objetivo_geral": forms.Textarea(attrs={"rows": 3}),
+            "duracao": forms.TextInput(attrs={"placeholder": "Ex.: 2 dias, 3 semanas ou 1 semestre"}),
+            "caracterizacao_publico": forms.Textarea(
+                attrs={
+                    "rows": 4,
+                    "placeholder": "descreva nº de participantes/estudantes beneficiados; ciclo e ano",
+                }
+            ),
+            "objetivo_geral": forms.Textarea(
+                attrs={"rows": 3, "placeholder": "insira apenas um objetivo"}
+            ),
             "objetivos_especificos": forms.Textarea(attrs={"rows": 4}),
-            "desenvolvimento_metodologico": forms.Textarea(attrs={"rows": 8}),
-            "consideracoes": forms.Textarea(attrs={"rows": 7}),
+            "desenvolvimento_metodologico": forms.Textarea(
+                attrs={"rows": 8, "placeholder": "relato detalhado do ocorrido"}
+            ),
+            "consideracoes": forms.Textarea(
+                attrs={
+                    "rows": 7,
+                    "placeholder": (
+                        "justifique porque a ação é uma experiência exitosa, ressaltando "
+                        "o que estudantes aprenderam e o que o(a) educador(a) aprendeu com "
+                        "o desenvolvimento da atividade"
+                    ),
+                }
+            ),
             "referencias": forms.Textarea(attrs={"rows": 5}),
             "autorizacao_imagens": forms.RadioSelect,
             "arquivo": forms.ClearableFileInput(attrs={"accept": "application/pdf,.pdf"}),
@@ -245,13 +266,21 @@ class TrabalhoForm(BootstrapFormMixin, forms.ModelForm):
             campos_obrigatorios.extend(self.CAMPOS_TRABALHO_ACADEMICO)
         for nome_campo in campos_obrigatorios:
             self.fields[nome_campo].required = required
+        modalidade_apresentacao = (
+            self.data.get(self.add_prefix("modalidade_apresentacao"))
+            if self.is_bound
+            else self.instance.modalidade_apresentacao
+        )
+        self.fields["eixo_proposta"].required = bool(
+            required
+            and modelo_submissao == Atividade.ModeloSubmissao.ACADEMICO
+            and modalidade_apresentacao == Trabalho.ModalidadeApresentacao.ONLINE
+        )
         self.fields["arquivo"].required = required and not bool(self.instance.pk)
         for nome_campo, limite in self.LIMITES.items():
             self.fields[nome_campo].widget.attrs["maxlength"] = limite
             self.fields[nome_campo].widget.attrs["data-character-limit"] = limite
-        self.fields["titulo"].widget.attrs["data-character-limit"] = 250
-        self.fields["eixo_tematico"].widget.attrs["data-character-limit"] = 200
-        self.fields["palavras_chave"].widget.attrs["data-character-limit"] = 300
+        self.fields["titulo"].widget.attrs["data-character-limit"] = 200
         self.fields["periodo_inicio"].input_formats = ["%Y-%m-%d"]
         self.fields["periodo_fim"].input_formats = ["%Y-%m-%d"]
         self._apply_bootstrap_classes()
@@ -276,9 +305,19 @@ class TrabalhoForm(BootstrapFormMixin, forms.ModelForm):
                     "periodo_inicio", "periodo_fim", "carga_horaria", "estado"
                 } else (False if nome_campo == "aceitou_termo_imagem" else "")
             cleaned_data["turnos"] = []
+            if cleaned_data.get("modalidade_apresentacao") != Trabalho.ModalidadeApresentacao.ONLINE:
+                cleaned_data["eixo_proposta"] = None
         else:
             for nome_campo in self.CAMPOS_TRABALHO_ACADEMICO:
                 cleaned_data[nome_campo] = ""
+            cleaned_data["eixo_proposta"] = None
+        aceitou_termos = bool(cleaned_data.get("aceitou_termo_relato"))
+        cleaned_data["aceitou_termo_cessao"] = aceitou_termos
+        cleaned_data["aceitou_termo_imagem"] = (
+            aceitou_termos
+            if self.modelo_submissao == Atividade.ModeloSubmissao.RELATO_EXPERIENCIA
+            else False
+        )
         return cleaned_data
 
     def clean_arquivo(self):
@@ -350,7 +389,7 @@ TrabalhoMunicipioFormSet = forms.inlineformset_factory(
 
 
 class EvidenciaTrabalhoForm(BootstrapFormMixin, forms.ModelForm):
-    """Recebe uma imagem que comprova o relato de experiência."""
+    """Recebe uma imagem que comprova a efetivação da ação."""
     class Meta:
         model = EvidenciaTrabalho
         fields = ("arquivo",)
@@ -380,10 +419,30 @@ class EvidenciaTrabalhoForm(BootstrapFormMixin, forms.ModelForm):
         return arquivo
 
 
+class BaseEvidenciaTrabalhoFormSet(forms.BaseInlineFormSet):
+    """Exige de uma a duas evidências válidas em cada submissão de trabalho."""
+
+    def clean(self):
+        super().clean()
+        if any(self.errors):
+            return
+        evidencias_ativas = 0
+        for form in self.forms:
+            if not hasattr(form, "cleaned_data") or form.cleaned_data.get("DELETE"):
+                continue
+            if form.cleaned_data.get("arquivo") or form.instance.pk:
+                evidencias_ativas += 1
+        if not evidencias_ativas:
+            raise forms.ValidationError(
+                "Envie pelo menos uma foto de evidência em formato JPG ou PNG."
+            )
+
+
 EvidenciaTrabalhoFormSet = forms.inlineformset_factory(
     Trabalho,
     EvidenciaTrabalho,
     form=EvidenciaTrabalhoForm,
+    formset=BaseEvidenciaTrabalhoFormSet,
     fields=("arquivo",),
     extra=2,
     max_num=2,
@@ -393,32 +452,27 @@ EvidenciaTrabalhoFormSet = forms.inlineformset_factory(
 
 
 class CoautorForm(BootstrapFormMixin, forms.ModelForm):
-    """Seleciona um usuário ativo e copia seus dados públicos para o trabalho."""
+    """Seleciona um usuário ativo e registra seu papel e ordem de autoria."""
     class Meta:
         model = Coautor
-        fields = ("usuario", "nome", "email")
+        fields = ("usuario", "papel", "ordem", "nome", "email")
         widgets = {
             "usuario": forms.HiddenInput(),
+            "ordem": forms.NumberInput(attrs={"min": 1}),
             "nome": forms.TextInput(attrs={"readonly": True, "tabindex": "-1"}),
             "email": forms.EmailInput(attrs={"readonly": True, "tabindex": "-1"}),
         }
 
     def __init__(self, *args, **kwargs):
-        """Restringe a busca a usuários ativos e guarda o autor principal."""
-        self.autor = kwargs.pop("autor", None)
+        """Restringe a seleção a usuários ativos cadastrados na plataforma."""
         super().__init__(*args, **kwargs)
         self.fields["usuario"].queryset = get_user_model().objects.filter(is_active=True)
         self.fields["usuario"].required = True
+        self.fields["papel"].required = True
+        self.fields["ordem"].required = True
         self.fields["nome"].required = False
         self.fields["email"].required = False
         self._apply_bootstrap_classes()
-
-    def clean_usuario(self):
-        """Evita repetir o autor principal na lista de coautores."""
-        usuario = self.cleaned_data["usuario"]
-        if self.autor and usuario.pk == self.autor.pk:
-            raise forms.ValidationError("O autor principal não pode ser incluído como coautor.")
-        return usuario
 
     def clean(self):
         """Obtém nome e e-mail do cadastro, sem confiar nos campos enviados pelo navegador."""
@@ -431,12 +485,14 @@ class CoautorForm(BootstrapFormMixin, forms.ModelForm):
 
 
 class BaseCoautorFormSet(forms.BaseInlineFormSet):
-    """Valida a coleção de coautores antes de persistir qualquer item."""
+    """Valida participantes, papéis e ordem da autoria antes de persistir."""
 
     def clean(self):
         """Rejeita o mesmo usuário informado mais de uma vez."""
         super().clean()
         usuarios = set()
+        ordens = set()
+        autores = 0
         for form in self.forms:
             if not hasattr(form, "cleaned_data") or form.cleaned_data.get("DELETE"):
                 continue
@@ -444,8 +500,20 @@ class BaseCoautorFormSet(forms.BaseInlineFormSet):
             if not usuario:
                 continue
             if usuario.pk in usuarios:
-                raise forms.ValidationError("O mesmo coautor foi informado mais de uma vez.")
+                raise forms.ValidationError("A mesma pessoa foi informada mais de uma vez.")
             usuarios.add(usuario.pk)
+            ordem = form.cleaned_data.get("ordem")
+            if ordem in ordens:
+                raise forms.ValidationError("A ordem de autoria não pode ser repetida.")
+            ordens.add(ordem)
+            if form.cleaned_data.get("papel") == Coautor.Papel.AUTOR:
+                autores += 1
+                if ordem != 1:
+                    raise forms.ValidationError("O autor deve ocupar a primeira posição.")
+        if autores != 1:
+            raise forms.ValidationError("Informe exatamente um autor para o trabalho.")
+        if ordens != set(range(1, len(usuarios) + 1)):
+            raise forms.ValidationError("A ordem de autoria deve ser sequencial, começando em 1.")
 
 
 CoautorFormSet = forms.inlineformset_factory(
@@ -453,7 +521,7 @@ CoautorFormSet = forms.inlineformset_factory(
     Coautor,
     form=CoautorForm,
     formset=BaseCoautorFormSet,
-    fields=("usuario", "nome", "email"),
+    fields=("usuario", "papel", "ordem", "nome", "email"),
     extra=1,
     can_delete=True,
 )

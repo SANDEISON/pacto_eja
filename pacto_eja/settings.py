@@ -211,6 +211,7 @@ ADMINLTE = {
                 {"text": "Educadores", "route": "educator_model_list", "icon": "bi bi-person-badge", "can": "core.view_educador"},
                 {"text": "Escolas", "route": "school_list", "icon": "bi bi-building", "can": "core.view_escola"},
                 {"text": "Estados", "route": "state_list", "icon": "bi bi-map", "can": "core.view_estado"},
+                {"text": "Eixo da proposta", "route": "proposal_axis_list", "icon": "bi bi-diagram-2", "can": ["core.view_eixoproposta", "core.change_eixoproposta"]},
                 {"text": "Níveis", "route": "level_list", "icon": "bi bi-mortarboard", "can": "core.view_nivel"},
                 {"text": "Modalidades", "route": "modality_list", "icon": "bi bi-diagram-3", "can": "core.view_modalidade"},
                 {"text": "Situações", "route": "situation_list", "icon": "bi bi-ui-checks", "can": "core.view_situacao"},

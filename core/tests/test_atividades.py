@@ -8,6 +8,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
+from ..forms import CoautorFormSet, TrabalhoForm
 from ..models import (
     Atividade,
     Cidade,
@@ -15,6 +16,7 @@ from ..models import (
     CorRaca,
     EducadorEstadoCivil,
     EducadorGenero,
+    EixoProposta,
     Endereco,
     Estado,
     Formacao,
@@ -99,12 +101,35 @@ class AtividadeFlowTests(TestCase):
 
     def academic_work_data(self):
         return {
-            "trabalho-eixo_tematico": "Práticas pedagógicas na EJA",
+            "trabalho-modalidade_apresentacao": Trabalho.ModalidadeApresentacao.ONLINE,
+            "trabalho-eixo_proposta": str(
+                EixoProposta.objects.get(
+                    nome="Eixo 1: Planejamento com o Projeto Didático"
+                ).pk
+            ),
             "trabalho-resumo": "Relato acadêmico sobre saberes e práticas na EJA.",
-            "trabalho-palavras_chave": "EJA; saberes; práticas pedagógicas",
+            "trabalho-periodo_inicio": "2026-03-01",
+            "trabalho-periodo_fim": "2026-03-10",
+            "trabalho-turnos": "noite",
+            "trabalho-duracao": "10 dias",
+            "trabalho-carga_horaria": "20",
+            "trabalho-caracterizacao_publico": "35 estudantes do primeiro ciclo da EJA.",
+            "trabalho-objetivo_geral": "Fortalecer a alfabetização na EJA.",
+            "trabalho-objetivos_especificos": "Desenvolver leitura e escrita contextualizadas.",
+            "trabalho-desenvolvimento_metodologico": "Rodas de diálogo e oficinas.",
+            "trabalho-consideracoes": "A ação ampliou a aprendizagem dos estudantes.",
+            "trabalho-referencias": "FREIRE, Paulo. Pedagogia da autonomia.",
             "trabalho-aceitou_termo_relato": "on",
-            "trabalho-aceitou_termo_cessao": "on",
             "trabalho-aceitou_originalidade": "on",
+            "evidencia-TOTAL_FORMS": "2",
+            "evidencia-INITIAL_FORMS": "0",
+            "evidencia-MIN_NUM_FORMS": "0",
+            "evidencia-MAX_NUM_FORMS": "2",
+            "evidencia-0-arquivo": SimpleUploadedFile(
+                "evidencia.png",
+                b"\x89PNG\r\n\x1a\nconteudo",
+                content_type="image/png",
+            ),
         }
 
     def create_programacao(self, modalidade, nome_sala, *, turno=None, data=None):
@@ -125,6 +150,132 @@ class AtividadeFlowTests(TestCase):
         self.assertContains(response, "Inscrever-se")
         self.assertContains(response, "google.com/maps/search/")
 
+    def test_academic_work_uses_updated_proposal_fields(self):
+        response = self.client.get(reverse("atividade_inscricao", args=[self.atividade.pk]))
+
+        form = TrabalhoForm(required=True)
+        self.assertEqual(form.fields["titulo"].label, "Título da proposta/prática")
+        self.assertEqual(form.fields["titulo"].max_length, 200)
+        self.assertTrue(form.fields["titulo"].required)
+        self.assertEqual(form.fields["modalidade_apresentacao"].label, "Apresentação do trabalho")
+        self.assertTrue(form.fields["modalidade_apresentacao"].required)
+        self.assertEqual(
+            list(form.fields["modalidade_apresentacao"].choices),
+            [("", "---------"), ("online", "On-line"), ("presencial", "Presencial")],
+        )
+        self.assertEqual(form.fields["eixo_proposta"].label, "Eixo da proposta")
+        self.assertEqual(form.fields["resumo"].label, "Apresentação")
+        self.assertEqual(form.fields["resumo"].widget.attrs["maxlength"], 1100)
+        self.assertEqual(
+            form.fields["resumo"].widget.attrs["placeholder"],
+            "justificativa dos conteúdo(s) abordado(s)",
+        )
+        self.assertTrue(form.fields["resumo"].required)
+        self.assertTrue(form.fields["aceitou_termo_relato"].required)
+        self.assertTrue(form.fields["aceitou_originalidade"].required)
+        for field_name in (
+            "periodo_inicio",
+            "periodo_fim",
+            "turnos",
+            "duracao",
+            "carga_horaria",
+            "caracterizacao_publico",
+            "objetivo_geral",
+            "objetivos_especificos",
+            "desenvolvimento_metodologico",
+            "consideracoes",
+            "referencias",
+        ):
+            with self.subTest(field_name=field_name):
+                self.assertTrue(form.fields[field_name].required)
+        self.assertEqual(form.fields["caracterizacao_publico"].widget.attrs["maxlength"], 500)
+        self.assertEqual(form.fields["objetivo_geral"].widget.attrs["maxlength"], 300)
+        self.assertEqual(form.fields["objetivos_especificos"].widget.attrs["maxlength"], 500)
+        self.assertEqual(form.fields["desenvolvimento_metodologico"].widget.attrs["maxlength"], 6000)
+        self.assertEqual(form.fields["consideracoes"].widget.attrs["maxlength"], 2000)
+        self.assertEqual(form.fields["referencias"].widget.attrs["maxlength"], 1000)
+        self.assertNotIn("deseja_participar_publicacao", form.fields)
+        self.assertNotIn("palavras_chave", form.fields)
+        self.assertNotContains(response, "1100 caracteres")
+        self.assertContains(
+            response,
+            'Título da proposta/prática <span class="text-danger">*</span>',
+            html=True,
+        )
+        self.assertContains(
+            response,
+            'Apresentação <span class="text-danger">*</span>',
+            html=True,
+        )
+        rendered_form = response.content.decode()
+        self.assertLess(
+            rendered_form.index("id_trabalho-modalidade_apresentacao"),
+            rendered_form.index("id_trabalho-eixo_proposta"),
+        )
+        self.assertNotContains(response, "Palavras-chave")
+        self.assertNotContains(response, "Tenho interesse em participar da publicação")
+        self.assertContains(response, "TERMO DE USO DE IMAGEM E DO RELATO")
+        self.assertContains(response, "TERMO DE CESSÃO DE DIREITOS AUTORAIS")
+        self.assertContains(response, "DECLARAÇÃO DE ORIGINALIDADE")
+        self.assertContains(response, "SOBRE O USO DE INTELIGÊNCIA ARTIFICIAL")
+        self.assertContains(response, "EVIDÊNCIAS")
+        self.assertContains(response, "até 2 fotos de evidência", html=False)
+        self.assertLess(
+            response.content.decode().index("id_trabalho-referencias"),
+            response.content.decode().index("EVIDÊNCIAS"),
+        )
+        self.assertContains(
+            response,
+            "Declaro CIÊNCIA e CONCORDÂNCIA com os 3 (três) termos acima, sobre uso de imagem, cessão de direitos autorais e declaração de originalidade.",
+            count=1,
+        )
+        self.assertContains(
+            response,
+            "https://sig-arq.ufpb.br/arquivos/2025189036a9a38041387d66209cac73d/Resoluo_Consepe_n_57.2025.pdf",
+        )
+
+    def test_proposal_axis_is_required_only_for_online_presentations(self):
+        common_data = {
+            "titulo": "Proposta de alfabetização",
+            "resumo": "Apresentação da proposta.",
+            "periodo_inicio": "2026-03-01",
+            "periodo_fim": "2026-03-10",
+            "turnos": ["noite"],
+            "duracao": "10 dias",
+            "carga_horaria": "20",
+            "caracterizacao_publico": "35 estudantes do primeiro ciclo.",
+            "objetivo_geral": "Fortalecer a alfabetização.",
+            "objetivos_especificos": "Desenvolver leitura e escrita.",
+            "desenvolvimento_metodologico": "Rodas de diálogo e oficinas.",
+            "consideracoes": "A ação ampliou a aprendizagem.",
+            "referencias": "FREIRE, Paulo. Pedagogia da autonomia.",
+            "aceitou_termo_relato": "on",
+            "aceitou_originalidade": "on",
+        }
+        online_form = TrabalhoForm(
+            data=common_data | {"modalidade_apresentacao": Trabalho.ModalidadeApresentacao.ONLINE},
+            files={
+                "arquivo": SimpleUploadedFile(
+                    "online.pdf", b"%PDF-1.4\n%%EOF", content_type="application/pdf"
+                )
+            },
+            required=True,
+        )
+        presencial_form = TrabalhoForm(
+            data=common_data
+            | {"modalidade_apresentacao": Trabalho.ModalidadeApresentacao.PRESENCIAL},
+            files={
+                "arquivo": SimpleUploadedFile(
+                    "presencial.pdf", b"%PDF-1.4\n%%EOF", content_type="application/pdf"
+                )
+            },
+            required=True,
+        )
+
+        self.assertFalse(online_form.is_valid())
+        self.assertIn("eixo_proposta", online_form.errors)
+        self.assertTrue(presencial_form.is_valid(), presencial_form.errors)
+
     def test_activity_modality_validates_required_access_information(self):
         self.atividade.modalidade = Atividade.ModalidadeParticipacao.ONLINE
         self.atividade.local = ""
@@ -139,8 +290,8 @@ class AtividadeFlowTests(TestCase):
     def test_registration_page_links_address_to_maps(self):
         response = self.client.get(reverse("atividade_inscricao", args=[self.atividade.pk]))
         self.assertContains(response, "Inscrição em evento")
-        self.assertContains(response, "docs/termo_uso_publicacao_trabalho.pdf")
-        self.assertContains(response, "docs/termo_cessao_direitos_autorais.pdf")
+        self.assertContains(response, "TERMO DE USO DE IMAGEM E DO RELATO")
+        self.assertContains(response, "TERMO DE CESSÃO DE DIREITOS AUTORAIS")
         self.assertContains(response, "Continuar")
         self.assertContains(response, "Deseja cadastrar um trabalho neste evento?")
         self.assertContains(response, 'data-registration-step="modalidade"')
@@ -155,9 +306,9 @@ class AtividadeFlowTests(TestCase):
         self.assertContains(response, 'data-work-choice="no"')
         self.assertContains(response, 'data-registration-finish hidden')
         self.assertContains(response, 'data-registration-submit hidden')
-        self.assertContains(response, "é necessário possuir cadastro ativo no sistema Pacto EJA")
-        self.assertNotContains(response, "Adicionar coautor")
-        self.assertContains(response, 'for="coauthor-search">Buscar coautor</label>', count=1)
+        self.assertContains(response, "Autores e coautores")
+        self.assertContains(response, "Indique um autor na ordem 1")
+        self.assertContains(response, 'for="coauthor-search">Buscar autor ou coautor</label>', count=1)
         self.assertContains(response, 'class="coauthor-row" hidden')
         self.assertContains(response, "Abrir endereço no Google Maps")
         self.assertContains(response, "Auditório central")
@@ -322,6 +473,9 @@ class AtividadeFlowTests(TestCase):
 
         self.assertContains(page, "Filtrar por modalidade (opcional)")
         self.assertContains(page, "Todas as modalidades")
+        self.assertContains(page, 'id="registration-program-required-modal"')
+        self.assertContains(page, "Seleção necessária")
+        self.assertContains(page, "Entendi")
         self.assertNotContains(page, "Filtrar por modalidade (opcional) <span class=\"text-danger\">*</span>")
         self.assertEqual(invalid_response.status_code, 200)
         self.assertFormError(
@@ -647,7 +801,7 @@ class AtividadeFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["results"][0]["id"], self.coauthor_user.pk)
 
-    def test_coauthor_search_identifies_main_author_cpf(self):
+    def test_authorship_search_finds_submitter_by_cpf(self):
         educador = self.user.educador
         educador.cpf = "52998224725"
         educador.save(update_fields=("cpf",))
@@ -655,11 +809,35 @@ class AtividadeFlowTests(TestCase):
         response = self.client.get(reverse("buscar_coautores"), {"q": "529.982.247-25"})
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["results"], [])
-        self.assertEqual(
-            response.json()["message"],
-            "Você já é o autor principal do trabalho e não precisa ser incluído como coautor.",
+        self.assertEqual(response.json()["results"][0]["id"], self.user.pk)
+
+    def test_authorship_requires_one_author_and_sequential_order(self):
+        base_data = {
+            "coautor-TOTAL_FORMS": "2",
+            "coautor-INITIAL_FORMS": "0",
+            "coautor-MIN_NUM_FORMS": "0",
+            "coautor-MAX_NUM_FORMS": "1000",
+            "coautor-0-usuario": str(self.user.pk),
+            "coautor-0-papel": Coautor.Papel.COAUTOR,
+            "coautor-0-ordem": "1",
+            "coautor-1-usuario": str(self.coauthor_user.pk),
+            "coautor-1-papel": Coautor.Papel.COAUTOR,
+            "coautor-1-ordem": "2",
+        }
+        without_author = CoautorFormSet(
+            data=base_data,
+            instance=Trabalho(),
+            prefix="coautor",
         )
+        valid_authorship = CoautorFormSet(
+            data=base_data | {"coautor-0-papel": Coautor.Papel.AUTOR},
+            instance=Trabalho(),
+            prefix="coautor",
+        )
+
+        self.assertFalse(without_author.is_valid())
+        self.assertIn("Informe exatamente um autor", str(without_author.non_form_errors()))
+        self.assertTrue(valid_authorship.is_valid(), valid_authorship.errors)
 
     def test_user_can_finish_simple_registration_only_once(self):
         data = self.personal_data() | {"acao": "inscrever"}
@@ -822,9 +1000,11 @@ class AtividadeFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Trabalho.objects.exists())
 
-    def test_user_can_submit_pdf_and_coauthor(self):
-        with TemporaryDirectory() as media_root, override_settings(MEDIA_ROOT=media_root):
-            data = self.personal_data() | self.academic_work_data() | {
+    def test_work_submission_requires_at_least_one_evidence_image(self):
+        data = self.personal_data() | self.academic_work_data()
+        data.pop("evidencia-0-arquivo")
+        data.update(
+            {
                 "acao": "submeter",
                 "trabalho-titulo": "Saberes e práticas na EJA",
                 "trabalho-arquivo": SimpleUploadedFile(
@@ -834,16 +1014,76 @@ class AtividadeFlowTests(TestCase):
                 "coautor-INITIAL_FORMS": "0",
                 "coautor-MIN_NUM_FORMS": "0",
                 "coautor-MAX_NUM_FORMS": "1000",
-                "coautor-0-usuario": str(self.coauthor_user.pk),
+                "coautor-0-usuario": str(self.user.pk),
+                "coautor-0-papel": Coautor.Papel.AUTOR,
+                "coautor-0-ordem": "1",
+            }
+        )
+
+        response = self.client.post(
+            reverse("atividade_inscricao", args=[self.atividade.pk]), data
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "Envie pelo menos uma foto de evidência em formato JPG ou PNG.",
+        )
+        self.assertFalse(Trabalho.objects.exists())
+
+    def test_user_can_submit_pdf_and_coauthor(self):
+        with TemporaryDirectory() as media_root, override_settings(MEDIA_ROOT=media_root):
+            data = self.personal_data() | self.academic_work_data() | {
+                "acao": "submeter",
+                "trabalho-titulo": "Saberes e práticas na EJA",
+                "trabalho-arquivo": SimpleUploadedFile(
+                    "trabalho.pdf", b"%PDF-1.4\n%%EOF", content_type="application/pdf"
+                ),
+                "coautor-TOTAL_FORMS": "2",
+                "coautor-INITIAL_FORMS": "0",
+                "coautor-MIN_NUM_FORMS": "0",
+                "coautor-MAX_NUM_FORMS": "1000",
+                "coautor-0-usuario": str(self.user.pk),
+                "coautor-0-papel": Coautor.Papel.AUTOR,
+                "coautor-0-ordem": "1",
+                "coautor-1-usuario": str(self.coauthor_user.pk),
+                "coautor-1-papel": Coautor.Papel.COAUTOR,
+                "coautor-1-ordem": "2",
             }
             response = self.client.post(reverse("atividade_inscricao", args=[self.atividade.pk]), data)
             self.assertRedirects(response, reverse("dashboard"))
             trabalho = Trabalho.objects.get(inscricao__usuario=self.user, inscricao__atividade=self.atividade)
             self.assertEqual(trabalho.titulo, "Saberes e práticas na EJA")
-            self.assertEqual(trabalho.eixo_tematico, "Práticas pedagógicas na EJA")
+            self.assertEqual(
+                trabalho.modalidade_apresentacao,
+                Trabalho.ModalidadeApresentacao.ONLINE,
+            )
+            self.assertEqual(
+                trabalho.eixo_proposta.nome,
+                "Eixo 1: Planejamento com o Projeto Didático",
+            )
             self.assertEqual(trabalho.versao_termos, Trabalho.VERSAO_ATUAL_TERMOS)
             self.assertIsNotNone(trabalho.termos_aceitos_em)
-            self.assertTrue(Coautor.objects.filter(trabalho=trabalho, nome="Pessoa Coautora").exists())
+            self.assertTrue(trabalho.aceitou_termo_relato)
+            self.assertTrue(trabalho.aceitou_termo_cessao)
+            self.assertTrue(trabalho.aceitou_originalidade)
+            self.assertEqual(trabalho.evidencias.count(), 1)
+            self.assertTrue(
+                Coautor.objects.filter(
+                    trabalho=trabalho,
+                    usuario=self.user,
+                    papel=Coautor.Papel.AUTOR,
+                    ordem=1,
+                ).exists()
+            )
+            self.assertTrue(
+                Coautor.objects.filter(
+                    trabalho=trabalho,
+                    nome="Pessoa Coautora",
+                    papel=Coautor.Papel.COAUTOR,
+                    ordem=2,
+                ).exists()
+            )
             download = self.client.get(reverse("trabalho_download", args=[trabalho.pk]))
             self.assertEqual(download.status_code, 200)
             for closer in download._resource_closers:
@@ -864,6 +1104,8 @@ class AtividadeFlowTests(TestCase):
                 "coautor-MAX_NUM_FORMS": "1000",
                 "coautor-0-nome": "Pessoa sem cadastro",
                 "coautor-0-email": "nao-cadastrada@example.com",
+                "coautor-0-papel": Coautor.Papel.AUTOR,
+                "coautor-0-ordem": "1",
             }
             response = self.client.post(reverse("atividade_inscricao", args=[self.atividade.pk]), data)
             self.assertEqual(response.status_code, 200)
@@ -883,35 +1125,43 @@ class AtividadeFlowTests(TestCase):
                 "trabalho-periodo_inicio": "2026-03-01",
                 "trabalho-periodo_fim": "2026-03-10",
                 "trabalho-turnos": "noite",
+                "trabalho-duracao": "10 dias",
                 "trabalho-carga_horaria": "20",
                 "trabalho-estado": str(estado.pk),
+                "trabalho-caracterizacao_publico": "35 estudantes do primeiro ciclo da EJA.",
                 "trabalho-objetivo_geral": "Fortalecer a formação de educadores.",
                 "trabalho-objetivos_especificos": "Compartilhar práticas e avaliar resultados.",
                 "trabalho-desenvolvimento_metodologico": "Encontros, rodas de diálogo e oficinas.",
                 "trabalho-consideracoes": "A experiência ampliou a participação.",
                 "trabalho-referencias": "FREIRE, Paulo. Pedagogia da autonomia.",
                 "trabalho-autorizacao_imagens": "sem",
-                "trabalho-aceitou_termo_imagem": "on",
                 "trabalho-aceitou_termo_relato": "on",
-                "trabalho-aceitou_termo_cessao": "on",
                 "trabalho-aceitou_originalidade": "on",
                 "trabalho-arquivo": SimpleUploadedFile(
                     "relato.pdf", b"%PDF-1.4\n%%EOF", content_type="application/pdf"
                 ),
-                "coautor-TOTAL_FORMS": "0",
+                "coautor-TOTAL_FORMS": "1",
                 "coautor-INITIAL_FORMS": "0",
                 "coautor-MIN_NUM_FORMS": "0",
                 "coautor-MAX_NUM_FORMS": "1000",
+                "coautor-0-usuario": str(self.user.pk),
+                "coautor-0-papel": Coautor.Papel.AUTOR,
+                "coautor-0-ordem": "1",
                 "municipio-TOTAL_FORMS": "1",
                 "municipio-INITIAL_FORMS": "0",
                 "municipio-MIN_NUM_FORMS": "0",
                 "municipio-MAX_NUM_FORMS": "1000",
                 "municipio-0-cidade": str(cidade.pk),
                 "municipio-0-participantes": "35",
-                "evidencia-TOTAL_FORMS": "0",
+                "evidencia-TOTAL_FORMS": "2",
                 "evidencia-INITIAL_FORMS": "0",
                 "evidencia-MIN_NUM_FORMS": "0",
                 "evidencia-MAX_NUM_FORMS": "2",
+                "evidencia-0-arquivo": SimpleUploadedFile(
+                    "evidencia-relato.jpg",
+                    b"\xff\xd8\xffconteudo",
+                    content_type="image/jpeg",
+                ),
             }
             response = self.client.post(
                 reverse("atividade_inscricao", args=[self.atividade.pk]), data
@@ -920,6 +1170,9 @@ class AtividadeFlowTests(TestCase):
             trabalho = Trabalho.objects.get(inscricao__usuario=self.user)
             self.assertEqual(trabalho.n_participantes, 35)
             self.assertEqual(trabalho.turnos, ["noite"])
+            self.assertTrue(trabalho.aceitou_termo_imagem)
+            self.assertTrue(trabalho.aceitou_termo_cessao)
+            self.assertEqual(trabalho.evidencias.count(), 1)
             self.assertTrue(
                 TrabalhoMunicipio.objects.filter(
                     trabalho=trabalho, cidade=cidade, participantes=35

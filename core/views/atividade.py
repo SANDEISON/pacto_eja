@@ -446,11 +446,11 @@ class FormulariosInscricao:
         if acao != "submeter":
             return perfil_valido
 
-        trabalho_valido = all([self.trabalho.is_valid(), self.coautores.is_valid()])
+        trabalho_valido = all(
+            [self.trabalho.is_valid(), self.coautores.is_valid(), self.evidencias.is_valid()]
+        )
         if self.trabalho.modelo_submissao == Atividade.ModeloSubmissao.RELATO_EXPERIENCIA:
-            trabalho_valido = all(
-                [self.municipios.is_valid(), self.evidencias.is_valid(), trabalho_valido]
-            )
+            trabalho_valido = all([self.municipios.is_valid(), trabalho_valido])
         return perfil_valido and trabalho_valido
 
     def perfil_sem_erros(self):
@@ -526,7 +526,6 @@ def _criar_formularios_inscricao(request, atividade, inscricao, educador, endere
         request.POST if enviando_trabalho else None,
         instance=trabalho or formulario_trabalho.instance,
         prefix="coautor",
-        form_kwargs={"autor": request.user},
     )
     relato = atividade.modelo_submissao == Atividade.ModeloSubmissao.RELATO_EXPERIENCIA
     estado_id = (
@@ -541,8 +540,8 @@ def _criar_formularios_inscricao(request, atividade, inscricao, educador, endere
         form_kwargs={"estado": estado_id},
     )
     formulario_evidencias = EvidenciaTrabalhoFormSet(
-        request.POST if enviando_trabalho and relato else None,
-        request.FILES if enviando_trabalho and relato else None,
+        request.POST if enviando_trabalho else None,
+        request.FILES if enviando_trabalho else None,
         instance=trabalho or formulario_trabalho.instance,
         prefix="evidencia",
     )
@@ -625,7 +624,7 @@ def _salvar_inscricao(atividade, formularios):
 
 
 def _salvar_trabalho(inscricao, formularios):
-    """Vincula o trabalho à inscrição antes de persistir seus coautores."""
+    """Vincula o trabalho à inscrição antes de persistir sua autoria ordenada."""
     trabalho = formularios.trabalho.save(commit=False)
     trabalho.inscricao = inscricao
     trabalho.versao_termos = Trabalho.VERSAO_ATUAL_TERMOS
@@ -633,11 +632,11 @@ def _salvar_trabalho(inscricao, formularios):
     trabalho.save()
     formularios.coautores.instance = trabalho
     formularios.coautores.save()
+    formularios.evidencias.instance = trabalho
+    formularios.evidencias.save()
     if formularios.trabalho.modelo_submissao == Atividade.ModeloSubmissao.RELATO_EXPERIENCIA:
         formularios.municipios.instance = trabalho
         formularios.municipios.save()
-        formularios.evidencias.instance = trabalho
-        formularios.evidencias.save()
         trabalho.n_participantes = sum(
             item.participantes for item in trabalho.municipios.all()
         )
@@ -791,22 +790,12 @@ def baixar_trabalho(request, pk):
 
 @login_required
 def buscar_coautores(request):
-    """Retorna até oito usuários ativos para o campo de busca de coautores."""
+    """Retorna até oito usuários ativos para compor a autoria do trabalho."""
     termo = request.GET.get("q", "").strip()
     if len(termo) < 3:
         return JsonResponse({"results": [], "message": "Digite ao menos 3 caracteres."})
 
     digitos = somente_digitos(termo)
-    cpf_autor = getattr(getattr(request.user, "educador", None), "cpf", "") or ""
-    cpf_autor = somente_digitos(cpf_autor)
-    if digitos and len(digitos) == 11 and digitos == cpf_autor:
-        return JsonResponse(
-            {
-                "results": [],
-                "message": "Você já é o autor principal do trabalho e não precisa ser incluído como coautor.",
-            }
-        )
-
     filtros = (
         Q(first_name__icontains=termo)
         | Q(last_name__icontains=termo)
@@ -819,7 +808,6 @@ def buscar_coautores(request):
 
     usuarios = (
         get_user_model().objects.filter(filtros, is_active=True)
-        .exclude(pk=request.user.pk)
         .distinct()
         .order_by("first_name", "last_name", "email")[:8]
     )

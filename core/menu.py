@@ -95,6 +95,8 @@ def management_access(request):
                 "core.change_educadorgenero",
                 "core.view_escola",
                 "core.view_estado",
+                "core.view_eixoproposta",
+                "core.change_eixoproposta",
                 "core.view_nivel",
                 "core.view_modalidade",
                 "core.view_situacao",
