@@ -536,7 +536,8 @@ class DadosPessoaisInscricaoForm(BootstrapFormMixin, forms.ModelForm):
     )
     modalidade_inscricao = forms.ChoiceField(
         label="Modalidade de participação",
-        required=False,
+        required=True,
+        error_messages={"required": "Selecione a modalidade de participação."},
     )
     refeicoes = forms.ModelMultipleChoiceField(
         label="Refeições disponíveis",
@@ -605,13 +606,6 @@ class DadosPessoaisInscricaoForm(BootstrapFormMixin, forms.ModelForm):
         self.fields["programacoes"].queryset = programacoes
         tem_programacoes = programacoes.exists()
         self.fields["programacoes"].required = tem_programacoes
-        self.fields["modalidade_inscricao"].required = not tem_programacoes
-        if tem_programacoes:
-            self.fields["modalidade_inscricao"].label = "Filtrar por modalidade (opcional)"
-            self.fields["modalidade_inscricao"].choices = (
-                ("", "Todas as modalidades"),
-                *modalidades_atividade,
-            )
         self.programacoes_tematicas = list(
             programacoes.order_by("tematica__nome")
             .values_list("tematica_id", "tematica__nome")
@@ -625,9 +619,7 @@ class DadosPessoaisInscricaoForm(BootstrapFormMixin, forms.ModelForm):
                 "data", "horario", "tipo"
             )
         if inscricao:
-            self.fields["modalidade_inscricao"].initial = (
-                "" if tem_programacoes else inscricao.modalidade
-            )
+            self.fields["modalidade_inscricao"].initial = inscricao.modalidade
             self.fields["programacoes"].initial = inscricao.programacoes.all()
             self.fields["refeicoes"].initial = inscricao.refeicoes.all()
         else:
@@ -660,16 +652,6 @@ class DadosPessoaisInscricaoForm(BootstrapFormMixin, forms.ModelForm):
         refeicoes = cleaned_data.get("refeicoes")
         modalidade = cleaned_data.get("modalidade_inscricao")
         if programacoes:
-            modalidades_selecionadas = {
-                programacao.modalidade for programacao in programacoes
-            }
-            modalidade = (
-                Inscricao.Modalidade.PRESENCIAL
-                if Inscricao.Modalidade.PRESENCIAL in modalidades_selecionadas
-                else Inscricao.Modalidade.ONLINE
-            )
-            cleaned_data["modalidade_inscricao"] = modalidade
-        if programacoes:
             horarios = set()
             for programacao in programacoes:
                 horario = (programacao.data, programacao.turno)
@@ -687,6 +669,13 @@ class DadosPessoaisInscricaoForm(BootstrapFormMixin, forms.ModelForm):
                 self.add_error(
                     "programacoes",
                     "Uma das programações selecionadas não está disponível para esta atividade.",
+                )
+            if modalidade and any(
+                programacao.modalidade != modalidade for programacao in programacoes
+            ):
+                self.add_error(
+                    "programacoes",
+                    "Selecione somente salas da modalidade de participação escolhida.",
                 )
         if refeicoes and modalidade != Inscricao.Modalidade.PRESENCIAL:
             self.add_error(

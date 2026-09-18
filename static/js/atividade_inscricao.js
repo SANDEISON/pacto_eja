@@ -95,6 +95,11 @@
   }
 
   function modalityIsValid() {
+    if (modalitySelect && !modalitySelect.checkValidity()) {
+      modalitySelect.reportValidity();
+      modalitySelect.focus();
+      return false;
+    }
     return programSelectionIsValid();
   }
 
@@ -223,6 +228,14 @@
   function updateProgramAvailability() {
     if (!programsSection) return;
     const modality = modalitySelect?.value || "";
+    programsSection.hidden = !modality;
+    if (!modality) {
+      programsSection.querySelectorAll('[name="dados-programacoes"]:checked').forEach((field) => {
+        field.checked = false;
+      });
+      updateProgramSelectionCount();
+      return;
+    }
     const theme = programThemeFilter?.value || "";
     const date = programDateFilter?.value || "";
     let availablePrograms = 0;
@@ -579,7 +592,15 @@
   });
   addressStateSelect?.addEventListener("change", loadAddressCities);
   modalitySelect?.addEventListener("change", updateMealAvailability);
-  modalitySelect?.addEventListener("change", updateProgramAvailability);
+  modalitySelect?.addEventListener("change", () => {
+    programsSection?.querySelectorAll('[name="dados-programacoes"]:checked').forEach((field) => {
+      if (field.dataset.modalidade !== modalitySelect.value) field.checked = false;
+    });
+    programsSection?.querySelector("[data-registration-programs-required]")?.classList.remove("d-block");
+    updateProgramAvailability();
+    updateProgramSelectionCount();
+    updateMealAvailability();
+  });
   programThemeFilter?.addEventListener("change", updateProgramAvailability);
   programDateFilter?.addEventListener("change", updateProgramAvailability);
   programsSection?.addEventListener("change", (event) => {
