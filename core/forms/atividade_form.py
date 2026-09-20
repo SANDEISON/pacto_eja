@@ -557,6 +557,18 @@ class DadosPessoaisInscricaoForm(BootstrapFormMixin, forms.ModelForm):
             "programações presenciais e on-line quando ocorrerem em horários diferentes."
         ),
     )
+    representante_estado_undime_consed = forms.TypedChoiceField(
+        label="Você é representante do Estado pela Undime ou pelo Consed?",
+        choices=(
+            ("sim", "Sim"),
+            ("nao", "Não"),
+        ),
+        coerce=lambda valor: valor == "sim",
+        empty_value=None,
+        required=True,
+        widget=forms.RadioSelect(attrs={"class": "registration-representative-options"}),
+        error_messages={"required": "Informe se você representa o Estado pela Undime ou pelo Consed."},
+    )
 
     class Meta:
         model = Educador
@@ -571,6 +583,7 @@ class DadosPessoaisInscricaoForm(BootstrapFormMixin, forms.ModelForm):
             "cor_raca",
             "telefone",
             "estado_civil",
+            "representante_estado_undime_consed",
         )
         widgets = {
             "data_nascimento": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
@@ -624,6 +637,11 @@ class DadosPessoaisInscricaoForm(BootstrapFormMixin, forms.ModelForm):
             self.fields["refeicoes"].initial = inscricao.refeicoes.all()
         else:
             self.fields["modalidade_inscricao"].initial = ""
+        resposta_representante = self.instance.representante_estado_undime_consed
+        if not self.is_bound and resposta_representante is not None:
+            self.initial["representante_estado_undime_consed"] = (
+                "sim" if resposta_representante else "nao"
+            )
         for name in (
             "cpf",
             "data_nascimento",
@@ -653,6 +671,7 @@ class DadosPessoaisInscricaoForm(BootstrapFormMixin, forms.ModelForm):
         modalidade = cleaned_data.get("modalidade_inscricao")
         if programacoes:
             horarios = set()
+            tem_conflito = False
             for programacao in programacoes:
                 horario = (programacao.data, programacao.turno)
                 if horario in horarios:
@@ -660,8 +679,25 @@ class DadosPessoaisInscricaoForm(BootstrapFormMixin, forms.ModelForm):
                         "programacoes",
                         "Escolha apenas uma programação por turno em cada data.",
                     )
+                    tem_conflito = True
                     break
                 horarios.add(horario)
+            turnos_selecionados = {
+                programacao.turno for programacao in programacoes
+            }
+            turnos_obrigatorios = {
+                ProgramacaoSala.Turno.MANHA,
+                ProgramacaoSala.Turno.TARDE,
+            }
+            if (
+                not tem_conflito
+                and not turnos_obrigatorios.issubset(turnos_selecionados)
+            ):
+                self.add_error(
+                    "programacoes",
+                    "Selecione pelo menos uma programação pela manhã e uma à tarde, "
+                    "independentemente do dia.",
+                )
             if any(
                 programacao.modalidade not in self._modalidades_atividade
                 for programacao in programacoes

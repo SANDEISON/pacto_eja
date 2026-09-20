@@ -3,11 +3,12 @@
 
 {% block box_class %}auth-shell{% endblock %}
 {% block body_class %}auth-page{% endblock %}
-{% block extra_css %}<link rel="stylesheet" href="{% static 'css/auth.css' %}?v=20260831-2">{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/auth.css' %}?v=20260920-1">{% endblock %}
 
 {% block auth_body %}
 <main class="auth-layout">
   <section class="auth-visual" aria-label="Apresentação do Pacto EJA">
+    {% block visual_content %}
     <a class="auth-brand" href="{% url 'accounts:signin' %}">
       <img src="{% static 'img/logo.svg' %}" alt="Pacto EJA">
       <span><strong>Pacto</strong> EJA</span>
@@ -18,12 +19,14 @@
       <div class="art-person"><div class="person-head"></div><div class="person-body"></div><div class="person-arm"></div></div>
       <div class="art-desk"></div><div class="art-book"><i class="bi bi-book-fill"></i></div>
     </div>
+    {% endblock %}
   </section>
   <section class="auth-panel">
     <div class="auth-rings" aria-hidden="true"></div>
     <div class="auth-form-card">
       {% block form_content %}{% endblock %}
     </div>
+    {% block panel_footer %}{% endblock %}
   </section>
 </main>
 {% endblock %}

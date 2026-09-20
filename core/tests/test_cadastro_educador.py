@@ -101,7 +101,7 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(
             response,
-            "Solicitação de certificado de participação nos cursos da Educação de Jovens e Adultos",
+            "Solicitação de certificado",
         )
         self.assertContains(response, "Cor/raça")
         self.assertContains(response, "Pardo")
@@ -130,7 +130,7 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
             "ou informe que não deseja solicitá-lo. "
             "Você pode optar por um ou mais de um curso simultaneamente.",
         )
-        self.assertContains(response, "Não desejo solicitar certificado")
+        self.assertContains(response, "Não desejo suprimir o certificado")
         self.assertContains(response, "Alfabetização de Jovens, Adultos e Idosos - 80 horas")
         self.assertContains(response, "Formação em Serviço para Formadores Regionais - 360 horas")
         self.assertContains(response, 'type="checkbox"')

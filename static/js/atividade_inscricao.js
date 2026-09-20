@@ -207,22 +207,41 @@
 
   function programSelectionIsValid() {
     const programFields = programsSection?.querySelectorAll('[name="dados-programacoes"]') || [];
-    const selectedProgram = programsSection?.querySelector('[name="dados-programacoes"]:checked');
+    const selectedPrograms = [
+      ...(programsSection?.querySelectorAll('[name="dados-programacoes"]:checked') || []),
+    ];
     const requiredMessage = programsSection?.querySelector("[data-registration-programs-required]");
-    const hasRequiredSelection = !programFields.length || Boolean(selectedProgram);
-    requiredMessage?.classList.toggle("d-block", !hasRequiredSelection);
-    if (!hasRequiredSelection) {
+    const modalMessage = programRequiredModal?.querySelector("#registration-program-required-message");
+    const showSelectionError = (message) => {
+      if (requiredMessage) {
+        requiredMessage.textContent = message;
+        requiredMessage.classList.add("d-block");
+      }
+      if (modalMessage) modalMessage.textContent = message;
       if (programRequiredModal && window.bootstrap?.Modal) {
         window.bootstrap.Modal.getOrCreateInstance(programRequiredModal).show();
       } else {
         programFields[0]?.focus();
       }
+    };
+    if (programFields.length && !selectedPrograms.length) {
+      showSelectionError("Selecione pelo menos uma sala disponível.");
       return false;
     }
-    if (updateProgramConflicts()) return true;
-    const firstConflict = programsSection?.querySelector('[name="dados-programacoes"]:checked');
-    firstConflict?.focus();
-    return false;
+    if (!updateProgramConflicts()) {
+      const firstConflict = programsSection?.querySelector('[name="dados-programacoes"]:checked');
+      firstConflict?.focus();
+      return false;
+    }
+    const selectedShifts = new Set(selectedPrograms.map((field) => field.dataset.turno));
+    if (programFields.length && (!selectedShifts.has("manha") || !selectedShifts.has("tarde"))) {
+      showSelectionError(
+        "Selecione pelo menos uma programação pela manhã e uma à tarde, independentemente do dia.",
+      );
+      return false;
+    }
+    requiredMessage?.classList.remove("d-block");
+    return true;
   }
 
   function updateProgramAvailability() {
@@ -578,6 +597,13 @@
   modalityContinueButton?.addEventListener("click", () => {
     if (!modalityIsValid()) return;
     showStep("decisao");
+  });
+  form.addEventListener("submit", (event) => {
+    const action = event.submitter?.value;
+    if (!["inscrever", "atualizar"].includes(action)) return;
+    if (modalityIsValid()) return;
+    event.preventDefault();
+    showStep("modalidade");
   });
   form.querySelector('[data-work-choice="yes"]')?.addEventListener("click", () => showStep("trabalho"));
   form.querySelector('[data-work-choice="no"]')?.addEventListener("click", () => {

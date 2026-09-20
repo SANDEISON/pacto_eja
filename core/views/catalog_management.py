@@ -1,4 +1,6 @@
+from django import forms
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models.deletion import ProtectedError
 from django.forms import modelform_factory
@@ -25,6 +27,18 @@ from ..models import (
 )
 from .management_permission_mixin import ManagementPermissionMixin
 from .searchable_list_mixin import SearchableListMixin
+
+
+class SearchableUserChoiceField(forms.ModelChoiceField):
+    """Identifica usuários por nome, login e e-mail no seletor pesquisável."""
+
+    def label_from_instance(self, usuario):
+        identificadores = (
+            usuario.get_full_name().strip(),
+            usuario.get_username(),
+            usuario.email,
+        )
+        return " — ".join(dict.fromkeys(valor for valor in identificadores if valor))
 
 
 CATALOGS = {
@@ -156,7 +170,10 @@ CATALOGS = {
         "search_fields": (
             "sala__nome",
             "tematica__nome",
-            "tematica__mediador",
+            "tematica__mediador__username",
+            "tematica__mediador__email",
+            "tematica__mediador__first_name",
+            "tematica__mediador__last_name",
             "descricao",
         ),
         "columns": (
@@ -168,7 +185,7 @@ CATALOGS = {
             ("Temática", "tematica"),
             ("Vagas", "quantidade_max_participantes"),
         ),
-        "select_related": ("sala", "tematica"),
+        "select_related": ("sala", "tematica", "tematica__mediador"),
         "list_url_name": "room_schedule_list",
     },
     "tematicas-salas": {
@@ -176,8 +193,15 @@ CATALOGS = {
         "title": "Temáticas das salas",
         "singular": "temática da sala",
         "fields": ("nome", "mediador"),
-        "search_fields": ("nome", "mediador"),
+        "search_fields": (
+            "nome",
+            "mediador__username",
+            "mediador__email",
+            "mediador__first_name",
+            "mediador__last_name",
+        ),
         "columns": (("Temática", "nome"), ("Mediador", "mediador")),
+        "select_related": ("mediador",),
         "list_url_name": "room_theme_list",
     },
 }
@@ -293,6 +317,25 @@ class CatalogFormMixin(CatalogMixin):
     def get_form(self, form_class=None):
         """Ajusta widgets e protege o identificador imutável de escolas."""
         form = super().get_form(form_class)
+        if self.model is TematicaSala:
+            campo_original = form.fields["mediador"]
+            form.fields["mediador"] = SearchableUserChoiceField(
+                label=campo_original.label,
+                queryset=get_user_model().objects.order_by(
+                    "first_name", "last_name", "username"
+                ),
+                required=campo_original.required,
+                empty_label="Selecione um usuário",
+                help_text=(
+                    "Pesquise pelo nome, sobrenome, usuário ou e-mail do mediador."
+                ),
+                widget=forms.Select(
+                    attrs={
+                        "data-searchable-user-select": "",
+                        "data-search-placeholder": "Buscar mediador",
+                    }
+                ),
+            )
         for field in form.fields.values():
             widget = field.widget
             css_class = bootstrap_widget_class(widget)

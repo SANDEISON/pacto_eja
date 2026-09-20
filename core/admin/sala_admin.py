@@ -28,4 +28,10 @@ class ProgramacaoSalaAdmin(admin.ModelAdmin):
 @admin.register(TematicaSala)
 class TematicaSalaAdmin(admin.ModelAdmin):
     list_display = ("id", "nome", "mediador")
-    search_fields = ("nome", "mediador")
+    search_fields = (
+        "nome",
+        "mediador__username",
+        "mediador__email",
+        "mediador__first_name",
+        "mediador__last_name",
+    )

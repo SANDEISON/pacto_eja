@@ -27,3 +27,78 @@ body.auth-page, body.error-page-custom { min-height: 100vh; margin: 0; backgroun
 .error-shell { width: 100%; max-width: none; min-height: 100vh; }.error-shell > .card { display: grid; place-items: center; padding: 32px; background: radial-gradient(circle at 80% 10%, #e8f5ff 0, transparent 35%), #f8fbfe; }.error-content { width: min(640px, 100%); padding: 55px; border-radius: 24px; background: #fff; text-align: center; box-shadow: 0 22px 70px rgba(25,75,120,.12); }.error-code { color: var(--pacto-blue); font-size: clamp(5rem, 14vw, 9rem); font-weight: 900; line-height: .9; letter-spacing: -.08em; opacity: .13; }.error-content p { max-width: 480px; margin: 12px auto 28px; color: #708090; font-size: 1.05rem; }.error-actions { display: flex; justify-content: center; gap: 12px; }.error-actions .auth-submit { width: auto; margin: 0; padding: 0 24px; }.error-back { min-height: 50px; padding: 0 22px; border: 1px solid #dce3ea; border-radius: 999px; background: #fff; color: var(--pacto-ink); font-weight: 700; }
 @media (max-width: 900px) { .auth-layout { grid-template-columns: 1fr; }.auth-visual { display: none; }.auth-panel { min-height: 100vh; border-radius: 0; padding: 26px; }.auth-form-card { padding: 36px 28px 30px; } }
 @media (max-width: 480px) { .auth-panel { padding: 16px; }.auth-form-card { padding: 30px 22px 25px; }.error-content { padding: 38px 22px; }.error-actions { flex-direction: column; }.error-actions .auth-submit { width: 100%; } }
+
+/* Login da Jornada Formativa */
+.signin-page .auth-layout { grid-template-columns: 56% 44%; }
+.signin-page .auth-visual { display: block; padding: 0; background: #f7edc8 url("../img/login-jornada-bg.png") center / 100% 100% no-repeat; }
+.signin-event-card { position: relative; z-index: 1; height: 100%; min-height: 100vh; padding: clamp(60px, 10.8vh, 88px) 7% 48px 10%; color: #111; }
+.signin-event-header { color: #0b55a1; font-family: Arial, Helvetica, sans-serif; }
+.signin-event-header h1 { margin: 0; font-size: clamp(1.75rem, 2.4vw, 2.55rem); font-weight: 900; line-height: .96; letter-spacing: -.035em; }
+.signin-event-header > p { margin: 2px 0 10px; font-size: clamp(1.15rem, 1.75vw, 1.75rem); font-weight: 700; line-height: 1; }
+.signin-event-callout { display: grid; grid-template-columns: minmax(190px, 1fr) auto; align-items: start; width: min(460px, 88%); gap: 8px 22px; }
+.signin-event-callout strong { grid-row: 1 / span 2; font-size: clamp(1rem, 1.5vw, 1.45rem); line-height: .96; }
+.signin-event-callout span { padding-top: 3px; font-size: clamp(.88rem, 1.2vw, 1.1rem); white-space: nowrap; }
+.signin-event-callout a { justify-self: start; padding: 8px 14px; border-radius: 8px; background: #e52b05; color: #fff; font-size: clamp(.9rem, 1.25vw, 1.15rem); font-weight: 900; line-height: 1; text-decoration: none; box-shadow: 0 2px 0 rgba(135, 33, 8, .16); }
+.signin-event-callout a:hover { color: #fff; background: #c92505; }
+.signin-schedule { margin-top: clamp(36px, 6vh, 56px); font-family: Georgia, "Times New Roman", serif; }
+.signin-schedule h2 { margin: 0 0 clamp(30px, 5vh, 50px); color: #087f25; font-size: clamp(1.15rem, 1.6vw, 1.45rem); font-weight: 700; }
+.schedule-day { margin-top: clamp(21px, 3.25vh, 31px); }
+.schedule-day h3 { margin: 0 0 2px; color: #d10b00; font-size: clamp(.9rem, 1.14vw, 1.08rem); font-weight: 400; }
+.schedule-day p { margin: 0; font-family: "Courier New", Courier, monospace; font-size: clamp(.77rem, 1.02vw, .98rem); line-height: 1.25; white-space: nowrap; }
+
+.signin-page .auth-panel { align-items: start; justify-items: center; padding: clamp(110px, 19vh, 150px) 48px 120px; border-radius: 0; background: #fff; }
+.signin-page .auth-panel::before, .signin-page .auth-rings { display: none; }
+.signin-page .auth-form-card { width: min(285px, 100%); padding: 0; border-radius: 0; box-shadow: none; transform: translateX(-32px); }
+.signin-page .auth-form-card h1 { font-size: 1.8rem; }
+.signin-page .auth-subtitle { margin-bottom: 24px; }
+.signin-page .auth-field { min-height: 45px; margin-top: 13px; }
+.signin-page .auth-submit { min-height: 45px; }
+.signin-partners { position: absolute; right: 7%; bottom: 34px; left: 7%; display: flex; align-items: center; justify-content: center; gap: clamp(18px, 3vw, 38px); color: #666; }
+.signin-partners > img { width: clamp(210px, 20vw, 255px); height: 112px; object-fit: contain; }
+.mec-mark { font-family: Arial, Helvetica, sans-serif; font-size: clamp(.82rem, 1.35vw, 1.2rem); line-height: .82; text-align: right; white-space: nowrap; }
+.mec-mark strong { font-size: 1.35em; font-weight: 600; }
+.brazil-flag { position: relative; flex: 0 0 auto; width: 58px; height: 40px; overflow: hidden; background: #078a42; }
+.brazil-flag::before { content: ""; position: absolute; inset: 7px 11px; background: #f4d615; transform: rotate(45deg); }
+.brazil-flag i { position: absolute; top: 12px; left: 21px; width: 17px; height: 17px; border-radius: 50%; background: #17499a; }
+
+.signup-event-page .auth-panel { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px; padding-bottom: 20px; overflow-y: auto; }
+.signup-event-page .auth-form-card { flex: 0 0 auto; }
+.signup-event-page .auth-field { min-height: 42px; margin-top: 9px; }
+.signup-event-page .auth-submit { min-height: 43px; margin-top: 14px; }
+.signup-event-page .auth-switch { margin-top: 14px; }
+.signup-event-page .signin-partners { position: relative; right: auto; bottom: auto; left: auto; flex: 0 0 auto; width: 100%; margin-top: 18px; }
+.signup-event-page .signin-partners > img { height: 82px; }
+.recovery-event-page .auth-panel { padding-top: clamp(70px, 11vh, 90px); }
+.recovery-event-page .auth-form-card { width: min(330px, 100%); }
+.recovery-event-page .alert { font-size: .8rem; }
+
+@media (max-width: 1100px) and (min-width: 901px) {
+  .signin-event-card { padding-left: 8%; padding-right: 5%; }
+  .signin-event-callout { width: 96%; }
+  .schedule-day p { font-size: .73rem; }
+  .signin-page .auth-panel { padding-right: 32px; padding-left: 32px; }
+  .signin-page .auth-form-card { transform: translateX(-18px); }
+  .signin-partners { gap: 14px; }
+  .signin-partners > img { width: 175px; }
+  .brazil-flag { width: 48px; height: 33px; }
+  .brazil-flag::before { inset: 6px 10px; }
+  .brazil-flag i { top: 10px; left: 17px; width: 15px; height: 15px; }
+}
+@media (max-width: 900px) {
+  .signin-page .auth-layout { grid-template-columns: 1fr; }
+  .signin-page .auth-visual { display: none; }
+  .signin-page .auth-panel { min-height: 100vh; padding: 72px 26px 135px; }
+  .signin-page .auth-form-card { width: min(320px, 100%); transform: none; }
+  .signin-partners { bottom: 24px; }
+  .signup-event-page .auth-panel { padding: 30px 26px 20px; }
+  .signup-event-page .signin-partners { bottom: auto; }
+}
+@media (max-width: 520px) {
+  .signin-page .auth-panel { padding: 54px 20px 125px; }
+  .signin-partners { right: 16px; left: 16px; gap: 10px; }
+  .signin-partners > img { width: 150px; height: 55px; }
+  .mec-mark { font-size: .66rem; }
+  .brazil-flag { width: 40px; height: 28px; }
+  .brazil-flag::before { inset: 5px 9px; }
+  .brazil-flag i { top: 8px; left: 14px; width: 12px; height: 12px; }
+}

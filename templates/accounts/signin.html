@@ -1,6 +1,11 @@
 {% extends "accounts/auth_base.html" %}
-
 {% block title %}Entrar | Pacto EJA{% endblock %}
+{% block body_class %}auth-page signin-page{% endblock %}
+
+{% block visual_content %}
+{% include "accounts/_jornada_visual.html" %}
+{% endblock %}
+
 {% block form_content %}
 <span class="auth-kicker">BOAS-VINDAS</span>
 <h1>Olá!</h1>
@@ -28,4 +33,8 @@
 </form>
 <p class="auth-switch">Ainda não possui uma conta? <a href="{% url 'accounts:signup' %}">Cadastre-se</a></p>
 <!--<p class="auth-switch"><a href="{% url 'cadastro_educador' %}">Acessar o cadastro público de educadores</a></p>-->
+{% endblock %}
+
+{% block panel_footer %}
+{% include "accounts/_partners_footer.html" %}
 {% endblock %}

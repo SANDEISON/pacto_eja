@@ -137,7 +137,7 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
         required=False,
     )
     nao_solicitar_certificado = forms.BooleanField(
-        label="Não desejo solicitar certificado",
+        label="Não desejo suprimir o certificado",
         required=False,
     )
 

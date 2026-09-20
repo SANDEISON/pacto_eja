@@ -153,6 +153,69 @@ class CatalogManagementTests(TestCase):
         self.assertEqual(TematicaSala.objects.count(), 8)
         self.assertTrue(TematicaSala.objects.filter(nome="EJA como direito").exists())
 
+    def test_room_theme_mediator_must_be_a_system_user(self):
+        mediador = User.objects.create_user(
+            username="mediador.tematica@example.com",
+            email="mediador.tematica@example.com",
+            first_name="Pessoa",
+            last_name="Mediadora",
+        )
+        create_response = self.client.post(
+            reverse("catalog_create", args=("tematicas-salas",)),
+            {
+                "nome": "Direitos e diversidade",
+                "mediador": mediador.pk,
+            },
+        )
+
+        self.assertRedirects(create_response, reverse("room_theme_list"))
+        tematica = TematicaSala.objects.get(nome="Direitos e diversidade")
+        self.assertEqual(tematica.mediador, mediador)
+
+        edit_response = self.client.get(
+            reverse("catalog_update", args=("tematicas-salas", tematica.pk))
+        )
+        self.assertContains(
+            edit_response,
+            '<select name="mediador" data-searchable-user-select=""',
+            html=False,
+        )
+        self.assertContains(
+            edit_response,
+            f'<option value="{mediador.pk}" selected>',
+            html=False,
+        )
+        self.assertContains(
+            edit_response,
+            "Pessoa Mediadora — mediador.tematica@example.com",
+        )
+        self.assertContains(
+            edit_response,
+            "Pesquise pelo nome, sobrenome, usuário ou e-mail do mediador.",
+        )
+        self.assertContains(edit_response, "static/js/catalog_form.js")
+
+        invalid_response = self.client.post(
+            reverse("catalog_create", args=("tematicas-salas",)),
+            {
+                "nome": "Temática inválida",
+                "mediador": "nome digitado livremente",
+            },
+        )
+        self.assertEqual(invalid_response.status_code, 200)
+        self.assertFormError(
+            invalid_response.context["form"],
+            "mediador",
+            "Faça uma escolha válida. Sua escolha não é uma das disponíveis.",
+        )
+        self.assertFalse(TematicaSala.objects.filter(nome="Temática inválida").exists())
+
+        search_response = self.client.get(
+            reverse("room_theme_list"),
+            {"q": "mediador.tematica@example.com"},
+        )
+        self.assertContains(search_response, "Direitos e diversidade")
+
     def test_initial_proposal_axes_are_available(self):
         self.assertQuerySetEqual(
             EixoProposta.objects.values_list("nome", flat=True),

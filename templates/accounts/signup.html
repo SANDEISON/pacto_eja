@@ -1,6 +1,8 @@
 {% extends "accounts/auth_base.html" %}
 
 {% block title %}Criar conta | Pacto EJA{% endblock %}
+{% block body_class %}auth-page signin-page signup-event-page{% endblock %}
+{% block visual_content %}{% include "accounts/_jornada_visual.html" %}{% endblock %}
 {% block form_content %}
 <span class="auth-kicker">COMECE AGORA</span>
 <h1>Crie sua conta</h1>
@@ -21,3 +23,4 @@
 </form>
 <p class="auth-switch">Já tem uma conta? <a href="{% url 'accounts:signin' %}">Entrar</a></p>
 {% endblock %}
+{% block panel_footer %}{% include "accounts/_partners_footer.html" %}{% endblock %}

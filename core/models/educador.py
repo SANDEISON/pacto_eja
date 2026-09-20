@@ -50,6 +50,11 @@ class Educador(models.Model):
         verbose_name="cursos solicitados para certificado",
         blank=True,
     )
+    representante_estado_undime_consed = models.BooleanField(
+        "Você é representante do Estado pela Undime ou pelo Consed?",
+        null=True,
+        blank=True,
+    )
 
     class Meta:
         db_table = "core_educador"

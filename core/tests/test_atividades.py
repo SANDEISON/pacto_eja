@@ -79,6 +79,7 @@ class AtividadeFlowTests(TestCase):
             "dados-genero": EducadorGenero.objects.first().pk,
             "dados-cor_raca": CorRaca.objects.first().pk,
             "dados-estado_civil": EducadorEstadoCivil.objects.first().pk,
+            "dados-representante_estado_undime_consed": "sim",
             "endereco-cep": "57000-000",
             "endereco-logradouro": "Rua da Inscrição",
             "endereco-numero": "100",
@@ -405,6 +406,7 @@ class AtividadeFlowTests(TestCase):
             ProgramacaoSala.Modalidade.ONLINE,
             "Sala virtual 2",
             turno=ProgramacaoSala.Turno.TARDE,
+            data=timezone.localdate(self.atividade.data_inicio) + timedelta(days=1),
         )
         presencial = self.create_programacao(ProgramacaoSala.Modalidade.PRESENCIAL, "Auditório 1")
         self.atividade.programacoes.set((online_um, online_dois, presencial))
@@ -435,7 +437,8 @@ class AtividadeFlowTests(TestCase):
         self.assertContains(page, 'data-registration-program-date-filter')
         self.assertNotContains(page, 'class="program-card-theme"')
         self.assertContains(page, f'data-tematica="{online_um.tematica_id}"', count=3)
-        self.assertContains(page, f'data-data="{online_um.data:%Y-%m-%d}"', count=3)
+        self.assertContains(page, f'data-data="{online_um.data:%Y-%m-%d}"', count=2)
+        self.assertContains(page, f'data-data="{online_dois.data:%Y-%m-%d}"', count=1)
         self.assertContains(page, 'data-turno="manha"', count=2)
         self.assertContains(page, 'data-turno="tarde"', count=1)
         self.assertRedirects(response, reverse("dashboard"))
@@ -452,7 +455,12 @@ class AtividadeFlowTests(TestCase):
             ProgramacaoSala.Modalidade.ONLINE,
             "Sala virtual obrigatória",
         )
-        self.atividade.programacoes.add(online)
+        online_tarde = self.create_programacao(
+            ProgramacaoSala.Modalidade.ONLINE,
+            "Sala virtual obrigatória à tarde",
+            turno=ProgramacaoSala.Turno.TARDE,
+        )
+        self.atividade.programacoes.add(online, online_tarde)
         url = reverse("atividade_inscricao", args=[self.atividade.pk])
 
         page = self.client.get(url)
@@ -470,7 +478,7 @@ class AtividadeFlowTests(TestCase):
             | {
                 "acao": "inscrever",
                 "dados-modalidade_inscricao": Inscricao.Modalidade.ONLINE,
-                "dados-programacoes": [str(online.pk)],
+                "dados-programacoes": [str(online.pk), str(online_tarde.pk)],
             },
         )
 
@@ -496,7 +504,66 @@ class AtividadeFlowTests(TestCase):
         self.assertRedirects(valid_response, reverse("dashboard"))
         inscricao = Inscricao.objects.get(atividade=self.atividade, usuario=self.user)
         self.assertEqual(inscricao.modalidade, Inscricao.Modalidade.ONLINE)
-        self.assertQuerySetEqual(inscricao.programacoes.all(), [online])
+        self.assertQuerySetEqual(
+            inscricao.programacoes.order_by("pk"),
+            [online, online_tarde],
+        )
+
+    def test_registration_requires_morning_and_afternoon_for_both_modalities(self):
+        self.atividade.modalidade = Atividade.ModalidadeParticipacao.AMBAS
+        self.atividade.permite_submissao = False
+        self.atividade.save(update_fields=("modalidade", "permite_submissao"))
+        programacoes_por_modalidade = {}
+        for modalidade, nome in (
+            (ProgramacaoSala.Modalidade.ONLINE, "Sala on-line"),
+            (ProgramacaoSala.Modalidade.PRESENCIAL, "Sala presencial"),
+        ):
+            manha = self.create_programacao(
+                modalidade,
+                f"{nome} pela manhã",
+            )
+            tarde = self.create_programacao(
+                modalidade,
+                f"{nome} à tarde",
+                turno=ProgramacaoSala.Turno.TARDE,
+            )
+            programacoes_por_modalidade[modalidade] = (manha, tarde)
+            self.atividade.programacoes.add(manha, tarde)
+
+        url = reverse("atividade_inscricao", args=[self.atividade.pk])
+        mensagem = (
+            "Selecione pelo menos uma programação pela manhã e uma à tarde, "
+            "independentemente do dia."
+        )
+        for modalidade in (
+            ProgramacaoSala.Modalidade.ONLINE,
+            ProgramacaoSala.Modalidade.PRESENCIAL,
+        ):
+            for programacao in programacoes_por_modalidade[modalidade]:
+                with self.subTest(
+                    modalidade=modalidade,
+                    turno=programacao.turno,
+                ):
+                    response = self.client.post(
+                        url,
+                        self.personal_data()
+                        | {
+                            "acao": "inscrever",
+                            "dados-modalidade_inscricao": modalidade,
+                            "dados-programacoes": [str(programacao.pk)],
+                        },
+                    )
+
+                    self.assertEqual(response.status_code, 200)
+                    self.assertFormError(
+                        response.context["dados_form"],
+                        "programacoes",
+                        mensagem,
+                    )
+                    self.assertEqual(response.context["active_tab"], "modalidade")
+                    self.assertFalse(
+                        Inscricao.objects.filter(atividade=self.atividade).exists()
+                    )
 
     def test_registration_rejects_program_from_another_modality(self):
         self.atividade.modalidade = Atividade.ModalidadeParticipacao.AMBAS
@@ -600,6 +667,11 @@ class AtividadeFlowTests(TestCase):
         )
 
         self.assertContains(page, "Escolha as refeições")
+        self.assertContains(
+            page,
+            "Ressaltamos que a participação no evento ocorrerá com custeio sob "
+            "responsabilidade de cada participante.",
+        )
         self.assertContains(page, "Café da manhã")
         self.assertContains(page, "Almoço")
         self.assertRedirects(response, reverse("dashboard"))
@@ -696,6 +768,20 @@ class AtividadeFlowTests(TestCase):
         self.assertContains(response, 'id="id_dados-genero"')
         self.assertContains(response, 'id="id_dados-cor_raca"')
         self.assertContains(response, 'id="id_dados-estado_civil"')
+        self.assertContains(response, 'id="id_dados-representante_estado_undime_consed_0"')
+        self.assertContains(response, 'id="id_dados-representante_estado_undime_consed_1"')
+        self.assertContains(
+            response,
+            '<span class="form-label" id="representante-estado-label">Você é representante do Estado pela Undime ou pelo Consed? <span class="text-danger">*</span></span>',
+            html=True,
+        )
+        self.assertContains(
+            response,
+            'type="radio" name="dados-representante_estado_undime_consed"',
+            count=2,
+        )
+        self.assertContains(response, 'value="sim"')
+        self.assertContains(response, 'value="nao"')
         self.assertContains(response, 'id="id_endereco-cep"')
         self.assertContains(response, 'id="id_endereco-logradouro"')
         self.assertContains(response, 'id="id_endereco-estado"')
@@ -708,6 +794,82 @@ class AtividadeFlowTests(TestCase):
         self.assertContains(response, "Formação acadêmica")
         self.assertContains(response, "Adicionar formação")
         self.assertContains(response, 'id="id_formacao-TOTAL_FORMS"')
+
+    def test_registration_requires_undime_or_consed_representative_answer(self):
+        data = self.personal_data() | {"acao": "inscrever"}
+        data.pop("dados-representante_estado_undime_consed")
+
+        response = self.client.post(
+            reverse("atividade_inscricao", args=[self.atividade.pk]),
+            data,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFormError(
+            response.context["dados_form"],
+            "representante_estado_undime_consed",
+            "Informe se você representa o Estado pela Undime ou pelo Consed.",
+        )
+        self.assertFalse(
+            Inscricao.objects.filter(atividade=self.atividade, usuario=self.user).exists()
+        )
+
+    def test_registration_saves_negative_undime_or_consed_representative_answer(self):
+        data = self.personal_data() | {
+            "acao": "inscrever",
+            "dados-representante_estado_undime_consed": "nao",
+        }
+
+        response = self.client.post(
+            reverse("atividade_inscricao", args=[self.atividade.pk]),
+            data,
+        )
+
+        self.assertRedirects(response, reverse("dashboard"))
+        self.user.educador.refresh_from_db()
+        self.assertIs(self.user.educador.representante_estado_undime_consed, False)
+
+    def test_registration_prefills_saved_undime_or_consed_answer_on_edit(self):
+        url = reverse("atividade_inscricao", args=[self.atividade.pk])
+        response = self.client.post(
+            url,
+            self.personal_data()
+            | {
+                "acao": "inscrever",
+                "dados-representante_estado_undime_consed": "sim",
+            },
+        )
+
+        self.assertRedirects(response, reverse("dashboard"))
+        edit_page = self.client.get(url)
+        self.assertEqual(
+            edit_page.context["dados_form"]["representante_estado_undime_consed"].value(),
+            "sim",
+        )
+        self.assertContains(
+            edit_page,
+            'value="sim" id="id_dados-representante_estado_undime_consed_0" required checked',
+        )
+
+        response = self.client.post(
+            url,
+            self.personal_data()
+            | {
+                "acao": "atualizar",
+                "dados-representante_estado_undime_consed": "nao",
+            },
+        )
+
+        self.assertRedirects(response, reverse("dashboard"))
+        edit_page = self.client.get(url)
+        self.assertEqual(
+            edit_page.context["dados_form"]["representante_estado_undime_consed"].value(),
+            "nao",
+        )
+        self.assertContains(
+            edit_page,
+            'value="nao" id="id_dados-representante_estado_undime_consed_1" required checked',
+        )
 
     def test_registration_prefills_existing_address_and_city_options(self):
         estado = Estado.objects.get(sigla="AL")
@@ -800,6 +962,7 @@ class AtividadeFlowTests(TestCase):
         educador = self.user.educador
         educador.refresh_from_db()
         self.assertEqual(educador.nome_social, "Nome Social")
+        self.assertIs(educador.representante_estado_undime_consed, True)
         endereco = Endereco.objects.get(educador=educador)
         self.assertEqual(endereco.cep, "57000000")
         self.assertEqual(endereco.cidade, cidade)
