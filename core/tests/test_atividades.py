@@ -1079,16 +1079,47 @@ class AtividadeFlowTests(TestCase):
         self.assertFalse(Inscricao.objects.filter(atividade=self.atividade, usuario=self.user).exists())
 
     def test_registered_user_can_edit_and_cancel_from_dashboard_during_registration_period(self):
-        Inscricao.objects.create(atividade=self.atividade, usuario=self.user)
+        inscricao = Inscricao.objects.create(atividade=self.atividade, usuario=self.user)
 
         response = self.client.get(reverse("dashboard"))
 
+        self.assertContains(response, "Emitir comprovante de inscrição")
+        self.assertContains(
+            response,
+            reverse("inscricao_comprovante", args=[self.atividade.pk]),
+        )
         self.assertContains(response, "Editar inscrição")
         self.assertContains(response, "Cancelar inscrição")
         self.assertContains(
             response,
             reverse("atividade_inscricao_cancelar", args=[self.atividade.pk]),
         )
+
+        comprovante = self.client.get(
+            reverse("inscricao_comprovante", args=[self.atividade.pk])
+        )
+        conteudo = b"".join(comprovante.streaming_content)
+        self.assertEqual(comprovante.status_code, 200)
+        self.assertEqual(comprovante["Content-Type"], "application/pdf")
+        self.assertIn(
+            f'filename="comprovante-inscricao-{inscricao.pk}.pdf"',
+            comprovante["Content-Disposition"],
+        )
+        self.assertTrue(conteudo.startswith(b"%PDF-"))
+
+    def test_user_cannot_issue_another_users_registration_receipt(self):
+        outro_usuario = get_user_model().objects.create_user(
+            username="outra.pessoa@example.com",
+            email="outra.pessoa@example.com",
+            password="SenhaForte2026!",
+        )
+        Inscricao.objects.create(atividade=self.atividade, usuario=outro_usuario)
+
+        response = self.client.get(
+            reverse("inscricao_comprovante", args=[self.atividade.pk])
+        )
+
+        self.assertEqual(response.status_code, 404)
 
     def test_user_can_update_registration_during_registration_period(self):
         Inscricao.objects.create(atividade=self.atividade, usuario=self.user)

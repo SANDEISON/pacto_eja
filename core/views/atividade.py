@@ -40,6 +40,7 @@ from ..models import (
     Trabalho,
 )
 from ..validators import somente_digitos
+from ..services.comprovante_inscricao import gerar_comprovante_inscricao
 from .management_permission_mixin import ManagementPermissionMixin
 from .searchable_list_mixin import SearchableListMixin
 
@@ -766,6 +767,23 @@ def cancelar_inscricao_atividade(request, pk):
         request,
         "atividades/confirmar_cancelamento.html",
         {"atividade": atividade, "inscricao": inscricao},
+    )
+
+
+@login_required
+def comprovante_inscricao(request, pk):
+    """Emite o comprovante apenas para o titular da inscrição."""
+    inscricao = get_object_or_404(
+        Inscricao.objects.select_related("atividade", "usuario", "usuario__educador"),
+        atividade_id=pk,
+        usuario=request.user,
+    )
+    arquivo = gerar_comprovante_inscricao(inscricao)
+    return FileResponse(
+        arquivo,
+        as_attachment=True,
+        filename=f"comprovante-inscricao-{inscricao.pk}.pdf",
+        content_type="application/pdf",
     )
 
 

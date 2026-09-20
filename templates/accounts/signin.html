@@ -32,6 +32,15 @@
   <button type="submit" class="auth-submit">Entrar <i class="bi bi-arrow-right"></i></button>
 </form>
 <p class="auth-switch">Ainda não possui uma conta? <a href="{% url 'accounts:signup' %}">Cadastre-se</a></p>
+<p class="auth-whatsapp-help">
+  <a href="https://wa.me/558330488555?text=Ol%C3%A1%2C%20preciso%20de%20ajuda%20com%20o%20Pacto%20EJA."
+     target="_blank"
+     rel="noopener noreferrer"
+     aria-label="Tirar dúvidas pelo WhatsApp no número (83) 3048-8555">
+    <i class="bi bi-whatsapp" aria-hidden="true"></i>
+    <span>Dúvidas - WhatsApp (83) 3048-8555</span>
+  </a>
+</p>
 <!--<p class="auth-switch"><a href="{% url 'cadastro_educador' %}">Acessar o cadastro público de educadores</a></p>-->
 {% endblock %}
 

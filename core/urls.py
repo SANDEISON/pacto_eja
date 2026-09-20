@@ -16,6 +16,7 @@ urlpatterns = [
     path("", RedirectView.as_view(pattern_name="cadastro_educador", permanent=False), name="home"),
     path("painel/", views.dashboard, name="dashboard"),
     path("atividades/<int:pk>/inscricao/", views.inscricao_atividade, name="atividade_inscricao"),
+    path("atividades/<int:pk>/inscricao/comprovante/", views.comprovante_inscricao, name="inscricao_comprovante"),
     path("atividades/<int:pk>/inscricao/cancelar/", views.cancelar_inscricao_atividade, name="atividade_inscricao_cancelar"),
     path("atividades/api/coautores/", views.buscar_coautores, name="buscar_coautores"),
     path("trabalhos/<int:pk>/baixar/", views.baixar_trabalho, name="trabalho_download"),

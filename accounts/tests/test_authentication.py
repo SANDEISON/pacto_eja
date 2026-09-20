@@ -107,6 +107,13 @@ class AuthenticationTests(TestCase):
 
         self.assertContains(response, reverse("accounts:password_recovery"))
 
+    def test_signin_displays_whatsapp_support_link(self):
+        response = self.client.get(reverse("accounts:signin"))
+
+        self.assertContains(response, "Dúvidas - WhatsApp (83) 3048-8555")
+        self.assertContains(response, 'class="bi bi-whatsapp"')
+        self.assertContains(response, "https://wa.me/558330488555")
+
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
     def test_password_recovery_sends_a_working_temporary_password(self):
         usuario = get_user_model().objects.create_user(

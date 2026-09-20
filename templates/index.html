@@ -28,9 +28,17 @@
           </div>
           <footer>
             {% if atividade.inscricao_usuario %}
-              <span class="registration-ok"><i class="bi bi-check-circle-fill"></i> Inscrição confirmada</span>
-              {% if atividade.periodo_inscricoes_aberto %}<div class="activity-registration-actions"><a class="btn btn-sm btn-outline-primary" href="{% url 'atividade_inscricao' atividade.pk %}"><i class="bi bi-pencil-square"></i> Editar inscrição</a><a class="btn btn-sm btn-outline-danger" href="{% url 'atividade_inscricao_cancelar' atividade.pk %}"><i class="bi bi-x-circle"></i> Cancelar inscrição</a></div>{% endif %}
-              {% if atividade.submissoes_abertas and atividade.permite_submissao %}<a class="btn btn-outline-primary" href="{% url 'atividade_inscricao' atividade.pk %}#trabalho-pane">{% if atividade.inscricao_usuario.trabalho %}Editar trabalho{% else %}Submeter trabalho{% endif %}</a>{% endif %}
+              <div class="activity-registration-panel">
+                <div class="activity-registration-status"><span class="registration-ok"><i class="bi bi-check-circle-fill"></i> Inscrição confirmada</span></div>
+                <div class="activity-registration-actions">
+                  <a class="btn btn-sm activity-action activity-action-receipt" href="{% url 'inscricao_comprovante' atividade.pk %}"><i class="bi bi-file-earmark-check"></i><span>Emitir comprovante de inscrição</span></a>
+                  {% if atividade.periodo_inscricoes_aberto %}
+                    <a class="btn btn-sm activity-action activity-action-edit" href="{% url 'atividade_inscricao' atividade.pk %}"><i class="bi bi-pencil-square"></i><span>Editar inscrição</span></a>
+                    <a class="btn btn-sm activity-action activity-action-cancel" href="{% url 'atividade_inscricao_cancelar' atividade.pk %}"><i class="bi bi-x-circle"></i><span>Cancelar inscrição</span></a>
+                  {% endif %}
+                  {% if atividade.submissoes_abertas and atividade.permite_submissao %}<a class="btn btn-sm activity-action activity-action-work" href="{% url 'atividade_inscricao' atividade.pk %}#trabalho-pane"><i class="bi bi-file-earmark-text"></i><span>{% if atividade.inscricao_usuario.trabalho %}Editar trabalho{% else %}Submeter trabalho{% endif %}</span></a>{% endif %}
+                </div>
+              </div>
             {% elif atividade.rascunho_usuario and atividade.periodo_inscricoes_aberto %}
               <span class="status-pill status-warning"><i class="bi bi-save"></i> Rascunho salvo</span>
               <a class="btn btn-primary w-100" href="{% url 'atividade_inscricao' atividade.pk %}"><i class="bi bi-pencil-square"></i> Continuar inscrição</a>
