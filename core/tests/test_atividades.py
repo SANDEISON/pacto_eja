@@ -55,6 +55,7 @@ class AtividadeFlowTests(TestCase):
             titulo="Seminário de Educação de Jovens e Adultos",
             descricao="Encontro para troca de experiências.",
             local="Auditório central",
+            link="https://example.com/encontro-online",
             data_inicio=agora + timedelta(days=20),
             data_fim=agora + timedelta(days=21),
             inscricoes_inicio=agora - timedelta(days=1),
@@ -150,6 +151,8 @@ class AtividadeFlowTests(TestCase):
         self.assertContains(response, self.atividade.titulo)
         self.assertContains(response, "Inscrever-se")
         self.assertContains(response, "google.com/maps/search/")
+        self.assertContains(response, "Acessar evento on-line")
+        self.assertContains(response, self.atividade.link)
 
     def test_academic_work_uses_updated_proposal_fields(self):
         response = self.client.get(reverse("atividade_inscricao", args=[self.atividade.pk]))
@@ -313,6 +316,8 @@ class AtividadeFlowTests(TestCase):
         self.assertContains(response, 'class="coauthor-row" hidden')
         self.assertContains(response, "Abrir endereço no Google Maps")
         self.assertContains(response, "Auditório central")
+        self.assertContains(response, "Acessar link do evento")
+        self.assertContains(response, self.atividade.link)
         self.assertContains(response, "Modalidade de participação")
         self.assertContains(response, "Selecione a modalidade de participação")
         self.assertContains(
@@ -1429,7 +1434,8 @@ class AtividadeManagementTests(TestCase):
         response = self.client.get(reverse("atividade_create"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "O sistema criará automaticamente")
-        self.assertNotContains(response, "link do evento on-line")
+        self.assertContains(response, "Link do evento on-line")
+        self.assertContains(response, "Use este campo para informar o acesso ao evento on-line.")
         self.assertContains(response, "Refeições disponíveis")
         self.assertContains(response, "Adicionar refeição")
 
@@ -1453,6 +1459,7 @@ class AtividadeManagementTests(TestCase):
                 "titulo": "Encontro com refeições",
                 "descricao": "Atividade de dois dias.",
                 "local": "Centro de convenções",
+                "link": "https://example.com/encontro-refeicoes",
                 "data_inicio": inicio.strftime("%Y-%m-%dT%H:%M"),
                 "data_fim": fim.strftime("%Y-%m-%dT%H:%M"),
                 "inscricoes_inicio": "",
@@ -1476,6 +1483,7 @@ class AtividadeManagementTests(TestCase):
 
         self.assertRedirects(response, reverse("atividade_list"))
         atividade = Atividade.objects.get(titulo="Encontro com refeições")
+        self.assertEqual(atividade.link, "https://example.com/encontro-refeicoes")
         self.assertEqual(atividade.refeicoes.count(), 2)
         self.assertTrue(
             atividade.refeicoes.filter(tipo=Refeicao.Tipo.CAFE_DA_MANHA).exists()

@@ -66,13 +66,14 @@ class AtividadeForm(BootstrapFormMixin, forms.ModelForm):
     class Meta:
         model = Atividade
         fields = (
-            "tipo", "modalidade", "titulo", "descricao", "local", "data_inicio", "data_fim",
+            "tipo", "modalidade", "titulo", "descricao", "local", "link", "data_inicio", "data_fim",
             "inscricoes_inicio", "inscricoes_fim", "vagas", "permite_submissao",
             "modelo_submissao", "submissoes_fim", "ativo",
         )
         widgets = {
             "descricao": forms.Textarea(attrs={"rows": 5}),
             "local": forms.TextInput(attrs={"placeholder": "Endereço, prédio, sala ou auditório"}),
+            "link": forms.URLInput(attrs={"placeholder": "https://..."}),
             "data_inicio": forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"),
             "data_fim": forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"),
             "inscricoes_inicio": forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"),
@@ -87,6 +88,7 @@ class AtividadeForm(BootstrapFormMixin, forms.ModelForm):
             "Informe o endereço completo do local. O sistema criará automaticamente "
             "um link para visualização no Google Maps."
         )
+        self.fields["link"].help_text = "Use este campo para informar o acesso ao evento on-line."
         for name in ("data_inicio", "data_fim", "inscricoes_inicio", "inscricoes_fim", "submissoes_fim"):
             self.fields[name].input_formats = ["%Y-%m-%dT%H:%M"]
         self._apply_bootstrap_classes()

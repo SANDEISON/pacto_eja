@@ -17,7 +17,7 @@
         <thead><tr><th>Atividade</th><th>Tipo</th><th>Modalidade</th><th>Data</th><th>Prazo de inscrição</th><th>Inscritos</th><th>Status</th><th class="text-end">Ações</th></tr></thead>
         <tbody>
           {% for atividade in atividades %}<tr>
-            <td><strong>{{ atividade.titulo }}</strong>{% if atividade.local %}<small class="d-block text-body-secondary"><i class="bi bi-geo-alt"></i> {{ atividade.local }}</small>{% endif %}</td>
+            <td><strong>{{ atividade.titulo }}</strong>{% if atividade.local %}<small class="d-block text-body-secondary"><i class="bi bi-geo-alt"></i> {{ atividade.local }}</small>{% endif %}{% if atividade.link %}<small class="d-block"><i class="bi bi-camera-video"></i> <a href="{{ atividade.link }}" target="_blank" rel="noopener noreferrer">Acessar evento on-line</a></small>{% endif %}</td>
             <td>{{ atividade.get_tipo_display }}</td><td>{{ atividade.get_modalidade_display }}</td><td>{{ atividade.data_inicio|date:"d/m/Y H:i" }}</td><td>{{ atividade.inscricoes_fim|date:"d/m/Y H:i" }}</td>
             <td>{% if perms.core.view_inscricao %}<a href="{% url 'atividade_inscricoes' atividade.pk %}">{{ atividade.total_inscricoes }}</a>{% else %}{{ atividade.total_inscricoes }}{% endif %}{% if atividade.vagas %} / {{ atividade.vagas }}{% endif %}</td>
             <td>{% if atividade.ativo %}<span class="status-pill status-active">Ativa</span>{% else %}<span class="status-pill status-inactive">Inativa</span>{% endif %}</td>

@@ -165,7 +165,7 @@ def gerar_comprovante_inscricao(inscricao):
         ("Participante", nome),
         ("CPF", _cpf_formatado(getattr(educador, "cpf", ""))),
         ("Número da inscrição", codigo),
-        ("Atividade", atividade.titulo),
+        ("Evento", atividade.titulo),
         ("Tipo", atividade.get_tipo_display()),
         ("Modalidade", inscricao.get_modalidade_display()),
         (

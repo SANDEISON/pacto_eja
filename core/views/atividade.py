@@ -51,7 +51,7 @@ class AtividadeListView(ManagementPermissionMixin, SearchableListMixin, ListView
     permission_required = "core.view_atividade"
     template_name = "management/atividade_list.html"
     context_object_name = "atividades"
-    search_fields = ("titulo", "descricao", "local", "tipo")
+    search_fields = ("titulo", "descricao", "local", "link", "tipo")
 
     def has_permission(self):
         """Permite a consulta a quem pode visualizar ou editar atividades."""

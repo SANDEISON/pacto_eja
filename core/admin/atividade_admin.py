@@ -15,7 +15,7 @@ class AtividadeAdmin(admin.ModelAdmin):
         "ativo",
     )
     list_filter = ("ativo", "tipo", "modalidade", "permite_submissao")
-    search_fields = ("titulo", "descricao", "local")
+    search_fields = ("titulo", "descricao", "local", "link")
     date_hierarchy = "data_inicio"
     filter_horizontal = ("programacoes",)
     readonly_fields = ("criado_em", "atualizado_em")

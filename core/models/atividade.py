@@ -29,6 +29,7 @@ class Atividade(models.Model):
     titulo = models.CharField("título", max_length=180)
     descricao = models.TextField("descrição")
     local = models.CharField("local/endereço", max_length=255, blank=True)
+    link = models.URLField("link do evento on-line", max_length=500, blank=True)
     data_inicio = models.DateTimeField("início")
     data_fim = models.DateTimeField("término")
     inscricoes_inicio = models.DateTimeField("início das inscrições", null=True, blank=True)
