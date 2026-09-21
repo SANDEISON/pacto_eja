@@ -328,6 +328,18 @@ class AtividadeFlowTests(TestCase):
         self.assertContains(response, "Presencial")
         self.assertContains(response, "Salvar e continuar depois")
 
+    def test_google_maps_link_in_local_is_opened_directly(self):
+        self.atividade.local = "Local https://maps.app.goo.gl/nnyHA1yVHSxauqMU7"
+        self.atividade.save(update_fields=("local",))
+
+        response = self.client.get(reverse("atividade_inscricao", args=[self.atividade.pk]))
+
+        self.assertContains(
+            response,
+            'href="https://maps.app.goo.gl/nnyHA1yVHSxauqMU7"',
+        )
+        self.assertNotContains(response, "query=Local")
+
     def test_user_can_save_incomplete_registration_and_resume_it(self):
         url = reverse("atividade_inscricao", args=[self.atividade.pk])
         response = self.client.post(

@@ -1,3 +1,6 @@
+import re
+from urllib.parse import quote_plus
+
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
@@ -101,6 +104,14 @@ class Atividade(models.Model):
     def aceita_modalidade(self, modalidade):
         """Confere se a modalidade escolhida está habilitada para a atividade."""
         return modalidade in {valor for valor, _ in self.modalidades_disponiveis}
+
+    @property
+    def local_url(self):
+        """Retorna um link informado no local ou monta uma busca pelo endereço."""
+        link_informado = re.search(r"https?://[^\s]+", self.local or "", flags=re.IGNORECASE)
+        if link_informado:
+            return link_informado.group(0).rstrip(".,;)")
+        return f"https://www.google.com/maps/search/?api=1&query={quote_plus(self.local or '')}"
 
     @property
     def periodo_inscricoes_aberto(self):

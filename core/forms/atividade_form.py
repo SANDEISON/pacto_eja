@@ -85,8 +85,8 @@ class AtividadeForm(BootstrapFormMixin, forms.ModelForm):
         """Configura formatos HTML5 e textos de ajuda exibidos na administração."""
         super().__init__(*args, **kwargs)
         self.fields["local"].help_text = (
-            "Informe o endereço completo do local. O sistema criará automaticamente "
-            "um link para visualização no Google Maps."
+            "Informe o endereço completo ou cole um link do Google Maps. O sistema criará "
+            "automaticamente um link de localização para endereços."
         )
         self.fields["link"].help_text = "Use este campo para informar o acesso ao evento on-line."
         for name in ("data_inicio", "data_fim", "inscricoes_inicio", "inscricoes_fim", "submissoes_fim"):
