@@ -114,6 +114,15 @@ class Atividade(models.Model):
         return f"https://www.google.com/maps/search/?api=1&query={quote_plus(self.local or '')}"
 
     @property
+    def local_texto(self):
+        """Exibe uma chamada curta para links ou o endereço informado."""
+        valor = self.local or ""
+        link_informado = re.search(r"https?://[^\s]+", valor, flags=re.IGNORECASE)
+        if link_informado:
+            return "Abrir no Google Maps"
+        return valor
+
+    @property
     def periodo_inscricoes_aberto(self):
         """Indica se alterações em inscrições ainda são permitidas."""
         agora = timezone.now()
