@@ -55,12 +55,9 @@ body.auth-page, body.error-page-custom { min-height: 100vh; margin: 0; backgroun
 .signin-page .auth-submit { min-height: 45px; }
 .auth-whatsapp-help { margin: 14px 0 0; text-align: center; }.auth-whatsapp-help a { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 8px 12px; border: 1px solid #25d366; border-radius: 999px; color: #128c4a; font-size: .78rem; font-weight: 700; line-height: 1.2; text-decoration: none; transition: background-color .2s, color .2s, transform .2s; }.auth-whatsapp-help a:hover, .auth-whatsapp-help a:focus-visible { background: #25d366; color: #fff; transform: translateY(-1px); }.auth-whatsapp-help i { font-size: 1rem; }
 .signin-partners { position: absolute; right: 7%; bottom: 34px; left: 7%; display: flex; align-items: center; justify-content: center; gap: clamp(18px, 3vw, 38px); color: #666; }
-.signin-partners > img { width: clamp(210px, 20vw, 255px); height: 112px; object-fit: contain; }
-.mec-mark { font-family: Arial, Helvetica, sans-serif; font-size: clamp(.82rem, 1.35vw, 1.2rem); line-height: .82; text-align: right; white-space: nowrap; }
-.mec-mark strong { font-size: 1.35em; font-weight: 600; }
-.brazil-flag { position: relative; flex: 0 0 auto; width: 58px; height: 40px; overflow: hidden; background: #078a42; }
-.brazil-flag::before { content: ""; position: absolute; inset: 7px 11px; background: #f4d615; transform: rotate(45deg); }
-.brazil-flag i { position: absolute; top: 12px; left: 21px; width: 17px; height: 17px; border-radius: 50%; background: #17499a; }
+.signin-partners > img { max-width: calc(50% - 10px); object-fit: contain; }
+.partner-ufpb-logo { width: clamp(210px, 20vw, 255px); height: 112px; }
+.partner-mec-logo { width: clamp(180px, 17vw, 220px); height: auto; }
 
 .signup-event-page .auth-panel { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px; padding-bottom: 20px; overflow-y: auto; }
 .signup-event-page .auth-form-card { flex: 0 0 auto; }
@@ -68,7 +65,7 @@ body.auth-page, body.error-page-custom { min-height: 100vh; margin: 0; backgroun
 .signup-event-page .auth-submit { min-height: 43px; margin-top: 14px; }
 .signup-event-page .auth-switch { margin-top: 14px; }
 .signup-event-page .signin-partners { position: relative; right: auto; bottom: auto; left: auto; flex: 0 0 auto; width: 100%; margin-top: 18px; }
-.signup-event-page .signin-partners > img { height: 82px; }
+.signup-event-page .partner-ufpb-logo { height: 82px; }
 .recovery-event-page .auth-panel { padding-top: clamp(70px, 11vh, 90px); }
 .recovery-event-page .auth-form-card { width: min(330px, 100%); }
 .recovery-event-page .alert { font-size: .8rem; }
@@ -80,10 +77,8 @@ body.auth-page, body.error-page-custom { min-height: 100vh; margin: 0; backgroun
   .signin-page .auth-panel { padding-right: 32px; padding-left: 32px; }
   .signin-page .auth-form-card { transform: translateX(-18px); }
   .signin-partners { gap: 14px; }
-  .signin-partners > img { width: 175px; }
-  .brazil-flag { width: 48px; height: 33px; }
-  .brazil-flag::before { inset: 6px 10px; }
-  .brazil-flag i { top: 10px; left: 17px; width: 15px; height: 15px; }
+  .partner-ufpb-logo { width: 175px; }
+  .partner-mec-logo { width: 155px; }
 }
 @media (max-width: 900px) {
   .signin-page .auth-layout { grid-template-columns: 1fr; }
@@ -97,9 +92,7 @@ body.auth-page, body.error-page-custom { min-height: 100vh; margin: 0; backgroun
 @media (max-width: 520px) {
   .signin-page .auth-panel { padding: 54px 20px 125px; }
   .signin-partners { right: 16px; left: 16px; gap: 10px; }
-  .signin-partners > img { width: 150px; height: 55px; }
-  .mec-mark { font-size: .66rem; }
-  .brazil-flag { width: 40px; height: 28px; }
-  .brazil-flag::before { inset: 5px 9px; }
-  .brazil-flag i { top: 8px; left: 14px; width: 12px; height: 12px; }
+  .signin-partners > img { max-width: calc(50% - 5px); }
+  .partner-ufpb-logo { width: 150px; height: 55px; }
+  .partner-mec-logo { width: 150px; }
 }

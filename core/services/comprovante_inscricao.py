@@ -49,6 +49,10 @@ def _texto(valor):
     return escape(str(valor or "—"))
 
 
+def _texto_com_quebras(valor):
+    return _texto(valor).replace("\r\n", "\n").replace("\r", "\n").replace("\n", "<br/>")
+
+
 def _rodape(canvas, documento):
     canvas.saveState()
     canvas.setStrokeColor(colors.HexColor("#DCE7F1"))
@@ -75,7 +79,27 @@ def gerar_comprovante_inscricao(inscricao):
             fontName="PactoSans-Bold",
             fontSize=17,
             leading=21,
-            spaceAfter=5 * mm,
+            spaceAfter=2 * mm,
+        ),
+        "evento": ParagraphStyle(
+            "EventoComprovante",
+            parent=estilos_base["Heading2"],
+            alignment=TA_CENTER,
+            textColor=TEXTO,
+            fontName="PactoSans-Bold",
+            fontSize=13,
+            leading=17,
+            spaceAfter=3 * mm,
+        ),
+        "descricao_evento": ParagraphStyle(
+            "DescricaoEventoComprovante",
+            parent=estilos_base["BodyText"],
+            alignment=TA_CENTER,
+            textColor=CINZA,
+            fontName="PactoSans",
+            fontSize=9,
+            leading=13,
+            spaceAfter=4 * mm,
         ),
         "subtitulo": ParagraphStyle(
             "SubtituloComprovante",
@@ -112,7 +136,7 @@ def gerar_comprovante_inscricao(inscricao):
         leftMargin=22 * mm,
         topMargin=16 * mm,
         bottomMargin=23 * mm,
-        title="Comprovante de inscrição",
+        title=f"Comprovante de inscrição - {atividade.titulo}",
         author="Pacto EJA",
     )
     elementos = []
@@ -127,6 +151,8 @@ def gerar_comprovante_inscricao(inscricao):
     elementos.extend(
         (
             Paragraph("COMPROVANTE DE INSCRIÇÃO", estilos["titulo"]),
+            Paragraph(_texto(atividade.titulo), estilos["evento"]),
+            Paragraph(_texto_com_quebras(atividade.descricao), estilos["descricao_evento"]),
             Paragraph(
                 "Declaramos, para os devidos fins, que o(a) participante abaixo está "
                 "regularmente inscrito(a) na atividade indicada neste documento.",
@@ -210,13 +236,13 @@ def gerar_comprovante_inscricao(inscricao):
 
     elementos.extend(
         (
-            Spacer(1, 7 * mm),
+            Spacer(1, 4 * mm),
             Paragraph(
                 "Este comprovante confirma exclusivamente a inscrição do participante e não "
                 "substitui certificado de participação, frequência ou conclusão.",
                 estilos["pequeno"],
             ),
-            Spacer(1, 4 * mm),
+            Spacer(1, 2 * mm),
             Paragraph(
                 f"Emitido em {timezone.localtime():%d/%m/%Y às %H:%M}.",
                 estilos["pequeno"],

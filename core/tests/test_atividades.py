@@ -423,7 +423,7 @@ class AtividadeFlowTests(TestCase):
             },
         )
 
-        self.assertContains(page, "Escolha as programações")
+        self.assertContains(page, "Selecione as ATIVIDADES das quais você participará:")
         self.assertContains(
             page,
             "Selecione pelo menos uma sala da modalidade escolhida e, no máximo, uma por turno em cada data.",
@@ -667,6 +667,10 @@ class AtividadeFlowTests(TestCase):
         )
 
         self.assertContains(page, "Escolha as refeições")
+        self.assertContains(
+            page,
+            "Escolha as suas refeições (serão disponibilizadas gratuitamente durante o evento).",
+        )
         self.assertContains(
             page,
             "Ressaltamos que a participação no evento ocorrerá com custeio sob "
