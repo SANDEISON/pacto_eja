@@ -3,7 +3,7 @@ from django.db.models import Count, F
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView
 
-from core.models import Educador, EducadorEscola
+from core.models import Atividade, Educador, EducadorEscola, Inscricao
 
 
 ROTULOS_TEMPO_ATUACAO = {
@@ -46,9 +46,26 @@ def normalizar_distribuicao(
     return distribuicao
 
 
+def obter_escolaridade_educador(educador):
+    """Retorna o maior nível de escolaridade cadastrado para o educador."""
+    formacoes = list(educador.formacoes.all())
+    if not formacoes:
+        return "Não informado"
+    formacoes_ordenadas = sorted(formacoes, key=lambda f: f.nivel_id or 0, reverse=True)
+    return formacoes_ordenadas[0].nivel.nome
+
+
 def dados_basicos_educador(educador):
     """Reúne os dados pessoais repetidos em cada vínculo do relatório detalhado."""
     usuario = educador.usuario
+    rep = educador.representante_estado_undime_consed
+    if rep is True:
+        rep_label = "Sim"
+    elif rep is False:
+        rep_label = "Não"
+    else:
+        rep_label = "Não informado"
+
     return {
         "nome": (
             educador.nome_completo
@@ -61,6 +78,8 @@ def dados_basicos_educador(educador):
         "telefone": educador.telefone or "",
         "genero": educador.genero.nome if educador.genero else "Não informado",
         "cor": educador.cor_raca.nome if educador.cor_raca else "Não informado",
+        "escolaridade": obter_escolaridade_educador(educador),
+        "representante_undime_consed": rep_label,
     }
 
 
@@ -92,28 +111,97 @@ def registro_participante(educador, vinculo=None):
     return registro
 
 
-def listar_participantes_detalhados():
-    """Expande cada educador em uma linha por vínculo escolar cadastrado."""
-    educadores = Educador.objects.select_related(
+def listar_participantes_detalhados(educadores_qs=None, atividade_selecionada_id=None):
+    """Expande cada educador em uma linha por vínculo escolar cadastrado, incluindo inscrições em atividades."""
+    if educadores_qs is None:
+        educadores_qs = Educador.objects.all()
+
+    educadores = educadores_qs.select_related(
         "usuario", "genero", "cor_raca"
     ).prefetch_related(
+        "formacoes__nivel",
         "funcoes__educador_escola__cidade__estado",
         "funcoes__educador_escola__escola",
         "funcoes__educador_escola__funcao",
+        "usuario__inscricoes_atividades__atividade",
     )
     participantes = []
 
     for educador in educadores:
+        inscricoes = list(educador.usuario.inscricoes_atividades.all())
+        atividades_info = []
+        atividades_ids = []
+        atividades_tipos = []
+        atividades_modalidades = []
+        atividades_status = []
+        atividades_nomes = []
+
+        modalidade_inscrito_atividade_atual = ""
+        data_inscricao_atividade_atual = ""
+
+        for insc in inscricoes:
+            atividade = insc.atividade
+            status_insc = "abertas" if atividade.inscricoes_abertas else "encerradas"
+            status_ativo = "ativa" if atividade.ativo else "inativa"
+
+            atividades_ids.append(atividade.id)
+            atividades_tipos.append(atividade.tipo)
+            atividades_modalidades.append(insc.modalidade)
+            atividades_status.append(status_insc)
+            atividades_status.append(status_ativo)
+            atividades_nomes.append(atividade.titulo)
+
+            if atividade_selecionada_id and atividade.id == atividade_selecionada_id:
+                modalidade_inscrito_atividade_atual = insc.get_modalidade_display()
+                data_inscricao_atividade_atual = (
+                    insc.inscrito_em.strftime("%d/%m/%Y %H:%M")
+                    if insc.inscrito_em
+                    else ""
+                )
+
+            atividades_info.append({
+                "id": atividade.id,
+                "titulo": atividade.titulo,
+                "tipo": atividade.tipo,
+                "tipo_label": atividade.get_tipo_display(),
+                "modalidade": insc.modalidade,
+                "modalidade_label": insc.get_modalidade_display(),
+                "atividade_modalidade": atividade.modalidade,
+                "atividade_modalidade_label": atividade.get_modalidade_display(),
+                "data_inscricao": (
+                    insc.inscrito_em.strftime("%d/%m/%Y %H:%M")
+                    if insc.inscrito_em
+                    else ""
+                ),
+                "ativo": atividade.ativo,
+                "inscricoes_abertas": atividade.inscricoes_abertas,
+            })
+
+        dados_atividades = {
+            "atividades": atividades_info,
+            "atividades_ids": list(set(atividades_ids)),
+            "atividades_tipos": list(set(atividades_tipos)),
+            "atividades_modalidades": list(set(atividades_modalidades)),
+            "atividades_status": list(set(atividades_status)),
+            "atividades_nomes": atividades_nomes,
+            "modalidade_inscrito_atual": modalidade_inscrito_atividade_atual,
+            "data_inscricao_atual": data_inscricao_atividade_atual,
+        }
+
         vinculos = [
             funcao_educador.educador_escola
             for funcao_educador in educador.funcoes.all()
         ]
         if not vinculos:
-            participantes.append(registro_participante(educador))
+            reg = registro_participante(educador)
+            reg.update(dados_atividades)
+            participantes.append(reg)
             continue
-        participantes.extend(
-            registro_participante(educador, vinculo) for vinculo in vinculos
-        )
+
+        for vinculo in vinculos:
+            reg = registro_participante(educador, vinculo)
+            reg.update(dados_atividades)
+            participantes.append(reg)
 
     return participantes
 
@@ -127,7 +215,112 @@ class ReportsView(TemplateView):
     def get_context_data(self, **kwargs):
         """Executa as agregações e entrega estruturas prontas para tabelas e gráficos."""
         context = super().get_context_data(**kwargs)
-        vinculos = EducadorEscola.objects.all()
+
+        # 1. Catálogo completo de atividades para a central/modal de seleção
+        atividades = Atividade.objects.prefetch_related("inscricoes").order_by("titulo")
+        atividades_catalogo = []
+        for a in atividades:
+            insc_count = a.inscricoes.count()
+            vagas_totais = a.vagas or 0
+            taxa_ocupacao = (
+                round((insc_count / vagas_totais * 100), 1)
+                if vagas_totais > 0
+                else 0
+            )
+            status_insc = "abertas" if a.inscricoes_abertas else "encerradas"
+            status_label = (
+                "Inscrições Abertas"
+                if a.inscricoes_abertas
+                else ("Inscrições Encerradas" if a.ativo else "Inativa")
+            )
+
+            atividades_catalogo.append({
+                "id": a.id,
+                "titulo": a.titulo,
+                "descricao": a.descricao,
+                "tipo": a.tipo,
+                "tipo_label": a.get_tipo_display(),
+                "modalidade": a.modalidade,
+                "modalidade_label": a.get_modalidade_display(),
+                "local": a.local or "",
+                "link": a.link or "",
+                "local_ou_link": a.local or a.link or "Não informado",
+                "data_inicio": (
+                    a.data_inicio.strftime("%d/%m/%Y %H:%M")
+                    if a.data_inicio
+                    else ""
+                ),
+                "data_fim": (
+                    a.data_fim.strftime("%d/%m/%Y %H:%M")
+                    if a.data_fim
+                    else ""
+                ),
+                "inscricoes_fim": (
+                    a.inscricoes_fim.strftime("%d/%m/%Y %H:%M")
+                    if a.inscricoes_fim
+                    else ""
+                ),
+                "vagas": a.vagas,
+                "total_inscritos": insc_count,
+                "vagas_restantes": a.vagas_restantes,
+                "taxa_ocupacao": taxa_ocupacao,
+                "ativo": a.ativo,
+                "inscricoes_abertas": a.inscricoes_abertas,
+                "status_slug": status_insc if a.ativo else "inativa",
+                "status_label": status_label,
+            })
+
+        # 2. Verificação de filtro por atividade ativa ou visão geral via URL
+        atividade_id_param = self.request.GET.get("atividade")
+        visao_geral = self.request.GET.get("visao") == "geral"
+        atividade_selecionada = None
+        atividade_selecionada_dict = None
+
+        if atividade_id_param:
+            try:
+                atividade_id = int(atividade_id_param)
+                atividade_selecionada = Atividade.objects.filter(pk=atividade_id).first()
+                if atividade_selecionada:
+                    atividade_selecionada_dict = next(
+                        (item for item in atividades_catalogo if item["id"] == atividade_id),
+                        None,
+                    )
+            except (ValueError, TypeError):
+                atividade_selecionada = None
+
+        exibir_dashboard = bool(atividade_selecionada or visao_geral)
+
+        if atividade_selecionada:
+            educadores_base = Educador.objects.filter(
+                usuario__inscricoes_atividades__atividade=atividade_selecionada
+            ).distinct()
+            vinculos = EducadorEscola.objects.filter(
+                funcao_educador__educador__in=educadores_base
+            ).distinct()
+
+            participantes_por_modalidade = (
+                Inscricao.objects.filter(atividade=atividade_selecionada)
+                .values(mod_inscricao=F("modalidade"))
+                .annotate(qtd=Count("usuario", distinct=True))
+                .order_by("-qtd")
+            )
+            atividade_dados = normalizar_distribuicao(
+                participantes_por_modalidade,
+                "mod_inscricao",
+                rotulos={"online": "On-line", "presencial": "Presencial"},
+            )
+        else:
+            educadores_base = Educador.objects.all()
+            vinculos = EducadorEscola.objects.all()
+            participantes_por_atividade = (
+                Inscricao.objects.values(nome_atividade=F("atividade__titulo"))
+                .annotate(qtd=Count("usuario", distinct=True))
+                .order_by("-qtd")
+            )
+            atividade_dados = normalizar_distribuicao(
+                participantes_por_atividade,
+                "nome_atividade",
+            )
 
         participantes_por_municipio = (
             vinculos.values(
@@ -151,12 +344,30 @@ class ReportsView(TemplateView):
             .order_by("-qtd")
         )
 
+        from collections import Counter
+        contagem_escolaridade = Counter()
+        for educador in educadores_base.prefetch_related("formacoes__nivel"):
+            contagem_escolaridade[obter_escolaridade_educador(educador)] += 1
+
+        escolaridade_dados = [
+            {"label": nivel_nome, "qtd": qtd}
+            for nivel_nome, qtd in contagem_escolaridade.most_common()
+        ]
+
         context.update(
-            total_educadores=Educador.objects.count(),
+            exibir_dashboard=exibir_dashboard,
+            visao_geral=visao_geral,
+            atividade_selecionada=atividade_selecionada_dict,
+            atividades_catalogo=atividades_catalogo,
+            total_educadores=educadores_base.count(),
             total_vinculos=vinculos.count(),
             total_escolas=vinculos.values("escola").distinct().count(),
             total_municipios=vinculos.values("cidade").distinct().count(),
-            participantes_detalhados=listar_participantes_detalhados(),
+            participantes_detalhados=listar_participantes_detalhados(
+                educadores_qs=educadores_base,
+                atividade_selecionada_id=atividade_selecionada.id if atividade_selecionada else None,
+            ),
+            atividade_dados=atividade_dados,
             municipio_dados=normalizar_distribuicao(
                 participantes_por_municipio,
                 "municipio",
@@ -171,13 +382,13 @@ class ReportsView(TemplateView):
                 campos_extras={"sigla": "sigla"},
             ),
             genero_dados=normalizar_distribuicao(
-                Educador.objects.values(nome_genero=F("genero__nome"))
+                educadores_base.values(nome_genero=F("genero__nome"))
                 .annotate(qtd=Count("pk"))
                 .order_by("-qtd"),
                 "nome_genero",
             ),
             cor_dados=normalizar_distribuicao(
-                Educador.objects.values(cor=F("cor_raca__nome"))
+                educadores_base.values(cor=F("cor_raca__nome"))
                 .annotate(qtd=Count("pk"))
                 .order_by("-qtd"),
                 "cor",
@@ -195,9 +406,11 @@ class ReportsView(TemplateView):
                 "tempo_atuacao",
                 ROTULOS_TEMPO_ATUACAO,
             ),
+            escolaridade_dados=escolaridade_dados,
         )
         return context
 
 
 # A URL importa uma função; ``as_view`` adapta a classe para esse contrato.
 reports = ReportsView.as_view()
+

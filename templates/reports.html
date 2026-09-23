@@ -99,16 +99,123 @@
 {% block content %}
 <div class="container-fluid px-0">
 
-  <!-- Banner de Cabeçalho -->
+{% if not exibir_dashboard %}
+  <!-- ======================================================== -->
+  <!-- TELA 1: SELEÇÃO E CATÁLOGO DE ATIVIDADES & EVENTOS       -->
+  <!-- ======================================================== -->
   <div class="report-header-banner mb-4 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
     <div>
       <div class="d-flex align-items-center gap-2 mb-1">
-        <span class="badge bg-white text-primary fw-bold px-3 py-1 rounded-pill">PAINEL ESTATÍSTICO</span>
+        <span class="badge bg-white text-primary fw-bold px-3 py-1 rounded-pill">GESTÃO PEDAGÓGICA</span>
+        <span class="badge bg-white text-dark fw-semibold px-2 py-1 rounded-pill"><i class="bi bi-calendar-event me-1 text-primary"></i>{{ atividades_catalogo|length }} Atividades Cadastradas</span>
       </div>
-      <h2 class="fw-bold m-0 text-white">Relatórios & Analytics EJA</h2>
-      <p class="m-0 opacity-85 fs-6 mt-1">Análise detalhada de participantes, escolas, abrangência geográfica e perfil demográfico.</p>
+      <h2 class="fw-bold m-0 text-white">Central de Atividades & Relatórios EJA</h2>
+      <p class="m-0 opacity-85 fs-6 mt-1">Consulte as atividades, cursos e palestras cadastrados. Selecione uma atividade para abrir o painel completo de indicadores, mapa de abrangência e inscritos.</p>
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 flex-wrap align-items-center">
+      <a href="?visao=geral" class="btn btn-warning btn-sm fw-bold shadow-sm px-3 py-2 text-dark">
+        <i class="bi bi-pie-chart-fill me-1"></i> Ver Relatório Geral (Todos)
+      </a>
+      <button type="button" class="btn btn-light btn-sm fw-semibold shadow-sm px-3 py-2" onclick="window.print()">
+        <i class="bi bi-printer me-1"></i> Imprimir / PDF
+      </button>
+    </div>
+  </div>
+
+  <!-- Barra de Filtros das Atividades Diretamente na Página Principal -->
+  <div class="card shadow-sm border-0 mb-4 bg-body-tertiary">
+    <div class="card-body p-3 p-md-4">
+      <div class="row g-3 align-items-end">
+        <div class="col-12 col-md-4">
+          <label for="catalogSearchInput" class="form-label small fw-bold text-muted mb-1">
+            <i class="bi bi-search me-1 text-primary"></i> Pesquisar Atividade:
+          </label>
+          <input type="text" id="catalogSearchInput" class="form-control" placeholder="Buscar por título, descrição ou local...">
+        </div>
+        <div class="col-12 col-sm-4 col-md-2">
+          <label for="catalogFilterTipo" class="form-label small fw-bold text-muted mb-1">📌 Tipo:</label>
+          <select id="catalogFilterTipo" class="form-select">
+            <option value="">Todos os Tipos</option>
+            <option value="evento">Evento</option>
+            <option value="palestra">Palestra</option>
+            <option value="curso">Curso</option>
+          </select>
+        </div>
+        <div class="col-12 col-sm-4 col-md-3">
+          <label for="catalogFilterModalidade" class="form-label small fw-bold text-muted mb-1">💻 Modalidade:</label>
+          <select id="catalogFilterModalidade" class="form-select">
+            <option value="">Todas as Modalidades</option>
+            <option value="presencial">Presencial</option>
+            <option value="online">On-line</option>
+            <option value="ambas">Ambas</option>
+          </select>
+        </div>
+        <div class="col-12 col-sm-4 col-md-3">
+          <label for="catalogFilterStatus" class="form-label small fw-bold text-muted mb-1">⚡ Status:</label>
+          <select id="catalogFilterStatus" class="form-select">
+            <option value="">Todos os Status</option>
+            <option value="abertas">Inscrições Abertas</option>
+            <option value="encerradas">Inscrições Encerradas</option>
+            <option value="ativa">Ativa</option>
+            <option value="inativa">Inativa</option>
+          </select>
+        </div>
+      </div>
+      <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top flex-wrap gap-2">
+        <span class="small fw-semibold text-muted" id="catalogCountInfo">Carregando atividades...</span>
+        <div class="d-flex gap-2">
+          <button type="button" id="btnResetCatalogFilters" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-x-circle me-1"></i> Limpar Filtros
+          </button>
+          <a href="?visao=geral" class="btn btn-sm btn-outline-primary fw-semibold">
+            <i class="bi bi-arrow-right-circle me-1"></i> Ir para Relatório Geral Consolidado
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Grade de Cards das Atividades -->
+  <div class="row g-4 mb-5" id="activitiesCatalogGrid">
+    <!-- Renderizado dinamicamente via JS com activitiesCatalog -->
+  </div>
+
+{% else %}
+  <!-- ======================================================== -->
+  <!-- TELA 2: DASHBOARD ANALÍTICO COMPLETO                     -->
+  <!-- ======================================================== -->
+  <div class="report-header-banner mb-4 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+    <div>
+      <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+        <a href="{% url 'reports' %}" class="btn btn-sm btn-light text-primary fw-bold px-3 py-1 rounded-pill shadow-sm">
+          <i class="bi bi-arrow-left me-1"></i> Selecionar Outra Atividade
+        </a>
+        {% if atividade_selecionada %}
+          <span class="badge bg-white text-primary fw-bold px-3 py-1 rounded-pill">{{ atividade_selecionada.tipo_label|upper }}</span>
+          <span class="badge bg-info text-white fw-bold px-3 py-1 rounded-pill">{{ atividade_selecionada.modalidade_label }}</span>
+        {% else %}
+          <span class="badge bg-white text-primary fw-bold px-3 py-1 rounded-pill">VISÃO GERAL CONSOLIDADA</span>
+        {% endif %}
+      </div>
+      <h2 class="fw-bold m-0 text-white mt-1">
+        {% if atividade_selecionada %}
+          {{ atividade_selecionada.titulo }}
+        {% else %}
+          Relatório Geral Consolidado (Todos os Participantes)
+        {% endif %}
+      </h2>
+      <p class="m-0 opacity-85 fs-6 mt-1">
+        {% if atividade_selecionada %}
+          Painel analítico detalhado com dados dos {{ total_educadores }} participantes inscritos nesta atividade.
+        {% else %}
+          Análise agregada de todos os {{ total_educadores }} educadores cadastrados no Pacto EJA.
+        {% endif %}
+      </p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap align-items-center">
+      <a href="{% url 'reports' %}" class="btn btn-warning btn-sm fw-bold shadow-sm px-3 py-2 text-dark">
+        <i class="bi bi-grid-fill me-1"></i> Lista de Atividades
+      </a>
       <button type="button" class="btn btn-light btn-sm fw-semibold shadow-sm px-3 py-2" onclick="window.print()">
         <i class="bi bi-printer me-1"></i> Imprimir / PDF
       </button>
@@ -117,6 +224,35 @@
       </button>
     </div>
   </div>
+
+  {% if atividade_selecionada %}
+  <!-- Banner Informativo da Atividade Ativa -->
+  <div class="card border-primary shadow-sm mb-4" style="background: linear-gradient(135deg, rgba(13, 110, 253, 0.08) 0%, rgba(13, 202, 240, 0.05) 100%);">
+    <div class="card-body p-3 p-md-4">
+      <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+        <div>
+          <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+            <span class="badge bg-primary text-uppercase">{{ atividade_selecionada.tipo_label }}</span>
+            <span class="badge bg-info-subtle text-info-emphasis">{{ atividade_selecionada.modalidade_label }}</span>
+            <span class="badge {% if atividade_selecionada.status_slug == 'abertas' %}bg-success{% elif atividade_selecionada.status_slug == 'encerradas' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">{{ atividade_selecionada.status_label }}</span>
+            <span class="badge bg-white text-primary border fw-bold"><i class="bi bi-people-fill me-1"></i>{{ atividade_selecionada.total_inscritos }} Inscrito(s)</span>
+          </div>
+          <p class="text-muted small m-0">{{ atividade_selecionada.descricao|truncatewords:30 }}</p>
+          <div class="d-flex flex-wrap gap-3 small text-secondary mt-2">
+            <span><i class="bi bi-calendar3 me-1 text-primary"></i><strong>Período:</strong> {{ atividade_selecionada.data_inicio }} a {{ atividade_selecionada.data_fim }}</span>
+            <span><i class="bi bi-geo-alt-fill me-1 text-danger"></i><strong>Local/Link:</strong> {{ atividade_selecionada.local_ou_link }}</span>
+            <span><i class="bi bi-ticket-perforated me-1 text-success"></i><strong>Vagas:</strong> {{ atividade_selecionada.vagas|default:"Ilimitadas" }} ({{ atividade_selecionada.vagas_restantes|default:"0" }} restantes)</span>
+          </div>
+        </div>
+        <div class="d-flex gap-2 align-items-center flex-shrink-0">
+          <a href="{% url 'reports' %}" class="btn btn-outline-primary btn-sm fw-semibold">
+            <i class="bi bi-arrow-left-right me-1"></i> Trocar Atividade
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 
   <!-- Cards de Métricas Principais (KPIs) -->
   <div class="row g-3 mb-4">
@@ -214,8 +350,13 @@
             <option value="municipio" selected>🏙️ Município de Atuação</option>
             <option value="escola">🏫 Escola</option>
             <option value="estado">🗺️ Estado</option>
+            {% if atividade_selecionada %}
+            <option value="atividade">🎯 Modalidade do Inscrito</option>
+            {% else %}
+            <option value="atividade">🎯 Atividade Inscrita</option>
+            {% endif %}
             <option value="funcao">💼 Função do Educador</option>
-            <option value="tempo">⏳ Tempo de Atuação na EJA</option>
+            <option value="escolaridade">🎓 Escolaridade</option>
             <option value="genero">👤 Gênero</option>
             <option value="cor">🎨 Cor / Raça</option>
           </select>
@@ -285,15 +426,15 @@
       </div>
     </div>
 
-    <!-- Card Tempo de Atuação -->
+    <!-- Card Escolaridade -->
     <div class="col-12 col-md-6 col-xl-4">
       <div class="card chart-card shadow-sm h-100 p-3">
         <div class="d-flex justify-content-between align-items-center mb-2">
-          <h6 class="fw-bold m-0"><i class="bi bi-clock-history me-2 text-success"></i>Tempo de Atuação EJA</h6>
-          <span class="badge bg-light text-dark fw-bold">Experiência</span>
+          <h6 class="fw-bold m-0"><i class="bi bi-mortarboard-fill me-2 text-success"></i>Escolaridade</h6>
+          <span class="badge bg-light text-dark fw-bold">Formação</span>
         </div>
         <div class="chart-container-sm">
-          <canvas id="tempoChart"></canvas>
+          <canvas id="escolaridadeChart"></canvas>
         </div>
       </div>
     </div>
@@ -371,7 +512,7 @@
       <!-- Barra de Filtros Específicos para a Tabela de Participantes -->
       <div id="participantFiltersContainer" class="bg-body-tertiary p-3 rounded-3 border">
         <div class="row g-2 align-items-center mb-2">
-          <div class="col-12 col-sm-6 col-md-2">
+          <div class="col-12 col-sm-6 col-md-3">
             <label for="filterEstado" class="form-label mb-1 small fw-semibold text-muted">🗺️ Estado:</label>
             <select id="filterEstado" class="form-select form-select-sm">
               <option value="">Todos os Estados</option>
@@ -386,20 +527,15 @@
           </div>
 
           <div class="col-12 col-sm-6 col-md-3">
-            <label for="filterEscola" class="form-label mb-1 small fw-semibold text-muted">🏫 Escola:</label>
-            <select id="filterEscola" class="form-select form-select-sm">
-              <option value="">Todas as Escolas</option>
+            <label for="filterRepresentante" class="form-label mb-1 small fw-semibold text-muted">🏛️ Rep. Undime/Consed:</label>
+            <select id="filterRepresentante" class="form-select form-select-sm">
+              <option value="">Todos</option>
+              <option value="Sim">Sim</option>
+              <option value="Não">Não</option>
             </select>
           </div>
 
-          <div class="col-12 col-sm-6 col-md-2">
-            <label for="filterFuncao" class="form-label mb-1 small fw-semibold text-muted">💼 Função:</label>
-            <select id="filterFuncao" class="form-select form-select-sm">
-              <option value="">Todas as Funções</option>
-            </select>
-          </div>
-
-          <div class="col-12 col-sm-6 col-md-2">
+          <div class="col-12 col-sm-6 col-md-3">
             <label for="filterGenero" class="form-label mb-1 small fw-semibold text-muted">👤 Gênero:</label>
             <select id="filterGenero" class="form-select form-select-sm">
               <option value="">Todos os Gêneros</option>
@@ -439,9 +575,13 @@
               <th>Nome Completo / Contato</th>
               <th>Documento (CPF)</th>
               <th>Município / UF</th>
-              <th>Escola</th>
-              <th>Função</th>
-              <th>Tempo EJA</th>
+              <th title="Você é representante do Estado pela Undime ou pelo Consed?">Rep. Undime/Consed</th>
+              {% if atividade_selecionada %}
+                <th>Modalidade do Inscrito</th>
+              {% else %}
+                <th>Atividades Inscritas</th>
+              {% endif %}
+              <th>Escolaridade</th>
               <th>Demografia</th>
             </tr>
           </thead>
@@ -489,6 +629,8 @@
     </div>
   </div>
 
+{% endif %}
+
 </div>
 {% endblock %}
 
@@ -496,17 +638,22 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 {{ participantes_detalhados|json_script:"participants-data" }}
+{{ atividades_catalogo|json_script:"activities-catalog-data" }}
+{{ atividade_dados|json_script:"activity-chart-data" }}
 {{ municipio_dados|json_script:"municipality-data" }}
 {{ escola_dados|json_script:"school-data" }}
 {{ estado_dados|json_script:"state-data" }}
 {{ genero_dados|json_script:"gender-data" }}
 {{ cor_dados|json_script:"race-color-data" }}
 {{ funcao_dados|json_script:"role-data" }}
+{{ escolaridade_dados|json_script:"education-level-data" }}
 {{ tempo_dados|json_script:"experience-time-data" }}
 <script>
   // Dataset de Participantes Detalhados
   const readJsonData = (elementId) => JSON.parse(document.getElementById(elementId).textContent);
   const participantsData = readJsonData("participants-data");
+  const activitiesCatalog = readJsonData("activities-catalog-data");
+  const selectedActivityId = "{% if atividade_selecionada %}{{ atividade_selecionada.id }}{% else %}{% endif %}";
 
   // Coordenadas Geográficas de Referência para Cidades do Brasil (Lat, Lng)
   const CITY_COORDINATES = {
@@ -567,10 +714,15 @@
     municipio: { title: "Distribuição por Município", data: readJsonData("municipality-data") },
     escola: { title: "Distribuição por Escola", data: readJsonData("school-data") },
     estado: { title: "Distribuição por Estado", data: readJsonData("state-data") },
+    atividade: {
+      title: selectedActivityId ? "Modalidade de Participação na Atividade" : "Distribuição por Atividade Inscrita",
+      data: readJsonData("activity-chart-data")
+    },
     genero: { title: "Distribuição por Gênero", data: readJsonData("gender-data") },
     cor: { title: "Distribuição por Cor / Raça", data: readJsonData("race-color-data") },
     funcao: { title: "Distribuição por Função", data: readJsonData("role-data") },
-    tempo: { title: "Distribuição por Tempo de Atuação", data: readJsonData("experience-time-data") }
+    escolaridade: { title: "Distribuição por Escolaridade", data: readJsonData("education-level-data") },
+    tempo: { title: "Distribuição por Escolaridade", data: readJsonData("education-level-data") }
   };
 
   let mainChartInstance = null;
@@ -808,23 +960,140 @@
     addOptions('filterGenero', generos);
   }
 
+  // Renderiza o Catálogo de Atividades na Página Inicial
+  function renderActivitiesCatalog() {
+    const grid = document.getElementById('activitiesCatalogGrid');
+    if (!grid) return;
+
+    const searchInput = document.getElementById('catalogSearchInput');
+    const tipoSelect = document.getElementById('catalogFilterTipo');
+    const modSelect = document.getElementById('catalogFilterModalidade');
+    const statusSelect = document.getElementById('catalogFilterStatus');
+    const countInfo = document.getElementById('catalogCountInfo');
+
+    const search = searchInput ? (searchInput.value || '').toLowerCase().trim() : '';
+    const tipo = tipoSelect ? tipoSelect.value : '';
+    const mod = modSelect ? modSelect.value : '';
+    const status = statusSelect ? statusSelect.value : '';
+
+    const filtered = (activitiesCatalog || []).filter(act => {
+      if (tipo && act.tipo !== tipo) return false;
+      if (mod && act.modalidade !== mod && act.modalidade !== 'ambas') return false;
+      if (status && act.status_slug !== status) return false;
+      if (search) {
+        const matchTitle = (act.titulo || '').toLowerCase().includes(search);
+        const matchDesc = (act.descricao || '').toLowerCase().includes(search);
+        const matchLocal = (act.local || '').toLowerCase().includes(search);
+        if (!matchTitle && !matchDesc && !matchLocal) return false;
+      }
+      return true;
+    });
+
+    if (countInfo) {
+      countInfo.innerHTML = `Exibindo <span class="badge bg-primary text-white">${filtered.length}</span> de ${activitiesCatalog.length} atividade(s)`;
+    }
+
+    grid.innerHTML = '';
+
+    if (filtered.length === 0) {
+      grid.innerHTML = `
+        <div class="col-12 text-center py-5">
+          <div class="text-muted">
+            <i class="bi bi-search fs-1 d-block mb-3 text-secondary opacity-50"></i>
+            <h5 class="fw-bold">Nenhuma atividade encontrada</h5>
+            <p class="small text-muted mb-3">Tente alterar os termos da busca ou limpar os filtros aplicados.</p>
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="resetCatalogFilters()">
+              <i class="bi bi-x-circle me-1"></i> Limpar Filtros
+            </button>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    filtered.forEach(act => {
+      const col = document.createElement('div');
+      col.className = 'col-12 col-md-6 col-xl-4';
+      
+      let statusBadgeClass = 'bg-secondary';
+      if (act.status_slug === 'abertas') statusBadgeClass = 'bg-success';
+      else if (act.status_slug === 'encerradas') statusBadgeClass = 'bg-warning text-dark';
+
+      col.innerHTML = `
+        <div class="card h-100 shadow-sm border-0 stat-card-widget" style="border-top: 4px solid #0d6efd !important;">
+          <div class="card-body p-4 d-flex flex-column justify-content-between">
+            <div>
+              <div class="d-flex align-items-center justify-content-between gap-2 mb-2 flex-wrap">
+                <div class="d-flex gap-1">
+                  <span class="badge bg-primary-subtle text-primary fw-bold text-uppercase px-2 py-1">${act.tipo_label}</span>
+                  <span class="badge bg-info-subtle text-info-emphasis px-2 py-1">${act.modalidade_label}</span>
+                </div>
+                <span class="badge ${statusBadgeClass} fw-bold px-2 py-1">${act.status_label}</span>
+              </div>
+
+              <h5 class="fw-bold text-dark mb-2 mt-1" style="font-size: 1.1rem; line-height: 1.35;">${act.titulo}</h5>
+              <p class="text-muted small mb-3" style="min-height: 48px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
+                ${act.descricao || 'Sem descrição cadastrada.'}
+              </p>
+
+              <div class="p-3 bg-light rounded-3 mb-3 small">
+                <div class="mb-1 text-truncate">
+                  <i class="bi bi-calendar3 me-2 text-primary"></i><strong>Período:</strong> ${act.data_inicio || 'A definir'} ${act.data_fim ? 'a ' + act.data_fim : ''}
+                </div>
+                <div class="mb-1 text-truncate">
+                  <i class="bi bi-geo-alt-fill me-2 text-danger"></i><strong>Local/Link:</strong> ${act.local_ou_link || 'Não informado'}
+                </div>
+                <div class="d-flex justify-content-between align-items-center pt-2 mt-2 border-top">
+                  <span><i class="bi bi-people-fill me-1 text-primary"></i><strong>${act.total_inscritos}</strong> inscritos</span>
+                  <span><i class="bi bi-ticket-perforated me-1 text-success"></i>${act.vagas ? act.vagas + ' vagas' : 'Ilimitadas'}</span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <a href="?atividade=${act.id}" class="btn btn-primary fw-bold w-100 py-2 shadow-sm d-flex align-items-center justify-content-center gap-2">
+                <i class="bi bi-bar-chart-line-fill"></i> Ver Relatório da Atividade
+              </a>
+            </div>
+          </div>
+        </div>
+      `;
+      grid.appendChild(col);
+    });
+  }
+
+  window.resetCatalogFilters = function() {
+    const searchInput = document.getElementById('catalogSearchInput');
+    const tipoSelect = document.getElementById('catalogFilterTipo');
+    const modSelect = document.getElementById('catalogFilterModalidade');
+    const statusSelect = document.getElementById('catalogFilterStatus');
+    if (searchInput) searchInput.value = '';
+    if (tipoSelect) tipoSelect.value = '';
+    if (modSelect) modSelect.value = '';
+    if (statusSelect) statusSelect.value = '';
+    renderActivitiesCatalog();
+  };
+
   // Aplica os filtros na lista de participantes
   function applyParticipantFilters() {
     currentPage = 1;
 
     const filterEstadoEl = document.getElementById('filterEstado');
+    const filterMunicipioEl = document.getElementById('filterMunicipio');
+    const filterRepEl = document.getElementById('filterRepresentante');
+    const filterGeneroEl = document.getElementById('filterGenero');
+    const searchInputEl = document.getElementById('participantSearchInput');
+
     const estado = filterEstadoEl ? filterEstadoEl.value : '';
-    const municipio = document.getElementById('filterMunicipio').value;
-    const escola = document.getElementById('filterEscola').value;
-    const funcao = document.getElementById('filterFuncao').value;
-    const genero = document.getElementById('filterGenero').value;
-    const searchTerm = document.getElementById('participantSearchInput').value.toLowerCase().trim();
+    const municipio = filterMunicipioEl ? filterMunicipioEl.value : '';
+    const representante = filterRepEl ? filterRepEl.value : '';
+    const genero = filterGeneroEl ? filterGeneroEl.value : '';
+    const searchTerm = searchInputEl ? searchInputEl.value.toLowerCase().trim() : '';
 
     currentFilteredParticipants = participantsData.filter(p => {
       if (estado && p.estado !== estado && p.sigla_uf !== estado) return false;
       if (municipio && p.municipio !== municipio) return false;
-      if (escola && p.escola !== escola) return false;
-      if (funcao && p.funcao !== funcao) return false;
+      if (representante && p.representante_undime_consed !== representante) return false;
       if (genero && p.genero !== genero) return false;
 
       if (searchTerm) {
@@ -832,10 +1101,10 @@
         const matchCpf = (p.cpf || '').toLowerCase().includes(searchTerm);
         const matchEmail = (p.email || '').toLowerCase().includes(searchTerm);
         const matchPhone = (p.telefone || '').toLowerCase().includes(searchTerm);
-        const matchSchool = (p.escola || '').toLowerCase().includes(searchTerm);
         const matchCity = (p.municipio || '').toLowerCase().includes(searchTerm);
         const matchState = (p.estado || '').toLowerCase().includes(searchTerm) || (p.sigla_uf || '').toLowerCase().includes(searchTerm);
-        if (!matchName && !matchCpf && !matchEmail && !matchPhone && !matchSchool && !matchCity && !matchState) {
+        const matchActivities = (p.atividades_nomes || []).some(n => (n || '').toLowerCase().includes(searchTerm));
+        if (!matchName && !matchCpf && !matchEmail && !matchPhone && !matchCity && !matchState && !matchActivities) {
           return false;
         }
       }
@@ -843,6 +1112,21 @@
     });
 
     renderParticipantsTable();
+  }
+
+  // Helper para formatar badges de atividades na tabela
+  function renderAtividadesBadges(atividades) {
+    if (!atividades || atividades.length === 0) {
+      return '<span class="badge bg-light text-muted border">Sem inscrições</span>';
+    }
+    return atividades.map(act => `
+      <div class="mb-1">
+        <span class="badge bg-primary-subtle text-primary border me-1" title="${act.tipo_label} - ${act.modalidade_label}">
+          <i class="bi bi-journal-check me-1"></i>${act.titulo}
+        </span>
+        <span class="badge bg-secondary-subtle text-secondary" style="font-size: 0.72rem;">${act.modalidade_label}</span>
+      </div>
+    `).join('');
   }
 
   // Renderiza a Tabela Detalhada com Paginação
@@ -876,6 +1160,30 @@
     pagedItems.forEach((p, idx) => {
       const realIndex = startIdx + idx + 1;
       const tr = document.createElement('tr');
+
+      let atividadeCellHtml = '';
+      if (selectedActivityId) {
+        atividadeCellHtml = `
+          <div>
+            <span class="badge bg-primary px-2 py-1 mb-1 d-inline-block">
+              <i class="bi bi-person-check-fill me-1"></i>${p.modalidade_inscrito_atual || 'Inscrito'}
+            </span>
+            ${p.data_inscricao_atual ? `<small class="text-muted d-block" style="font-size: 0.75rem;"><i class="bi bi-calendar-check me-1"></i>${p.data_inscricao_atual}</small>` : ''}
+          </div>
+        `;
+      } else {
+        atividadeCellHtml = renderAtividadesBadges(p.atividades);
+      }
+
+      let repBadge = '';
+      if (p.representante_undime_consed === 'Sim') {
+        repBadge = '<span class="badge bg-success-subtle text-success-emphasis border border-success-subtle"><i class="bi bi-check-circle-fill me-1"></i>Sim</span>';
+      } else if (p.representante_undime_consed === 'Não') {
+        repBadge = '<span class="badge bg-light text-secondary border">Não</span>';
+      } else {
+        repBadge = '<span class="badge bg-light text-muted border">Não informado</span>';
+      }
+
       tr.innerHTML = `
         <td class="ps-4 fw-bold text-muted">${realIndex}</td>
         <td>
@@ -892,9 +1200,9 @@
           <span class="fw-semibold">${p.municipio || 'Não informado'}</span>
           <small class="text-muted d-block">${p.estado || ''}</small>
         </td>
-        <td><span class="badge bg-light text-dark border">${p.escola || 'Não informado'}</span></td>
-        <td><span class="badge bg-info-subtle text-info-emphasis">${p.funcao || 'Não informado'}</span></td>
-        <td><span class="badge bg-secondary-subtle text-secondary-emphasis">${p.tempo || 'Não informado'}</span></td>
+        <td>${repBadge}</td>
+        <td>${atividadeCellHtml}</td>
+        <td><span class="badge bg-secondary-subtle text-secondary-emphasis">${p.escolaridade || 'Não informado'}</span></td>
         <td>
           <small class="d-block text-muted">Gênero: <strong>${p.genero}</strong></small>
           <small class="d-block text-muted">Cor/Raça: <strong>${p.cor}</strong></small>
@@ -1123,7 +1431,7 @@
     });
   }
 
-  // Exportação CSV 1: Participantes Detalhados
+  // Exportação CSV 1: Participantes Detalhados ou Inscritos da Atividade
   function exportFullParticipantsCSV() {
     const dataToExport = currentFilteredParticipants;
 
@@ -1132,30 +1440,62 @@
       return;
     }
 
-    let csvContent = "\uFEFFNome Completo;CPF;E-mail;Telefone;Município;Estado;Escola;Função;Tempo de Atuação EJA;Gênero;Cor / Raça\n";
+    const currentActivity = selectedActivityId ? (activitiesCatalog || []).find(a => a.id === parseInt(selectedActivityId, 10)) : null;
 
-    dataToExport.forEach(p => {
-      const cleanField = (val) => `"${(val || '').replace(/"/g, '""')}"`;
-      csvContent += [
-        cleanField(p.nome),
-        cleanField(p.cpf),
-        cleanField(p.email),
-        cleanField(p.telefone),
-        cleanField(p.municipio),
-        cleanField(p.estado),
-        cleanField(p.escola),
-        cleanField(p.funcao),
-        cleanField(p.tempo),
-        cleanField(p.genero),
-        cleanField(p.cor)
-      ].join(";") + "\n";
-    });
+    let csvContent = "";
+    let fileName = "";
+
+    if (currentActivity) {
+      csvContent = "\uFEFFNome Completo;CPF;E-mail;Telefone;Município;Estado;Escola;Rep. Undime / Consed;Atividade;Modalidade do Inscrito;Data da Inscrição;Escolaridade;Gênero;Cor / Raça\n";
+      dataToExport.forEach(p => {
+        const cleanField = (val) => `"${(val || '').replace(/"/g, '""')}"`;
+        csvContent += [
+          cleanField(p.nome),
+          cleanField(p.cpf),
+          cleanField(p.email),
+          cleanField(p.telefone),
+          cleanField(p.municipio),
+          cleanField(p.estado),
+          cleanField(p.escola),
+          cleanField(p.representante_undime_consed || "Não informado"),
+          cleanField(currentActivity.titulo),
+          cleanField(p.modalidade_inscrito_atual || "Não informado"),
+          cleanField(p.data_inscricao_atual || ""),
+          cleanField(p.escolaridade),
+          cleanField(p.genero),
+          cleanField(p.cor)
+        ].join(";") + "\n";
+      });
+      const cleanTitle = currentActivity.titulo.toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 30);
+      fileName = `inscritos_${cleanTitle}_${new Date().toISOString().slice(0,10)}.csv`;
+    } else {
+      csvContent = "\uFEFFNome Completo;CPF;E-mail;Telefone;Município;Estado;Escola;Rep. Undime / Consed;Atividades Inscritas;Escolaridade;Gênero;Cor / Raça\n";
+      dataToExport.forEach(p => {
+        const cleanField = (val) => `"${(val || '').replace(/"/g, '""')}"`;
+        const atividadesStr = (p.atividades_nomes || []).join(", ");
+        csvContent += [
+          cleanField(p.nome),
+          cleanField(p.cpf),
+          cleanField(p.email),
+          cleanField(p.telefone),
+          cleanField(p.municipio),
+          cleanField(p.estado),
+          cleanField(p.escola),
+          cleanField(p.representante_undime_consed || "Não informado"),
+          cleanField(atividadesStr),
+          cleanField(p.escolaridade),
+          cleanField(p.genero),
+          cleanField(p.cor)
+        ].join(";") + "\n";
+      });
+      fileName = `relatorio_participantes_pacto_eja_${new Date().toISOString().slice(0,10)}.csv`;
+    }
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `relatorio_participantes_pacto_eja_${new Date().toISOString().slice(0,10)}.csv`);
+    link.setAttribute("download", fileName);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -1211,16 +1551,17 @@
       });
     }
 
-    // 2. Tempo de Atuação
-    const tempoData = datasets.tempo.data;
-    if (tempoData.length) {
-      new Chart(document.getElementById('tempoChart').getContext('2d'), {
+    // 2. Escolaridade
+    const escolaridadeData = datasets.escolaridade ? datasets.escolaridade.data : [];
+    const escolaridadeCanvas = document.getElementById('escolaridadeChart');
+    if (escolaridadeCanvas && escolaridadeData.length) {
+      new Chart(escolaridadeCanvas.getContext('2d'), {
         type: 'bar',
         data: {
-          labels: tempoData.map(d => d.label),
+          labels: escolaridadeData.map(d => d.label),
           datasets: [{
             label: 'Educadores',
-            data: tempoData.map(d => d.qtd),
+            data: escolaridadeData.map(d => d.qtd),
             backgroundColor: '#198754',
             borderRadius: 6
           }]
@@ -1259,31 +1600,58 @@
     }
   }
 
-  // Event Listeners de Filtros da Tabela
-  if (document.getElementById('filterEstado')) {
-    document.getElementById('filterEstado').addEventListener('change', applyParticipantFilters);
+  // Event Listeners de Filtros do Catálogo de Atividades
+  const catalogSearchInput = document.getElementById('catalogSearchInput');
+  if (catalogSearchInput) catalogSearchInput.addEventListener('input', renderActivitiesCatalog);
+
+  const catalogFilterTipo = document.getElementById('catalogFilterTipo');
+  if (catalogFilterTipo) catalogFilterTipo.addEventListener('change', renderActivitiesCatalog);
+
+  const catalogFilterModalidade = document.getElementById('catalogFilterModalidade');
+  if (catalogFilterModalidade) catalogFilterModalidade.addEventListener('change', renderActivitiesCatalog);
+
+  const catalogFilterStatus = document.getElementById('catalogFilterStatus');
+  if (catalogFilterStatus) catalogFilterStatus.addEventListener('change', renderActivitiesCatalog);
+
+  const btnResetCatalogFilters = document.getElementById('btnResetCatalogFilters');
+  if (btnResetCatalogFilters) btnResetCatalogFilters.addEventListener('click', resetCatalogFilters);
+
+  // Event Listeners de Filtros da Tabela de Participantes
+  const filterEstado = document.getElementById('filterEstado');
+  if (filterEstado) filterEstado.addEventListener('change', applyParticipantFilters);
+
+  const filterMunicipio = document.getElementById('filterMunicipio');
+  if (filterMunicipio) filterMunicipio.addEventListener('change', applyParticipantFilters);
+
+  const filterRepresentante = document.getElementById('filterRepresentante');
+  if (filterRepresentante) filterRepresentante.addEventListener('change', applyParticipantFilters);
+
+  const filterGenero = document.getElementById('filterGenero');
+  if (filterGenero) filterGenero.addEventListener('change', applyParticipantFilters);
+
+  const participantSearchInput = document.getElementById('participantSearchInput');
+  if (participantSearchInput) participantSearchInput.addEventListener('input', applyParticipantFilters);
+
+  const selectPageSize = document.getElementById('selectPageSize');
+  if (selectPageSize) {
+    selectPageSize.addEventListener('change', (e) => {
+      pageSize = parseInt(e.target.value, 10) || 10;
+      currentPage = 1;
+      renderParticipantsTable();
+    });
   }
-  document.getElementById('filterMunicipio').addEventListener('change', applyParticipantFilters);
-  document.getElementById('filterEscola').addEventListener('change', applyParticipantFilters);
-  document.getElementById('filterFuncao').addEventListener('change', applyParticipantFilters);
-  document.getElementById('filterGenero').addEventListener('change', applyParticipantFilters);
-  document.getElementById('participantSearchInput').addEventListener('input', applyParticipantFilters);
 
-  document.getElementById('selectPageSize').addEventListener('change', (e) => {
-    pageSize = parseInt(e.target.value, 10) || 10;
-    currentPage = 1;
-    renderParticipantsTable();
-  });
-
-  document.getElementById('btnClearFilters').addEventListener('click', () => {
-    if (document.getElementById('filterEstado')) document.getElementById('filterEstado').value = '';
-    document.getElementById('filterMunicipio').value = '';
-    document.getElementById('filterEscola').value = '';
-    document.getElementById('filterFuncao').value = '';
-    document.getElementById('filterGenero').value = '';
-    document.getElementById('participantSearchInput').value = '';
-    applyParticipantFilters();
-  });
+  const btnClearFilters = document.getElementById('btnClearFilters');
+  if (btnClearFilters) {
+    btnClearFilters.addEventListener('click', () => {
+      if (document.getElementById('filterEstado')) document.getElementById('filterEstado').value = '';
+      if (document.getElementById('filterMunicipio')) document.getElementById('filterMunicipio').value = '';
+      if (document.getElementById('filterRepresentante')) document.getElementById('filterRepresentante').value = '';
+      if (document.getElementById('filterGenero')) document.getElementById('filterGenero').value = '';
+      if (document.getElementById('participantSearchInput')) document.getElementById('participantSearchInput').value = '';
+      applyParticipantFilters();
+    });
+  }
 
   // Event Listeners de Troca de Aba (Participantes Detalhados vs Resumo Agrupado)
   document.querySelectorAll('input[name="tableViewMode"]').forEach(radio => {
@@ -1296,38 +1664,51 @@
       const subtitle = document.getElementById('tableSubtitle');
 
       if (mode === 'participants') {
-        tableParticipants.classList.remove('d-none');
-        tableSummary.classList.add('d-none');
-        filtersContainer.classList.remove('d-none');
-        paginationFooter.classList.remove('d-none');
-        subtitle.innerText = 'Listagem geral dos participantes com paginação, filtros personalizados e exportação CSV granular.';
+        if (tableParticipants) tableParticipants.classList.remove('d-none');
+        if (tableSummary) tableSummary.classList.add('d-none');
+        if (filtersContainer) filtersContainer.classList.remove('d-none');
+        if (paginationFooter) paginationFooter.classList.remove('d-none');
+        if (subtitle) subtitle.innerText = 'Listagem geral dos participantes com paginação, filtros personalizados e exportação CSV granular.';
       } else {
-        tableParticipants.classList.add('d-none');
-        tableSummary.classList.remove('d-none');
-        filtersContainer.classList.add('d-none');
-        paginationFooter.classList.add('d-none');
-        subtitle.innerText = 'Resumo quantitativo e percentual por dimensão estatística.';
+        if (tableParticipants) tableParticipants.classList.add('d-none');
+        if (tableSummary) tableSummary.classList.remove('d-none');
+        if (filtersContainer) filtersContainer.classList.add('d-none');
+        if (paginationFooter) paginationFooter.classList.add('d-none');
+        if (subtitle) subtitle.innerText = 'Resumo quantitativo e percentual por dimensão estatística.';
       }
     });
   });
 
   // Event Listeners de Exportação CSV
-  document.getElementById('btnExportFullCsv').addEventListener('click', exportFullParticipantsCSV);
-  document.getElementById('btnExportSummaryCsv').addEventListener('click', exportSummaryCSV);
+  const btnExportFullCsv = document.getElementById('btnExportFullCsv');
+  if (btnExportFullCsv) btnExportFullCsv.addEventListener('click', exportFullParticipantsCSV);
+
+  const btnExportSummaryCsv = document.getElementById('btnExportSummaryCsv');
+  if (btnExportSummaryCsv) btnExportSummaryCsv.addEventListener('click', exportSummaryCSV);
 
   // Event Listeners do Gráfico Principal
-  document.getElementById('filterSelect').addEventListener('change', renderMainChart);
+  const filterSelect = document.getElementById('filterSelect');
+  if (filterSelect) filterSelect.addEventListener('change', renderMainChart);
+
   document.querySelectorAll('input[name="chartType"]').forEach(radio => {
     radio.addEventListener('change', renderMainChart);
   });
 
   // Inicialização no DOM
   document.addEventListener('DOMContentLoaded', () => {
-    populateFilterDropdowns();
-    applyParticipantFilters();
-    renderMainChart();
-    renderSecondaryCharts();
-    initBrazilMap();
+    // 1. Renderiza o catálogo de atividades da tela inicial
+    renderActivitiesCatalog();
+
+    // 2. Se o dashboard analítico estiver ativo no DOM, inicializa tabelas e gráficos
+    if (document.getElementById('tableParticipants')) {
+      populateFilterDropdowns();
+      applyParticipantFilters();
+    }
+    if (document.getElementById('mainChart')) {
+      renderMainChart();
+      renderSecondaryCharts();
+      initBrazilMap();
+    }
   });
 </script>
 {% endblock %}
