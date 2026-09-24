@@ -34,6 +34,7 @@ class ProgramacaoSalaCheckboxSelectMultiple(forms.CheckboxSelectMultiple):
             option["attrs"]["data-data-label"] = programacao.data.strftime("%d/%m/%Y")
             option["attrs"]["data-turno"] = programacao.turno
             option["attrs"]["data-turno-label"] = programacao.get_turno_display()
+            option["attrs"]["data-descricao"] = programacao.descricao
         return option
 
 

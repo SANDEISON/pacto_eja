@@ -93,6 +93,15 @@
     </div>
   </div>
 </div>
+<div class="modal fade" id="registration-program-details-modal" tabindex="-1" aria-labelledby="registration-program-details-title" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header"><h2 class="modal-title fs-5" id="registration-program-details-title" data-program-details-title>Detalhes da sala</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div>
+      <div class="modal-body"><p class="program-details-description mb-0" data-program-details-description></p></div>
+      <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button></div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
-{% block page_js %}{{ dados_rascunho|json_script:"registration-draft-data" }}<script src="{% static 'js/atividade_inscricao.js' %}?v=20260920-2"></script>{% endblock %}
+{% block page_js %}{{ dados_rascunho|json_script:"registration-draft-data" }}<script src="{% static 'js/atividade_inscricao.js' %}?v=20260924-2"></script>{% endblock %}

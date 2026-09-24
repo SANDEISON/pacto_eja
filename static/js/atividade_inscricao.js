@@ -18,6 +18,7 @@
   const mealsSection = form.querySelector("[data-registration-meals]");
   const programsSection = form.querySelector("[data-registration-programs]");
   const programRequiredModal = document.getElementById("registration-program-required-modal");
+  const programDetailsModal = document.getElementById("registration-program-details-modal");
   const programThemeFilter = form.querySelector("[data-registration-program-theme-filter]");
   const programDateFilter = form.querySelector("[data-registration-program-date-filter]");
   const workChoiceStep = form.querySelector('[data-registration-step="decisao"]');
@@ -133,6 +134,18 @@
       const option = programOptionWrapper(field);
       if (!option || option === optionsRoot) return;
       option.classList.add("program-option-wrapper");
+      if (field.dataset.descricao?.trim()) {
+        option.classList.add("has-program-details");
+        const detailsButton = document.createElement("button");
+        detailsButton.type = "button";
+        detailsButton.className = "btn btn-sm btn-outline-primary program-details-button";
+        detailsButton.dataset.programDetails = "";
+        detailsButton.dataset.programInputId = field.id;
+        detailsButton.textContent = "Ver detalhes";
+        const roomName = option.querySelector(".program-card-heading strong")?.textContent?.trim();
+        detailsButton.setAttribute("aria-label", `Ver detalhes de ${roomName || "sala"}`);
+        option.append(detailsButton);
+      }
       const dayKey = field.dataset.data;
       const periodKey = `${dayKey}-${field.dataset.turno}`;
       if (!days.has(dayKey)) {
@@ -164,6 +177,19 @@
     optionsRoot.replaceChildren(...[...days.values()].map((day) => day.element));
     optionsRoot.dataset.grouped = "true";
   }
+
+  programsSection?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-program-details]");
+    if (!button || !programDetailsModal) return;
+    const field = document.getElementById(button.dataset.programInputId);
+    if (!field) return;
+    const title = programDetailsModal.querySelector("[data-program-details-title]");
+    const description = programDetailsModal.querySelector("[data-program-details-description]");
+    const roomName = programOptionWrapper(field)?.querySelector(".program-card-heading strong")?.textContent;
+    if (title) title.textContent = roomName || "Detalhes da sala";
+    if (description) description.textContent = field.dataset.descricao?.trim() || "Descrição não informada.";
+    if (window.bootstrap?.Modal) window.bootstrap.Modal.getOrCreateInstance(programDetailsModal).show();
+  });
 
   function updateProgramGroupVisibility() {
     programsSection?.querySelectorAll("[data-program-period]").forEach((period) => {

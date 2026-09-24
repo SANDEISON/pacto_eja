@@ -79,7 +79,10 @@ body { font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; col
 .registration-program-period { display: grid; gap: .6rem; }
 .registration-program-period > h6 { margin: 0; color: #526476; font-size: .8rem; font-weight: 800; text-transform: uppercase; }
 .registration-program-period-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
-.registration-program-period-options > .program-option-wrapper { min-width: 0; }
+.registration-program-period-options > .program-option-wrapper { position: relative; min-width: 0; }
+.has-program-details .program-card-content { padding-bottom: 3.7rem; }
+.program-details-button { position: absolute; z-index: 2; bottom: .9rem; right: .9rem; }
+.program-details-description { white-space: pre-wrap; overflow-wrap: anywhere; }
 .registration-programs .certificate-options label { position: relative; display: block; height: 100%; margin: 0; cursor: pointer; }
 .registration-programs input[type="checkbox"] { position: absolute; z-index: 1; top: .9rem; right: .9rem; width: 1.1rem; height: 1.1rem; margin: 0; accent-color: var(--pacto-blue); cursor: pointer; }
 .program-card-content { display: grid; height: 100%; gap: .7rem; padding: .9rem 2.7rem .9rem .9rem; border: 1px solid #d9e4ee; border-radius: 11px; background: #fff; box-shadow: 0 2px 7px rgba(29, 43, 71, .04); transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease; }

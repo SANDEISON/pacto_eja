@@ -430,6 +430,8 @@ class AtividadeFlowTests(TestCase):
             data=timezone.localdate(self.atividade.data_inicio) + timedelta(days=1),
         )
         presencial = self.create_programacao(ProgramacaoSala.Modalidade.PRESENCIAL, "Auditório 1")
+        online_um.descricao = 'Descrição da sala com <conteúdo> & "informações".'
+        online_um.save(update_fields=("descricao",))
         self.atividade.programacoes.set((online_um, online_dois, presencial))
         url = reverse("atividade_inscricao", args=[self.atividade.pk])
 
@@ -450,6 +452,9 @@ class AtividadeFlowTests(TestCase):
             "Selecione pelo menos uma sala da modalidade escolhida e, no máximo, uma por turno em cada data.",
         )
         self.assertContains(page, 'class="program-card-content"', count=3)
+        self.assertContains(page, 'data-descricao="Descrição da sala com &lt;conteúdo&gt; &amp; &quot;informações&quot;."')
+        self.assertContains(page, 'id="registration-program-details-modal"')
+        self.assertNotContains(page, 'data-descricao="Descrição da sala com <conteúdo>')
         self.assertContains(page, 'data-registration-programs-count')
         self.assertContains(page, 'name="dados-programacoes"', count=3)
         self.assertContains(page, 'data-modalidade="online"', count=2)
