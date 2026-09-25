@@ -83,14 +83,46 @@ def dados_basicos_educador(educador):
     }
 
 
+def obter_cidade_educador(educador, vinculo=None):
+    """Retorna a cidade vinculada à escola ou a cidade residencial do educador."""
+    if vinculo and getattr(vinculo, "cidade", None):
+        return vinculo.cidade
+    try:
+        endereco = getattr(educador, "endereco", None)
+        if endereco and getattr(endereco, "cidade", None):
+            return endereco.cidade
+    except Exception:
+        pass
+    return None
+
+
 def registro_participante(educador, vinculo=None):
     """Monta uma linha do relatório detalhado, com ou sem vínculo escolar."""
     registro = dados_basicos_educador(educador)
+    cidade = obter_cidade_educador(educador, vinculo)
+
+    if cidade:
+        nome_cidade = cidade.nome_cidade or "Não informado"
+        estado_nome = (
+            cidade.estado.nome_estado
+            if getattr(cidade, "estado", None)
+            else "Não informado"
+        )
+        sigla_uf = (
+            cidade.estado.sigla
+            if getattr(cidade, "estado", None) and cidade.estado.sigla
+            else ""
+        )
+    else:
+        nome_cidade = "Não informado"
+        estado_nome = "Não informado"
+        sigla_uf = ""
+
     if not vinculo:
         registro.update(
-            municipio="Não informado",
-            estado="Não informado",
-            sigla_uf="",
+            municipio=nome_cidade,
+            estado=estado_nome,
+            sigla_uf=sigla_uf,
             escola="Não informado",
             funcao="Não informado",
             tempo="Não informado",
@@ -98,11 +130,11 @@ def registro_participante(educador, vinculo=None):
         return registro
 
     registro.update(
-        municipio=vinculo.cidade.nome_cidade or "Não informado",
-        estado=vinculo.cidade.estado.nome_estado or "Não informado",
-        sigla_uf=vinculo.cidade.estado.sigla or "",
-        escola=vinculo.escola.nome or "Não informado",
-        funcao=vinculo.funcao.nome if vinculo.funcao else "Não informado",
+        municipio=nome_cidade,
+        estado=estado_nome,
+        sigla_uf=sigla_uf,
+        escola=vinculo.escola.nome if getattr(vinculo, "escola", None) else "Não informado",
+        funcao=vinculo.funcao.nome if getattr(vinculo, "funcao", None) else "Não informado",
         tempo=ROTULOS_TEMPO_ATUACAO.get(
             vinculo.tempo_atuacao,
             vinculo.tempo_atuacao or "Não informado",
@@ -117,7 +149,7 @@ def listar_participantes_detalhados(educadores_qs=None, atividade_selecionada_id
         educadores_qs = Educador.objects.all()
 
     educadores = educadores_qs.select_related(
-        "usuario", "genero", "cor_raca"
+        "usuario", "genero", "cor_raca", "endereco__cidade__estado"
     ).prefetch_related(
         "formacoes__nivel",
         "funcoes__educador_escola__cidade__estado",
@@ -322,24 +354,8 @@ class ReportsView(TemplateView):
                 "nome_atividade",
             )
 
-        participantes_por_municipio = (
-            vinculos.values(
-                municipio=F("cidade__nome_cidade"),
-                estado_sigla=F("cidade__estado__sigla"),
-            )
-            .annotate(qtd=Count("pk"))
-            .order_by("-qtd")
-        )
         participantes_por_escola = (
             vinculos.values(nome_escola=F("escola__nome"))
-            .annotate(qtd=Count("pk"))
-            .order_by("-qtd")
-        )
-        participantes_por_estado = (
-            vinculos.values(
-                estado=F("cidade__estado__nome_estado"),
-                sigla=F("cidade__estado__sigla"),
-            )
             .annotate(qtd=Count("pk"))
             .order_by("-qtd")
         )
@@ -354,6 +370,51 @@ class ReportsView(TemplateView):
             for nivel_nome, qtd in contagem_escolaridade.most_common()
         ]
 
+        participantes_detalhados = listar_participantes_detalhados(
+            educadores_qs=educadores_base,
+            atividade_selecionada_id=atividade_selecionada.id if atividade_selecionada else None,
+        )
+
+        contagem_municipios = Counter()
+        municipio_estados = {}
+        contagem_estados = Counter()
+        estado_siglas = {}
+
+        for p in participantes_detalhados:
+            m = p.get("municipio") or "Não informado"
+            contagem_municipios[m] += 1
+            if m != "Não informado" and m not in municipio_estados:
+                municipio_estados[m] = p.get("sigla_uf") or ""
+
+            e = p.get("estado") or "Não informado"
+            contagem_estados[e] += 1
+            if e != "Não informado" and e not in estado_siglas:
+                estado_siglas[e] = p.get("sigla_uf") or ""
+
+        municipio_dados = [
+            {
+                "label": m,
+                "qtd": qtd,
+                "state": municipio_estados.get(m, ""),
+            }
+            for m, qtd in contagem_municipios.most_common()
+        ]
+
+        estado_dados = [
+            {
+                "label": e,
+                "qtd": qtd,
+                "sigla": estado_siglas.get(e, ""),
+            }
+            for e, qtd in contagem_estados.most_common()
+        ]
+
+        total_municipios = len({
+            p["municipio"]
+            for p in participantes_detalhados
+            if p.get("municipio") and p["municipio"] != "Não informado"
+        })
+
         context.update(
             exibir_dashboard=exibir_dashboard,
             visao_geral=visao_geral,
@@ -362,25 +423,14 @@ class ReportsView(TemplateView):
             total_educadores=educadores_base.count(),
             total_vinculos=vinculos.count(),
             total_escolas=vinculos.values("escola").distinct().count(),
-            total_municipios=vinculos.values("cidade").distinct().count(),
-            participantes_detalhados=listar_participantes_detalhados(
-                educadores_qs=educadores_base,
-                atividade_selecionada_id=atividade_selecionada.id if atividade_selecionada else None,
-            ),
+            total_municipios=total_municipios,
+            participantes_detalhados=participantes_detalhados,
             atividade_dados=atividade_dados,
-            municipio_dados=normalizar_distribuicao(
-                participantes_por_municipio,
-                "municipio",
-                campos_extras={"estado_sigla": "state"},
-            ),
+            municipio_dados=municipio_dados,
             escola_dados=normalizar_distribuicao(
                 participantes_por_escola, "nome_escola"
             ),
-            estado_dados=normalizar_distribuicao(
-                participantes_por_estado,
-                "estado",
-                campos_extras={"sigla": "sigla"},
-            ),
+            estado_dados=estado_dados,
             genero_dados=normalizar_distribuicao(
                 educadores_base.values(nome_genero=F("genero__nome"))
                 .annotate(qtd=Count("pk"))
