@@ -1,3 +1,4 @@
+from django.db.models import Case, IntegerField, Value, When
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 
@@ -23,5 +24,11 @@ def escolas_por_cidade(request):
     )
     if busca:
         escolas = escolas.filter(nome__icontains=busca)
-    results = list(escolas.order_by("nome").values("id_escola", "nome")[:100])
+    # Mantém a opção Outra visível mesmo em municípios com mais de 100 escolas.
+    prioridade_outra = Case(
+        When(id_escola=9_000_000_000 + cidade.codigo_ibge, then=Value(0)),
+        default=Value(1),
+        output_field=IntegerField(),
+    )
+    results = list(escolas.order_by(prioridade_outra, "nome").values("id_escola", "nome")[:100])
     return JsonResponse({"results": results})

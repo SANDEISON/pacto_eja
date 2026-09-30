@@ -193,6 +193,35 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         self.assertEqual(cadastro.tempo_atuacao, "4_6_anos")
         self.assertFalse(CadastroPendente.objects.exists())
 
+    def test_other_school_is_listed_before_the_result_limit(self):
+        Escola.objects.bulk_create([
+            Escola(
+                id_escola=28000000 + index,
+                nome=f"Escola {index:03d}",
+                id_municipio=self.cidade.codigo_ibge,
+                sigla_uf=self.estado.sigla,
+            )
+            for index in range(105)
+        ])
+        response = self.client.get(
+            reverse("cadastro_educador_escolas"), {"cidade": self.cidade.pk}
+        )
+        results = response.json()["results"]
+        self.assertEqual(len(results), 100)
+        self.assertEqual(results[0], {
+            "id_escola": 9_000_000_000 + self.cidade.codigo_ibge,
+            "nome": "Outra",
+        })
+
+    def test_registration_can_use_other_school(self):
+        outra = Escola.objects.get(pk=9_000_000_000 + self.cidade.codigo_ibge)
+        self.submit_registration(self.registration_data(
+            atuacoes_json=json.dumps([self.assignment_data(escola_id=outra.pk)])
+        ))
+        cadastro = EducadorEscola.objects.get(funcao_educador__educador__cpf="52998224725")
+        self.assertEqual(cadastro.escola, outra)
+        self.assertEqual(cadastro.cidade, self.cidade)
+
     def test_registration_allows_requesting_both_certificates(self):
         self.submit_registration(
             self.registration_data(

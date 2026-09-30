@@ -68,6 +68,14 @@ Os models são separados por assunto e exportados por `core.models`. O mesmo pad
 
 ### Relações principais do domínio
 
+A migração `0039_escola_outra_por_municipio` cria a escola **Outra** em cada município
+cadastrado com código IBGE. Essa opção aparece no início da lista de escolas do
+cadastro de educadores e pode ser usada para salvar a atuação normalmente.
+Para carregar esses dados no servidor, atualize o código e execute
+`python manage.py migrate` no ambiente da aplicação. Os IDs dessas opções são
+sintéticos (`9000000000 + código IBGE do município`); os demais dados opcionais
+da escola ficam em branco.
+
 - `Atividade` concentra período, modalidade, vagas e configuração da submissão;
 - `ProgramacaoSala` associa sala, temática, turno e modalidade; uma atividade oferece uma ou mais programações;
 - `Inscricao` liga usuário e atividade e registra modalidade, programações e refeições escolhidas;
