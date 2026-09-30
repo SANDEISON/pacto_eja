@@ -128,52 +128,63 @@ def recover_password(request):
 
 
 def signup(request):
-    """Guarda a conta como pendente e envia a confirmação do e-mail."""
+    """Cria a conta diretamente enquanto a confirmação por e-mail está suspensa."""
     if request.user.is_authenticated:
         return redirect("dashboard")
     form = SignUpForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
-        CadastroPendente.objects.filter(
-            tipo=CadastroPendente.Tipo.CONTA,
-            criado_em__lt=timezone.now() - timedelta(seconds=VALIDADE_CONFIRMACAO_SEGUNDOS),
-        ).delete()
-        usuario_nao_salvo = form.save(commit=False)
-        pendente = CadastroPendente.objects.create(
-            tipo=CadastroPendente.Tipo.CONTA,
-            cpf=form.cleaned_data["cpf"],
-            email=form.cleaned_data["email"],
-            dados={"full_name": form.cleaned_data["full_name"].strip()},
-            senha_hash=usuario_nao_salvo.password,
-        )
-        token = signing.dumps(
-            {"cadastro_id": str(pendente.pk)},
-            salt=SALT_CONFIRMACAO_CONTA,
-            compress=True,
-        )
-        confirmacao_url = request.build_absolute_uri(
-            f'{reverse("accounts:signup_confirm")}?token={token}'
-        )
+        # Confirmação por e-mail suspensa temporariamente pelo limite do Gmail.
         try:
-            send_mail(
-                subject="Confirme sua conta — Pacto EJA",
-                message=(
-                    f"Olá, {pendente.dados['full_name']}!\n\n"
-                    "Para confirmar seu e-mail e criar sua conta no Pacto EJA, "
-                    "acesse o link abaixo:\n\n"
-                    f"{confirmacao_url}\n\n"
-                    "O link é válido por 24 horas. Se você não solicitou esta conta, "
-                    "ignore esta mensagem."
-                ),
-                from_email=None,
-                recipient_list=[pendente.email],
-                fail_silently=False,
-            )
-        except Exception:
-            pendente.delete()
-            logger.exception("Falha ao enviar e-mail de confirmação da conta")
-            form.add_error("email", "Não foi possível enviar a confirmação. Confira o e-mail e tente novamente.")
+            with transaction.atomic():
+                form.save()
+        except IntegrityError:
+            form.add_error(None, "Não foi possível concluir o cadastro. Verifique se os dados já estão em uso.")
         else:
-            return redirect("accounts:signup_confirmation_sent")
+            messages.success(request, "Sua conta foi criada e já pode ser acessada.")
+            return redirect("accounts:signin")
+
+        # Fluxo de confirmação preservado para reativação após resolver o limite.
+        # CadastroPendente.objects.filter(
+        #     tipo=CadastroPendente.Tipo.CONTA,
+        #     criado_em__lt=timezone.now() - timedelta(seconds=VALIDADE_CONFIRMACAO_SEGUNDOS),
+        # ).delete()
+        # usuario_nao_salvo = form.save(commit=False)
+        # pendente = CadastroPendente.objects.create(
+        #     tipo=CadastroPendente.Tipo.CONTA,
+        #     cpf=form.cleaned_data["cpf"],
+        #     email=form.cleaned_data["email"],
+        #     dados={"full_name": form.cleaned_data["full_name"].strip()},
+        #     senha_hash=usuario_nao_salvo.password,
+        # )
+        # token = signing.dumps(
+        #     {"cadastro_id": str(pendente.pk)},
+        #     salt=SALT_CONFIRMACAO_CONTA,
+        #     compress=True,
+        # )
+        # confirmacao_url = request.build_absolute_uri(
+        #     f'{reverse("accounts:signup_confirm")}?token={token}'
+        # )
+        # try:
+        #     send_mail(
+        #         subject="Confirme sua conta — Pacto EJA",
+        #         message=(
+        #             f"Olá, {pendente.dados['full_name']}!\n\n"
+        #             "Para confirmar seu e-mail e criar sua conta no Pacto EJA, "
+        #             "acesse o link abaixo:\n\n"
+        #             f"{confirmacao_url}\n\n"
+        #             "O link é válido por 24 horas. Se você não solicitou esta conta, "
+        #             "ignore esta mensagem."
+        #         ),
+        #         from_email=None,
+        #         recipient_list=[pendente.email],
+        #         fail_silently=False,
+        #     )
+        # except Exception:
+        #     pendente.delete()
+        #     logger.exception("Falha ao enviar e-mail de confirmação da conta")
+        #     form.add_error(None, "Não foi possível enviar a confirmação por e-mail. O cadastro não foi concluído. Tente novamente mais tarde; se o problema persistir, entre em contato com a coordenação.")
+        # else:
+        #     return redirect("accounts:signup_confirmation_sent")
     return render(request, "accounts/signup.html", {"form": form})
 
 

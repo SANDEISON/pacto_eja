@@ -35,8 +35,9 @@
             {% include "management/_field.html" with field=form.cpf column="col-12 col-md-5" %}
             <div class="col-12 col-md-7 d-flex align-items-end"><div id="cpf-status" class="lookup-status" aria-live="polite"><i class="bi bi-search"></i><span>Digite o CPF completo para consultar.</span></div></div>
             {% include "management/_field.html" with field=form.nome_completo column="col-12" %}
-            {% include "management/_field.html" with field=form.data_nascimento column="col-12 col-md-5" %}
-            {% include "management/_field.html" with field=form.email column="col-12 col-md-7" %}
+            {% include "management/_field.html" with field=form.data_nascimento column="col-12" %}
+            {% include "management/_field.html" with field=form.email column="col-12 col-md-6" %}
+            {% include "management/_field.html" with field=form.email_confirmacao column="col-12 col-md-6" %}
             {% include "management/_field.html" with field=form.cor_raca column="col-12 col-md-6" %}
             {% include "management/_field.html" with field=form.genero column="col-12 col-md-6" %}
             <div class="col-12"><div class="identification-subheading"><i class="bi bi-geo-alt"></i><div><h4>Endereço</h4><p>Informe seu endereço residencial completo.</p></div></div></div>

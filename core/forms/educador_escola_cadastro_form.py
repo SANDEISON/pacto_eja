@@ -40,6 +40,11 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
         ),
     )
     email = forms.EmailField(label="E-mail", widget=forms.EmailInput(attrs={"autocomplete": "email"}))
+    email_confirmacao = forms.EmailField(
+        label="Confirme o e-mail",
+        widget=forms.EmailInput(attrs={"autocomplete": "off"}),
+        help_text="Digite novamente o mesmo endereço de e-mail.",
+    )
     data_nascimento = forms.DateField(
         label="Data de nascimento",
         validators=(validate_birth_date,),
@@ -199,13 +204,17 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
         cleaned_data = super().clean()
         educador = self.educador_encontrado
 
+        email = (cleaned_data.get("email") or "").strip().lower()
+        email_confirmacao = (cleaned_data.get("email_confirmacao") or "").strip().lower()
+        if email and email_confirmacao and email != email_confirmacao:
+            self.add_error("email_confirmacao", "Os e-mails informados não são iguais.")
+
         if educador:
             usuario = educador.usuario
             cleaned_data["nome_completo"] = educador.nome_completo or usuario.get_full_name() or usuario.first_name or usuario.username
             cleaned_data["email"] = usuario.email
         else:
             nome_completo = (cleaned_data.get("nome_completo") or "").strip()
-            email = (cleaned_data.get("email") or "").strip().lower()
             if email and User.objects.filter(email__iexact=email).exists():
                 self.add_error("email", "Já existe um usuário cadastrado com este e-mail.")
             if User.objects.filter(username=cleaned_data.get("cpf", "")).exists():

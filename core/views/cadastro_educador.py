@@ -54,53 +54,52 @@ def _carregar_cadastro_pendente(token):
 
 @require_http_methods(["GET", "POST"])
 def cadastro_educador(request):
-    """Valida o formulário e confirma o e-mail antes de criar uma nova conta."""
+    """Salva o cadastro diretamente enquanto a confirmação por e-mail está suspensa."""
     form = EducadorEscolaCadastroForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
-        # Perfis existentes continuam apenas adicionando vínculos; não há uma nova
-        # conta ou um novo endereço de e-mail a confirmar nesse caso.
-        if form.educador_encontrado is not None:
-            try:
-                form.save_cadastro()
-            except IntegrityError:
-                form.add_error(None, "Não foi possível concluir o cadastro. Verifique se os dados já estão em uso.")
-            else:
-                return redirect("cadastro_educador_success")
-            return render(request, "cadastro_educadores/form.html", {"form": form})
-
-        CadastroPendente.objects.filter(
-            criado_em__lt=timezone.now() - timedelta(seconds=VALIDADE_CONFIRMACAO_SEGUNDOS)
-        ).delete()
-        pendente = CadastroPendente.objects.create(
-            cpf=form.cleaned_data["cpf"],
-            email=form.cleaned_data["email"],
-            dados=_serializar_post(request.POST),
-        )
-        token = _token_confirmacao(pendente)
-        confirmacao_url = request.build_absolute_uri(
-            f'{reverse("cadastro_educador_confirmar_email")}?token={token}'
-        )
+        # Confirmação por e-mail suspensa temporariamente pelo limite do Gmail.
+        # A mesma rotina cria novos perfis ou adiciona vínculos aos existentes.
         try:
-            send_mail(
-                subject="Confirme seu cadastro — Pacto EJA",
-                message=(
-                    f"Olá, {form.cleaned_data['nome_completo']}!\n\n"
-                    "Recebemos uma solicitação de cadastro no Pacto EJA. "
-                    "Para confirmar seu e-mail e concluir o cadastro, acesse o link abaixo:\n\n"
-                    f"{confirmacao_url}\n\n"
-                    "O link é válido por 24 horas. Se você não solicitou este cadastro, "
-                    "ignore esta mensagem."
-                ),
-                from_email=None,
-                recipient_list=[pendente.email],
-                fail_silently=False,
-            )
-        except Exception:
-            pendente.delete()
-            logger.exception("Falha ao enviar e-mail de confirmação do cadastro")
-            form.add_error("email", "Não foi possível enviar a confirmação. Confira o e-mail e tente novamente.")
+            form.save_cadastro()
+        except IntegrityError:
+            form.add_error(None, "Não foi possível concluir o cadastro. Verifique se os dados já estão em uso.")
         else:
-            return redirect("cadastro_educador_confirmacao_enviada")
+            return redirect("cadastro_educador_success")
+
+        # Fluxo de confirmação preservado para reativação após resolver o limite.
+        # CadastroPendente.objects.filter(
+        #     criado_em__lt=timezone.now() - timedelta(seconds=VALIDADE_CONFIRMACAO_SEGUNDOS)
+        # ).delete()
+        # pendente = CadastroPendente.objects.create(
+        #     cpf=form.cleaned_data["cpf"],
+        #     email=form.cleaned_data["email"],
+        #     dados=_serializar_post(request.POST),
+        # )
+        # token = _token_confirmacao(pendente)
+        # confirmacao_url = request.build_absolute_uri(
+        #     f'{reverse("cadastro_educador_confirmar_email")}?token={token}'
+        # )
+        # try:
+        #     send_mail(
+        #         subject="Confirme seu cadastro — Pacto EJA",
+        #         message=(
+        #             f"Olá, {form.cleaned_data['nome_completo']}!\n\n"
+        #             "Recebemos uma solicitação de cadastro no Pacto EJA. "
+        #             "Para confirmar seu e-mail e concluir o cadastro, acesse o link abaixo:\n\n"
+        #             f"{confirmacao_url}\n\n"
+        #             "O link é válido por 24 horas. Se você não solicitou este cadastro, "
+        #             "ignore esta mensagem."
+        #         ),
+        #         from_email=None,
+        #         recipient_list=[pendente.email],
+        #         fail_silently=False,
+        #     )
+        # except Exception:
+        #     pendente.delete()
+        #     logger.exception("Falha ao enviar e-mail de confirmação do cadastro")
+        #     form.add_error(None, "Não foi possível enviar a confirmação por e-mail. O cadastro não foi concluído. Tente novamente mais tarde; se o problema persistir, entre em contato com a coordenação.")
+        # else:
+        #     return redirect("cadastro_educador_confirmacao_enviada")
     return render(request, "cadastro_educadores/form.html", {"form": form})
 
 

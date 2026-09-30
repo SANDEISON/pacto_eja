@@ -1,5 +1,4 @@
 from unittest.mock import patch
-from urllib.parse import parse_qs, urlparse
 
 from django.core.cache import cache
 from django.core import mail
@@ -20,7 +19,7 @@ class AuthenticationTests(TestCase):
         self.assertRedirects(response, f"{reverse('accounts:signin')}?next={reverse('dashboard')}")
 
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
-    def test_signup_creates_user_only_after_email_confirmation(self):
+    def test_signup_creates_user_without_email_confirmation(self):
         response = self.client.post(
             reverse("accounts:signup"),
             {
@@ -31,21 +30,6 @@ class AuthenticationTests(TestCase):
                 "password2": "SenhaForte2026!",
             },
         )
-        self.assertRedirects(response, reverse("accounts:signup_confirmation_sent"))
-        self.assertFalse(get_user_model().objects.filter(username="52998224725").exists())
-        self.assertNotIn("_auth_user_id", self.client.session)
-        self.assertEqual(len(mail.outbox), 1)
-        confirmation_url = next(
-            line for line in mail.outbox[0].body.splitlines() if line.startswith("http")
-        )
-        token = parse_qs(urlparse(confirmation_url).query)["token"][0]
-
-        confirmation_page = self.client.get(
-            reverse("accounts:signup_confirm"), {"token": token}
-        )
-        self.assertContains(confirmation_page, "Confirmar e criar conta")
-        response = self.client.post(reverse("accounts:signup_confirm"), {"token": token})
-
         self.assertRedirects(response, reverse("accounts:signin"))
         user = get_user_model().objects.get(username="52998224725")
         self.assertEqual(user.first_name, "Maria")
@@ -55,29 +39,30 @@ class AuthenticationTests(TestCase):
         self.assertTrue(user.check_password("SenhaForte2026!"))
         self.assertNotIn("_auth_user_id", self.client.session)
         self.assertFalse(CadastroPendente.objects.exists())
-        self.assertEqual(
-            self.client.post(reverse("accounts:signup_confirm"), {"token": token}).status_code,
-            400,
+        self.assertEqual(mail.outbox, [])
+        login_response = self.client.post(
+            reverse("accounts:signin"),
+            {"username": "529.982.247-25", "password": "SenhaForte2026!"},
         )
+        self.assertRedirects(login_response, reverse("dashboard"))
 
-    def test_signup_email_failure_does_not_create_or_reserve_cpf(self):
-        with self.assertLogs("accounts.views", level="ERROR"):
-            with patch("accounts.views.send_mail", side_effect=OSError("SMTP indisponível")):
-                response = self.client.post(
-                    reverse("accounts:signup"),
-                    {
-                        "full_name": "Maria da Silva",
-                        "cpf": "529.982.247-25",
-                        "email": "maria@example.com",
-                        "password1": "SenhaForte2026!",
-                        "password2": "SenhaForte2026!",
-                    },
-                )
+    def test_signup_succeeds_when_email_service_is_unavailable(self):
+        with patch("accounts.views.send_mail", side_effect=OSError("SMTP indisponível")) as send_mail:
+            response = self.client.post(
+                reverse("accounts:signup"),
+                {
+                    "full_name": "Maria da Silva",
+                    "cpf": "529.982.247-25",
+                    "email": "maria@example.com",
+                    "password1": "SenhaForte2026!",
+                    "password2": "SenhaForte2026!",
+                },
+            )
 
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Não foi possível enviar a confirmação")
-        self.assertFalse(get_user_model().objects.filter(username="52998224725").exists())
-        self.assertFalse(CadastroPendente.objects.filter(cpf="52998224725").exists())
+        self.assertRedirects(response, reverse("accounts:signin"))
+        send_mail.assert_not_called()
+        self.assertTrue(get_user_model().objects.filter(username="52998224725").exists())
+        self.assertFalse(CadastroPendente.objects.exists())
 
     def test_user_can_sign_in_with_formatted_cpf(self):
         user = get_user_model().objects.create_user(
