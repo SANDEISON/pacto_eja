@@ -30,7 +30,6 @@
   const experienceTimeSelect = document.getElementById("id_tempo_atuacao");
   const assignmentsInput = document.getElementById("id_atuacoes_json");
   const certificateInputs = Array.from(document.querySelectorAll('input[name="curso_certificado"]'));
-  const certificateOptOut = document.getElementById("id_nao_solicitar_certificado");
   const assignmentsList = document.getElementById("assignment-list");
   const assignmentsCount = document.getElementById("assignment-count");
   const editorTitle = document.getElementById("assignment-editor-title");
@@ -40,6 +39,8 @@
   const submitButton = form.querySelector('button[type="submit"]');
   let cpfTimer;
   let cpfRequestId = 0;
+  let addressRequestId = 0;
+  let loadedCpf = form.dataset.bound === "true" ? digits(cpfInput.value) : "";
   let schoolTimer;
   let schoolOptions = [];
   let activeSchoolIndex = -1;
@@ -67,6 +68,7 @@
     return number.replace(/^(\d{5})(\d)/, "$1-$2");
   }
   function clearAddress() {
+    addressRequestId += 1;
     addressCepInput.value = "";
     addressStreetInput.value = "";
     addressNumberInput.value = "";
@@ -82,41 +84,60 @@
     cpfStatus.innerHTML = `<i class="bi ${icon}"></i><span>${message}</span>`;
   }
   async function lookupCpf() {
-    // Consulta apenas a existência do CPF; dados pessoais nunca são retornados publicamente.
+    // Bloqueia somente o formulário concluído e recupera dados de cadastros incompletos.
     const cpf = digits(cpfInput.value);
     const requestId = ++cpfRequestId;
     if (cpf.length !== 11) {
+      form.dataset.registered = "false";
+      submitButton.disabled = true;
       setCpfStatus("", "bi-search", "Digite o CPF completo para consultar.");
       return;
     }
     setCpfStatus("", "bi-arrow-repeat", "Consultando o cadastro...");
+    submitButton.disabled = true;
     try {
       const response = await fetch(`${form.dataset.cpfUrl}?cpf=${cpf}`, { headers: { "X-Requested-With": "XMLHttpRequest" } });
       const data = await response.json();
       if (requestId !== cpfRequestId || cpf !== digits(cpfInput.value)) return;
       if (!response.ok || !data.valid) throw new Error(data.message || "CPF inválido.");
-      const wasExisting = form.dataset.existingPerson === "true";
-      if (data.exists) {
+      form.dataset.registered = String(data.registered);
+      if (data.registered) {
         nameInput.readOnly = false;
         emailInput.readOnly = false;
-        form.dataset.existingPerson = "true";
         submitButton.disabled = true;
         setCpfStatus("error", "bi-exclamation-circle-fill", "Este CPF já está cadastrado. Não é permitido enviar o formulário novamente. Para corrigir seus dados, entre em contato pelo WhatsApp (83) 3048-8555.");
         cpfWhatsappHelp.hidden = false;
       } else {
-        if (wasExisting) { nameInput.value = ""; emailInput.value = ""; birthDateInput.value = ""; corRacaSelect.value = ""; genderSelect.value = ""; clearAddress(); }
-        nameInput.readOnly = false;
-        emailInput.readOnly = false;
-        form.dataset.existingPerson = "false";
+        if (data.dados && loadedCpf !== cpf) {
+          const fields = {
+            nome_completo: nameInput, email: emailInput, data_nascimento: birthDateInput,
+            cor_raca: corRacaSelect, genero: genderSelect, endereco_cep: addressCepInput,
+            endereco_logradouro: addressStreetInput, endereco_numero: addressNumberInput,
+            endereco_complemento: addressComplementInput, endereco_bairro: addressDistrictInput,
+            endereco_estado: addressStateSelect,
+          };
+          Object.entries(fields).forEach(([key, input]) => { input.value = data.dados[key] ?? ""; });
+          addressCepInput.value = maskCep(addressCepInput.value);
+          certificateInputs.forEach(input => {
+            input.checked = (data.dados.curso_certificado || []).map(String).includes(input.value);
+          });
+          loadedCpf = cpf;
+          await loadAddressCities(data.dados.endereco_cidade);
+          if (requestId !== cpfRequestId || cpf !== digits(cpfInput.value)) return;
+        }
+        nameInput.readOnly = Boolean(data.dados?.nome_completo);
+        emailInput.readOnly = Boolean(data.dados?.email);
         submitButton.disabled = false;
-        setCpfStatus("new", "bi-person-plus-fill", "Complete os dados para criar a conta.");
+        setCpfStatus("new", "bi-person-plus-fill", data.exists
+          ? "Cadastro localizado. Confira os dados e complete o formulário."
+          : "Complete os dados para criar a conta.");
       }
     } catch (error) {
       if (requestId !== cpfRequestId || cpf !== digits(cpfInput.value)) return;
       nameInput.readOnly = false;
       emailInput.readOnly = false;
-      form.dataset.existingPerson = "false";
-      submitButton.disabled = false;
+      form.dataset.registered = "false";
+      submitButton.disabled = true;
       setCpfStatus("error", "bi-exclamation-circle-fill", error.message);
     }
   }
@@ -240,6 +261,7 @@
   }
 
   async function loadAddressCities(selectedCity = "") {
+    const requestId = ++addressRequestId;
     addressCitySelect.value = "";
     addressCitySelect.disabled = true;
     addressCitySelect.innerHTML = '<option value="">Buscando municípios...</option>';
@@ -251,11 +273,12 @@
     try {
       const response = await fetch(`${form.dataset.cidadesUrl}?estado=${encodeURIComponent(addressStateSelect.value)}`, { headers: { "X-Requested-With": "XMLHttpRequest" } });
       const data = await response.json();
+      if (requestId !== addressRequestId) return;
       addressCitySelect.innerHTML = '<option value="">Selecione o município</option>';
       data.results.forEach(item => addressCitySelect.add(new Option(item.nome_cidade, item.id)));
       addressCitySelect.value = selectedCity ? String(selectedCity) : "";
     } finally {
-      addressCitySelect.disabled = false;
+      if (requestId === addressRequestId) addressCitySelect.disabled = false;
     }
   }
 
@@ -409,6 +432,21 @@
 
   cpfInput.addEventListener("input", function () {
     cpfInput.value = maskCpf(cpfInput.value);
+    cpfRequestId += 1;
+    submitButton.disabled = true;
+    if (loadedCpf && loadedCpf !== digits(cpfInput.value)) {
+      loadedCpf = "";
+      nameInput.value = "";
+      emailInput.value = "";
+      nameInput.readOnly = false;
+      emailInput.readOnly = false;
+      document.getElementById("id_email_confirmacao").value = "";
+      birthDateInput.value = "";
+      corRacaSelect.value = "";
+      genderSelect.value = "";
+      certificateInputs.forEach(input => { input.checked = false; });
+      clearAddress();
+    }
     clearTimeout(cpfTimer);
     cpfTimer = setTimeout(lookupCpf, 350);
   });
@@ -453,12 +491,6 @@
   });
   addAssignmentButton.addEventListener("click", addOrUpdateAssignment);
   cancelAssignmentButton.addEventListener("click", clearEditor);
-  certificateInputs.forEach(input => input.addEventListener("change", function () {
-    if (input.checked && certificateOptOut) certificateOptOut.checked = false;
-  }));
-  if (certificateOptOut) certificateOptOut.addEventListener("change", function () {
-    if (certificateOptOut.checked) certificateInputs.forEach(input => { input.checked = false; });
-  });
   assignmentsList.addEventListener("click", function (event) {
     const button = event.target.closest("button[data-action]");
     if (!button) return;
@@ -472,7 +504,7 @@
     }
   });
   form.addEventListener("submit", function (event) {
-    if (form.dataset.existingPerson === "true") {
+    if (form.dataset.registered === "true" || submitButton.disabled) {
       event.preventDefault();
       cpfInput.focus();
       return;

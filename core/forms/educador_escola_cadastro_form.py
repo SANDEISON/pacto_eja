@@ -2,7 +2,7 @@ import json
 
 from django import forms
 from django.contrib.auth import get_user_model
-from django.db import transaction
+from django.db import IntegrityError, transaction
 
 from ..models import (
     Cidade,
@@ -141,15 +141,12 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
         widget=forms.CheckboxSelectMultiple(),
         required=False,
     )
-    nao_solicitar_certificado = forms.BooleanField(
-        label="Não desejo suprimir o certificado",
-        required=False,
-    )
 
     def __init__(self, *args, **kwargs):
         """Restringe cidades e escolas de acordo com as seleções recebidas."""
         super().__init__(*args, **kwargs)
         self.educador_encontrado = None
+        self.usuario_encontrado = None
         if not self.is_bound:
             self.fields["atuacoes_json"].initial = "[]"
 
@@ -186,11 +183,17 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
         self._apply_bootstrap_classes()
 
     def clean_cpf(self):
-        """Normaliza o CPF e impede o reenvio de um cadastro existente."""
+        """Normaliza o CPF e bloqueia apenas cadastros com atuações já enviadas."""
         cpf = somente_digitos(self.cleaned_data["cpf"])
         validate_cpf(cpf)
         self.educador_encontrado = Educador.objects.select_related("usuario").filter(cpf=cpf).first()
-        if self.educador_encontrado or User.objects.filter(username=cpf).exists():
+        self.usuario_encontrado = (
+            self.educador_encontrado.usuario if self.educador_encontrado
+            else User.objects.filter(username=cpf).first()
+        )
+        if self.educador_encontrado is None and self.usuario_encontrado:
+            self.educador_encontrado = Educador.objects.filter(usuario=self.usuario_encontrado).first()
+        if self.educador_encontrado and FuncaoEducador.objects.filter(educador=self.educador_encontrado).exists():
             self.cpf_ja_cadastrado = True
             raise forms.ValidationError(
                 "Este CPF já está cadastrado. Não é permitido enviar o formulário novamente. "
@@ -215,16 +218,23 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
         if email and email_confirmacao and email != email_confirmacao:
             self.add_error("email_confirmacao", "Os e-mails informados não são iguais.")
 
-        if educador:
-            usuario = educador.usuario
-            cleaned_data["nome_completo"] = educador.nome_completo or usuario.get_full_name() or usuario.first_name or usuario.username
-            cleaned_data["email"] = usuario.email
-        else:
-            nome_completo = (cleaned_data.get("nome_completo") or "").strip()
-            if email and User.objects.filter(email__iexact=email).exists():
-                self.add_error("email", "Já existe um usuário cadastrado com este e-mail.")
-            cleaned_data["nome_completo"] = nome_completo
-            cleaned_data["email"] = email
+        nome_completo = (cleaned_data.get("nome_completo") or "").strip()
+        usuarios_email = User.objects.filter(email__iexact=email)
+        if self.usuario_encontrado:
+            usuarios_email = usuarios_email.exclude(pk=self.usuario_encontrado.pk)
+        if email and usuarios_email.exists():
+            self.add_error("email", "Já existe um usuário cadastrado com este e-mail.")
+        cleaned_data["nome_completo"] = nome_completo
+        cleaned_data["email"] = email
+        if self.usuario_encontrado:
+            usuario = self.usuario_encontrado
+            nome_existente = (
+                educador.nome_completo if educador else ""
+            ) or usuario.get_full_name()
+            if nome_existente and nome_existente != usuario.username:
+                cleaned_data["nome_completo"] = nome_existente
+            if usuario.email:
+                cleaned_data["email"] = usuario.email
 
         atuacoes = self._clean_atuacoes(cleaned_data.get("atuacoes_json"), educador)
         cleaned_data["atuacoes"] = atuacoes
@@ -235,16 +245,10 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
             self.add_error("endereco_cidade", "O município selecionado não pertence à UF informada.")
 
         cursos_certificados = cleaned_data.get("curso_certificado")
-        nao_solicitar_certificado = cleaned_data.get("nao_solicitar_certificado")
-        if not cursos_certificados and not nao_solicitar_certificado:
+        if not cursos_certificados:
             self.add_error(
                 "curso_certificado",
-                "Selecione pelo menos um curso ou informe que não deseja solicitar certificado.",
-            )
-        elif cursos_certificados and nao_solicitar_certificado:
-            self.add_error(
-                "curso_certificado",
-                "Escolha os cursos desejados ou a opção de não solicitar certificado.",
+                "Selecione pelo menos um curso para solicitar o certificado.",
             )
 
         return cleaned_data
@@ -345,12 +349,12 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
     @transaction.atomic
     def save_cadastro(self):
         """Persiste usuário, perfil, endereço e vínculos em uma única transação."""
-        educador = self.educador_encontrado
-        if educador is None:
-            cpf = self.cleaned_data["cpf"]
-            email = self.cleaned_data["email"]
-            nome_completo = self.cleaned_data["nome_completo"]
-            primeiro_nome, _, sobrenome = nome_completo.partition(" ")
+        cpf = self.cleaned_data["cpf"]
+        email = self.cleaned_data["email"]
+        nome_completo = self.cleaned_data["nome_completo"]
+        primeiro_nome, _, sobrenome = nome_completo.partition(" ")
+        usuario = self.usuario_encontrado
+        if usuario is None:
             usuario = User.objects.create_user(
                 username=cpf,
                 email=email,
@@ -358,15 +362,22 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
                 first_name=primeiro_nome,
                 last_name=sobrenome,
             )
-            educador, _ = Educador.objects.get_or_create(usuario=usuario)
-            educador.cpf = cpf
-            educador.nome_completo = nome_completo
-            educador.save(update_fields=("cpf", "nome_completo"))
+        else:
+            usuario = User.objects.select_for_update().get(pk=usuario.pk)
+        educador, _ = Educador.objects.get_or_create(usuario=usuario)
+        if FuncaoEducador.objects.filter(educador=educador).exists():
+            raise IntegrityError("Este educador já enviou o formulário.")
+        usuario.email = email
+        usuario.first_name = primeiro_nome
+        usuario.last_name = sobrenome
+        usuario.save(update_fields=("email", "first_name", "last_name"))
+        educador.cpf = cpf
+        educador.nome_completo = nome_completo
 
         educador.cor_raca = self.cleaned_data.get("cor_raca")
         educador.genero = self.cleaned_data.get("genero")
         educador.data_nascimento = self.cleaned_data.get("data_nascimento")
-        educador.save(update_fields=("cor_raca", "genero", "data_nascimento"))
+        educador.save(update_fields=("cpf", "nome_completo", "cor_raca", "genero", "data_nascimento"))
         educador.cursos_certificados.set(self.cleaned_data.get("curso_certificado"))
 
         Endereco.objects.update_or_create(

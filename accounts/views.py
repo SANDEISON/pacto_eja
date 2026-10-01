@@ -10,6 +10,7 @@ from django.contrib.auth.views import LoginView, LogoutView
 from django.core import signing
 from django.core.cache import cache
 from django.core.mail import send_mail
+from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
@@ -137,10 +138,16 @@ def signup(request):
         try:
             with transaction.atomic():
                 form.save()
+        except ValidationError as error:
+            form.add_error("cpf", error)
         except IntegrityError:
             form.add_error(None, "Não foi possível concluir o cadastro. Verifique se os dados já estão em uso.")
         else:
-            messages.success(request, "Sua conta foi criada e já pode ser acessada.")
+            mensagem = (
+                "Sua senha foi definida e sua conta já pode ser acessada."
+                if form.usuario_encontrado else "Sua conta foi criada e já pode ser acessada."
+            )
+            messages.success(request, mensagem)
             return redirect("accounts:signin")
 
         # Fluxo de confirmação preservado para reativação após resolver o limite.

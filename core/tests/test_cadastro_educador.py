@@ -117,11 +117,11 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         self.assertContains(response, "Solicito liberação do Certificado do Curso:")
         self.assertContains(
             response,
-            "Selecione abaixo o(s) curso(s) para o(s) qual(is) deseja solicitar o certificado "
-            "ou informe que não deseja solicitá-lo. "
+            "Selecione abaixo o(s) curso(s) para o(s) qual(is) deseja solicitar o certificado. "
             "Você pode optar por um ou mais de um curso simultaneamente.",
         )
-        self.assertContains(response, "Não desejo suprimir o certificado")
+        self.assertNotContains(response, "Não desejo suprimir o certificado")
+        self.assertNotContains(response, 'id="id_nao_solicitar_certificado"')
         self.assertContains(response, "Alfabetização de Jovens, Adultos e Idosos - 80 horas")
         self.assertContains(response, "Formação em Serviço para Formadores Regionais - 360 horas")
         self.assertContains(response, 'type="checkbox"')
@@ -248,34 +248,29 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         self.assertFormError(
             response.context["form"],
             "curso_certificado",
-            "Selecione pelo menos um curso ou informe que não deseja solicitar certificado.",
+            "Selecione pelo menos um curso para solicitar o certificado.",
         )
         self.assertFalse(Educador.objects.filter(cpf="52998224725").exists())
 
-    def test_registration_allows_not_requesting_certificate(self):
-        self.submit_registration(
+    def test_removed_opt_out_cannot_bypass_required_certificate_choice(self):
+        response = self.client.post(
+            reverse("cadastro_educador"),
             self.registration_data(
                 curso_certificado=[],
                 nao_solicitar_certificado="on",
             ),
         )
 
-        educador = Educador.objects.get(cpf="52998224725")
-        self.assertFalse(educador.cursos_certificados.exists())
-
-    def test_registration_rejects_certificate_and_opt_out_together(self):
-        response = self.client.post(
-            reverse("cadastro_educador"),
-            self.registration_data(nao_solicitar_certificado="on"),
-        )
-
-        self.assertEqual(response.status_code, 200)
         self.assertFormError(
-            response.context["form"],
-            "curso_certificado",
-            "Escolha os cursos desejados ou a opção de não solicitar certificado.",
+            response.context["form"], "curso_certificado",
+            "Selecione pelo menos um curso para solicitar o certificado.",
         )
         self.assertFalse(Educador.objects.filter(cpf="52998224725").exists())
+
+    def test_registration_ignores_removed_opt_out_when_course_is_selected(self):
+        self.submit_registration(
+            self.registration_data(nao_solicitar_certificado="on"),
+        )
 
     def test_success_page_does_not_offer_login(self):
         response = self.client.get(reverse("cadastro_educador_success"))
@@ -409,7 +404,7 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         self.assertContains(response, "não pode estar no futuro")
         self.assertFalse(User.objects.filter(username="52998224725").exists())
 
-    def test_existing_cpf_is_rejected_without_changing_person(self):
+    def test_existing_cpf_without_assignments_can_complete_registration(self):
         usuario = User.objects.create_user(
             username="existente@example.com",
             email="existente@example.com",
@@ -427,22 +422,21 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
             self.registration_data(nome_completo="Nome adulterado", email="outro@example.com"),
         )
 
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("cpf", response.context["form"].errors)
-        self.assertContains(response, "Não é permitido enviar o formulário novamente.")
+        self.assertRedirects(response, reverse("cadastro_educador_success"))
         self.assertEqual(User.objects.count(), total_usuarios)
-        self.assertFalse(
+        self.assertTrue(
             EducadorEscola.objects.filter(
                 funcao_educador__educador=educador,
                 escola=self.escola,
             ).exists()
         )
         usuario.refresh_from_db()
-        self.assertEqual(usuario.first_name, "Educador Existente")
+        self.assertEqual(usuario.get_full_name(), "Educador Existente")
         self.assertEqual(usuario.email, "existente@example.com")
         educador.refresh_from_db()
-        self.assertEqual(educador.cor_raca, CorRaca.objects.get(nome="Branco"))
-        self.assertFalse(Endereco.objects.filter(educador=educador).exists())
+        self.assertEqual(educador.cor_raca, self.cor_raca)
+        self.assertTrue(Endereco.objects.filter(educador=educador).exists())
+        self.assertTrue(usuario.check_password("senha-segura"))
 
     def test_person_cannot_submit_a_second_registration(self):
         usuario = User.objects.create_user(
@@ -505,15 +499,24 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         self.assertEqual(educador.endereco.logradouro, "Avenida Fernandes Lima")
         self.assertEqual(list(educador.cursos_certificados.all()), [self.curso_certificado])
 
-    def test_cpf_username_without_profile_cpf_is_also_blocked(self):
+    def test_cpf_username_without_profile_cpf_reuses_existing_account(self):
         usuario = User.objects.create_user(username="52998224725")
-        response = self.client.post(reverse("cadastro_educador"), self.registration_data())
-        self.assertIn("cpf", response.context["form"].errors)
-        self.assertFalse(FuncaoEducador.objects.filter(educador=usuario.educador).exists())
+        total_usuarios = User.objects.count()
         lookup = self.client.get(reverse("cadastro_educador_cpf_lookup"), {"cpf": "52998224725"})
         self.assertTrue(lookup.json()["exists"])
+        self.assertFalse(lookup.json()["registered"])
+        response = self.client.post(reverse("cadastro_educador"), self.registration_data())
+        self.assertRedirects(response, reverse("cadastro_educador_success"))
+        self.assertEqual(User.objects.count(), total_usuarios)
+        usuario.educador.refresh_from_db()
+        self.assertEqual(usuario.educador.cpf, "52998224725")
+        self.assertTrue(FuncaoEducador.objects.filter(educador=usuario.educador).exists())
+        lookup = self.client.get(reverse("cadastro_educador_cpf_lookup"), {"cpf": "52998224725"})
+        self.assertTrue(lookup.json()["exists"])
+        self.assertTrue(lookup.json()["registered"])
+        self.assertNotIn("dados", lookup.json())
 
-    def test_cpf_lookup_does_not_return_personal_data(self):
+    def test_cpf_lookup_prefills_personal_data_for_incomplete_registration(self):
         usuario = User.objects.create_user(
             username="consulta@example.com",
             email="consulta@example.com",
@@ -525,6 +528,11 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         educador.genero = self.genero_nao_binario
         educador.data_nascimento = date(1985, 8, 20)
         educador.save(update_fields=("cpf", "cor_raca", "genero", "data_nascimento"))
+        educador.cursos_certificados.add(self.curso_certificado)
+        Endereco.objects.create(
+            educador=educador, cep="57000000", logradouro="Rua Existente", numero="20",
+            complemento="Casa", bairro="Centro", cidade=self.cidade,
+        )
 
         response = self.client.get(reverse("cadastro_educador_cpf_lookup"), {"cpf": "529.982.247-25"})
 
@@ -535,8 +543,33 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
                 "valid": True,
                 "exists": True,
                 "registered": False,
+                "dados": {
+                    "nome_completo": "Pessoa Localizada",
+                    "email": "consulta@example.com",
+                    "data_nascimento": "1985-08-20",
+                    "cor_raca": self.cor_raca.pk,
+                    "genero": self.genero_nao_binario.pk,
+                    "curso_certificado": [self.curso_certificado.pk],
+                    "endereco_cep": "57000000",
+                    "endereco_logradouro": "Rua Existente",
+                    "endereco_numero": "20",
+                    "endereco_complemento": "Casa",
+                    "endereco_bairro": "Centro",
+                    "endereco_estado": self.estado.pk,
+                    "endereco_cidade": self.cidade.pk,
+                },
             },
         )
+        self.assertEqual(response["Cache-Control"], "no-store")
+
+    def test_existing_account_cannot_use_another_accounts_email(self):
+        usuario = User.objects.create_user(username="52998224725", email="existente@example.com")
+        User.objects.create_user(username="outro", email="outro@example.com")
+        response = self.client.post(
+            reverse("cadastro_educador"), self.registration_data(email="outro@example.com"),
+        )
+        self.assertFormError(response.context["form"], "email", "Já existe um usuário cadastrado com este e-mail.")
+        self.assertFalse(FuncaoEducador.objects.filter(educador=usuario.educador).exists())
 
     def test_registration_rejects_different_email_confirmation(self):
         response = self.client.post(

@@ -24,6 +24,7 @@
 
       {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
       <form method="post" id="cadastro-educador-form" novalidate
+            data-bound="{{ form.is_bound|yesno:'true,false' }}"
             data-cpf-url="{% url 'cadastro_educador_cpf_lookup' %}"
             data-cidades-url="{% url 'cadastro_educador_cidades' %}"
             data-escolas-url="{% url 'cadastro_educador_escolas' %}">
@@ -103,14 +104,10 @@
         </section>
 
         <section class="educator-section certificate-section">
-          <div class="section-label"><span>3</span><div><h3>Certificado</h3><p>Selecione abaixo o(s) curso(s) para o(s) qual(is) deseja solicitar o certificado ou informe que não deseja solicitá-lo. Você pode optar por um ou mais de um curso simultaneamente.</p></div></div>
+          <div class="section-label"><span>3</span><div><h3>Certificado</h3><p>Selecione abaixo o(s) curso(s) para o(s) qual(is) deseja solicitar o certificado. Você pode optar por um ou mais de um curso simultaneamente.</p></div></div>
           <fieldset>
             <legend class="form-label">{{ form.curso_certificado.label }} <span class="text-danger">*</span></legend>
             {{ form.curso_certificado }}
-            <div class="certificate-opt-out">
-              {{ form.nao_solicitar_certificado }}
-              <label for="{{ form.nao_solicitar_certificado.id_for_label }}">{{ form.nao_solicitar_certificado.label }}</label>
-            </div>
             {% for error in form.curso_certificado.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
           </fieldset>
         </section>
@@ -120,5 +117,5 @@
     </div>
   </section>
 </main>
-<script src="{% static 'js/cadastro_educadores.js' %}?v=20261001-3"></script>
+<script src="{% static 'js/cadastro_educadores.js' %}?v=20261001-5"></script>
 {% endblock %}
