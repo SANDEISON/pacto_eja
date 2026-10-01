@@ -409,7 +409,7 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         self.assertContains(response, "não pode estar no futuro")
         self.assertFalse(User.objects.filter(username="52998224725").exists())
 
-    def test_existing_cpf_reuses_user_and_person(self):
+    def test_existing_cpf_is_rejected_without_changing_person(self):
         usuario = User.objects.create_user(
             username="existente@example.com",
             email="existente@example.com",
@@ -427,9 +427,11 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
             self.registration_data(nome_completo="Nome adulterado", email="outro@example.com"),
         )
 
-        self.assertRedirects(response, reverse("cadastro_educador_success"))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("cpf", response.context["form"].errors)
+        self.assertContains(response, "Não é permitido enviar o formulário novamente.")
         self.assertEqual(User.objects.count(), total_usuarios)
-        self.assertTrue(
+        self.assertFalse(
             EducadorEscola.objects.filter(
                 funcao_educador__educador=educador,
                 escola=self.escola,
@@ -439,10 +441,10 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         self.assertEqual(usuario.first_name, "Educador Existente")
         self.assertEqual(usuario.email, "existente@example.com")
         educador.refresh_from_db()
-        self.assertEqual(educador.cor_raca, self.cor_raca)
-        self.assertEqual(educador.endereco.cep, "57000000")
+        self.assertEqual(educador.cor_raca, CorRaca.objects.get(nome="Branco"))
+        self.assertFalse(Endereco.objects.filter(educador=educador).exists())
 
-    def test_person_can_submit_a_second_registration(self):
+    def test_person_cannot_submit_a_second_registration(self):
         usuario = User.objects.create_user(
             username="ja.cadastrado@example.com",
             email="ja.cadastrado@example.com",
@@ -475,15 +477,41 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
 
         response = self.client.post(reverse("cadastro_educador"), self.registration_data())
 
-        self.assertRedirects(response, reverse("cadastro_educador_success"))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("cpf", response.context["form"].errors)
         self.assertEqual(
             EducadorEscola.objects.filter(funcao_educador__educador=educador).count(),
-            2,
+            1,
         )
         self.assertEqual(Endereco.objects.filter(educador=educador).count(), 1)
         educador.endereco.refresh_from_db()
+        self.assertEqual(educador.endereco.logradouro, "Rua do Cadastro")
+        self.assertEqual(educador.endereco.numero, "20")
+
+    def test_repeated_submission_keeps_only_first_registration(self):
+        self.submit_registration(self.registration_data())
+        educador = Educador.objects.get(cpf="52998224725")
+        response = self.client.post(
+            reverse("cadastro_educador"),
+            self.registration_data(
+                cpf="52998224725",
+                endereco_logradouro="Endereço alterado",
+                curso_certificado=[self.outro_curso_certificado.pk],
+            ),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("cpf", response.context["form"].errors)
+        self.assertEqual(FuncaoEducador.objects.filter(educador=educador).count(), 1)
         self.assertEqual(educador.endereco.logradouro, "Avenida Fernandes Lima")
-        self.assertEqual(educador.endereco.numero, "1000")
+        self.assertEqual(list(educador.cursos_certificados.all()), [self.curso_certificado])
+
+    def test_cpf_username_without_profile_cpf_is_also_blocked(self):
+        usuario = User.objects.create_user(username="52998224725")
+        response = self.client.post(reverse("cadastro_educador"), self.registration_data())
+        self.assertIn("cpf", response.context["form"].errors)
+        self.assertFalse(FuncaoEducador.objects.filter(educador=usuario.educador).exists())
+        lookup = self.client.get(reverse("cadastro_educador_cpf_lookup"), {"cpf": "52998224725"})
+        self.assertTrue(lookup.json()["exists"])
 
     def test_cpf_lookup_does_not_return_personal_data(self):
         usuario = User.objects.create_user(

@@ -186,10 +186,15 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
         self._apply_bootstrap_classes()
 
     def clean_cpf(self):
-        """Normaliza o CPF e localiza um perfil que já possa ser reutilizado."""
+        """Normaliza o CPF e impede o reenvio de um cadastro existente."""
         cpf = somente_digitos(self.cleaned_data["cpf"])
         validate_cpf(cpf)
         self.educador_encontrado = Educador.objects.select_related("usuario").filter(cpf=cpf).first()
+        if self.educador_encontrado or User.objects.filter(username=cpf).exists():
+            raise forms.ValidationError(
+                "Este CPF já está cadastrado. Não é permitido enviar o formulário novamente. "
+                "Para corrigir seus dados, entre em contato com a coordenação."
+            )
         return cpf
 
     def clean_endereco_cep(self):
@@ -217,8 +222,6 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
             nome_completo = (cleaned_data.get("nome_completo") or "").strip()
             if email and User.objects.filter(email__iexact=email).exists():
                 self.add_error("email", "Já existe um usuário cadastrado com este e-mail.")
-            if User.objects.filter(username=cleaned_data.get("cpf", "")).exists():
-                self.add_error("cpf", "Já existe um usuário cadastrado com este CPF.")
             cleaned_data["nome_completo"] = nome_completo
             cleaned_data["email"] = email
 

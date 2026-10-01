@@ -58,7 +58,7 @@ def cadastro_educador(request):
     form = EducadorEscolaCadastroForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         # Confirmação por e-mail suspensa temporariamente pelo limite do Gmail.
-        # A mesma rotina cria novos perfis ou adiciona vínculos aos existentes.
+        # O formulário aceita somente CPFs que ainda não estão cadastrados.
         try:
             form.save_cadastro()
         except IntegrityError:

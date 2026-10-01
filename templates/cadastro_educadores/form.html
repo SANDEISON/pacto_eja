@@ -19,7 +19,7 @@
     <div class="educator-form-card">
       <header class="form-heading">
         <span class="step-badge"><i class="bi bi-pencil-square"></i></span>
-        <div><h2>Solicitação de certificado</h2><p>Os campos com asterisco são obrigatórios.</p></div>
+        <div><h2>Solicitação de certificado</h2><p>Os campos com asterisco são obrigatórios. Cada CPF pode enviar este formulário uma única vez.</p></div>
       </header>
 
       {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
@@ -111,5 +111,5 @@
     </div>
   </section>
 </main>
-<script src="{% static 'js/cadastro_educadores.js' %}?v=20260916-1"></script>
+<script src="{% static 'js/cadastro_educadores.js' %}?v=20261001-1"></script>
 {% endblock %}

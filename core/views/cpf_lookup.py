@@ -1,4 +1,5 @@
 from django.core.exceptions import ValidationError
+from django.contrib.auth import get_user_model
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 
@@ -8,7 +9,7 @@ from ..validators import somente_digitos, validate_cpf
 
 @require_GET
 def cpf_lookup(request):
-    """Consulta um CPF válido e devolve os dados reutilizáveis no cadastro."""
+    """Consulta a existência de um CPF sem expor dados pessoais."""
     cpf = somente_digitos(request.GET.get("cpf", ""))
     if len(cpf) != 11:
         return JsonResponse({"valid": False, "exists": False, "message": "Informe um CPF válido."}, status=400)
@@ -19,7 +20,8 @@ def cpf_lookup(request):
 
     educador = Educador.objects.select_related("usuario", "cor_raca", "genero").filter(cpf=cpf).first()
     if educador is None:
-        return JsonResponse({"valid": True, "exists": False, "registered": False})
+        exists = get_user_model().objects.filter(username=cpf).exists()
+        return JsonResponse({"valid": True, "exists": exists, "registered": False})
 
     return JsonResponse(
         {

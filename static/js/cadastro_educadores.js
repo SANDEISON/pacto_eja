@@ -38,6 +38,7 @@
   const cancelAssignmentButton = document.getElementById("cancel-assignment");
   const submitButton = form.querySelector('button[type="submit"]');
   let cpfTimer;
+  let cpfRequestId = 0;
   let schoolTimer;
   let schoolOptions = [];
   let activeSchoolIndex = -1;
@@ -81,6 +82,7 @@
   async function lookupCpf() {
     // Consulta apenas a existência do CPF; dados pessoais nunca são retornados publicamente.
     const cpf = digits(cpfInput.value);
+    const requestId = ++cpfRequestId;
     if (cpf.length !== 11) {
       setCpfStatus("", "bi-search", "Digite o CPF completo para consultar.");
       return;
@@ -89,26 +91,25 @@
     try {
       const response = await fetch(`${form.dataset.cpfUrl}?cpf=${cpf}`, { headers: { "X-Requested-With": "XMLHttpRequest" } });
       const data = await response.json();
+      if (requestId !== cpfRequestId || cpf !== digits(cpfInput.value)) return;
       if (!response.ok || !data.valid) throw new Error(data.message || "CPF inválido.");
       const wasExisting = form.dataset.existingPerson === "true";
       if (data.exists) {
         nameInput.readOnly = false;
         emailInput.readOnly = false;
         form.dataset.existingPerson = "true";
-        submitButton.disabled = false;
-        const message = data.registered
-          ? "CPF já cadastrado. Os dados pessoais foram protegidos; você pode adicionar outro vínculo."
-          : "CPF já cadastrado. Os dados pessoais foram protegidos.";
-        setCpfStatus("success", "bi-check-circle-fill", message);
+        submitButton.disabled = true;
+        setCpfStatus("error", "bi-exclamation-circle-fill", "Este CPF já está cadastrado. Não é permitido enviar o formulário novamente. Para corrigir seus dados, entre em contato com a coordenação.");
       } else {
         if (wasExisting) { nameInput.value = ""; emailInput.value = ""; birthDateInput.value = ""; corRacaSelect.value = ""; genderSelect.value = ""; clearAddress(); }
         nameInput.readOnly = false;
         emailInput.readOnly = false;
         form.dataset.existingPerson = "false";
         submitButton.disabled = false;
-        setCpfStatus("new", "bi-person-plus-fill", "CPF não cadastrado. Complete os dados para criar a conta.");
+        setCpfStatus("new", "bi-person-plus-fill", "Complete os dados para criar a conta.");
       }
     } catch (error) {
+      if (requestId !== cpfRequestId || cpf !== digits(cpfInput.value)) return;
       nameInput.readOnly = false;
       emailInput.readOnly = false;
       form.dataset.existingPerson = "false";
@@ -468,6 +469,11 @@
     }
   });
   form.addEventListener("submit", function (event) {
+    if (form.dataset.existingPerson === "true") {
+      event.preventDefault();
+      cpfInput.focus();
+      return;
+    }
     if (!assignments.length) {
       event.preventDefault();
       setEditorError("Adicione pelo menos uma atuação antes de salvar o cadastro.");
