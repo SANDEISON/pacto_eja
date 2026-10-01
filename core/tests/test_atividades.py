@@ -1,5 +1,6 @@
 from datetime import timedelta
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -1173,6 +1174,30 @@ class AtividadeFlowTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 404)
+
+    def test_receipt_lists_date_and_room_in_chronological_shift_order(self):
+        from ..services.comprovante_inscricao import Paragraph, gerar_comprovante_inscricao
+
+        inscricao = Inscricao.objects.create(atividade=self.atividade, usuario=self.user)
+        data = timezone.localdate(self.atividade.data_inicio)
+        modalidade = ProgramacaoSala.Modalidade.PRESENCIAL
+        programacoes = [
+            self.create_programacao(modalidade, "Sala do segundo dia", data=data + timedelta(days=1)),
+            self.create_programacao(modalidade, "Sala da noite", turno=ProgramacaoSala.Turno.NOITE, data=data),
+            self.create_programacao(modalidade, "Sala da tarde", turno=ProgramacaoSala.Turno.TARDE, data=data),
+            self.create_programacao(modalidade, "Sala da manhã", turno=ProgramacaoSala.Turno.MANHA, data=data),
+        ]
+        inscricao.programacoes.add(*programacoes)
+        with patch("core.services.comprovante_inscricao.Paragraph", wraps=Paragraph) as paragraph:
+            arquivo = gerar_comprovante_inscricao(inscricao)
+        self.assertTrue(arquivo.read().startswith(b"%PDF-"))
+        linhas = [call.args[0] for call in paragraph.call_args_list if call.args[0].startswith("- ")]
+        self.assertEqual(linhas, [
+            f"- {data:%d/%m/%Y} - Manhã: Sala da manhã",
+            f"- {data:%d/%m/%Y} - Tarde: Sala da tarde",
+            f"- {data:%d/%m/%Y} - Noite: Sala da noite",
+            f"- {data + timedelta(days=1):%d/%m/%Y} - Manhã: Sala do segundo dia",
+        ])
 
     def test_user_can_update_registration_during_registration_period(self):
         Inscricao.objects.create(atividade=self.atividade, usuario=self.user)

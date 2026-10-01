@@ -1,12 +1,24 @@
 from django import forms
 from django.contrib.auth import get_user_model
-from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.contrib.auth.forms import AuthenticationForm, SetPasswordForm, UserCreationForm
 from django.db import transaction
 
 from core.validators import somente_digitos, validate_cpf
 
+from .constants import SENHA_INICIAL
+
 
 User = get_user_model()
+
+
+class FirstAccessPasswordForm(SetPasswordForm):
+    """Valida a nova senha e impede a reutilização da senha inicial."""
+
+    def clean_new_password1(self):
+        password = self.cleaned_data["new_password1"]
+        if password == SENHA_INICIAL:
+            raise forms.ValidationError("Escolha uma senha diferente da senha inicial.")
+        return password
 
 
 class CPFAuthenticationForm(AuthenticationForm):

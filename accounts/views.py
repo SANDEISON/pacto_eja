@@ -6,7 +6,7 @@ from hashlib import sha256
 
 from django.contrib import messages
 from django.contrib.auth import get_user_model
-from django.contrib.auth.views import LoginView, LogoutView
+from django.contrib.auth.views import LoginView, LogoutView, PasswordChangeView
 from django.core import signing
 from django.core.cache import cache
 from django.core.mail import send_mail
@@ -15,10 +15,12 @@ from django.db import IntegrityError, transaction
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from core.models import CadastroPendente
 
-from .forms import CPFAuthenticationForm, PasswordRecoveryForm, SignUpForm
+from .constants import SENHA_INICIAL
+from .forms import CPFAuthenticationForm, FirstAccessPasswordForm, PasswordRecoveryForm, SignUpForm
 
 
 logger = logging.getLogger(__name__)
@@ -62,6 +64,45 @@ class SignInView(LoginView):
     template_name = "accounts/signin.html"
     authentication_form = CPFAuthenticationForm
     redirect_authenticated_user = True
+
+    def form_valid(self, form):
+        if form.cleaned_data["password"] == SENHA_INICIAL:
+            self.request.session["alteracao_senha_obrigatoria"] = True
+            self.request.session["destino_apos_alterar_senha"] = self.get_redirect_url()
+        else:
+            self.request.session.pop("alteracao_senha_obrigatoria", None)
+            self.request.session.pop("destino_apos_alterar_senha", None)
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        if self.request.session.get("alteracao_senha_obrigatoria"):
+            return reverse("accounts:change_initial_password")
+        return super().get_success_url()
+
+
+class FirstAccessPasswordView(PasswordChangeView):
+    template_name = "accounts/change_initial_password.html"
+    form_class = FirstAccessPasswordForm
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated and not request.session.get("alteracao_senha_obrigatoria"):
+            return redirect("dashboard")
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        self.request.session.pop("alteracao_senha_obrigatoria", None)
+        self.request.session.pop("destino_apos_alterar_senha", None)
+        messages.success(self.request, "Sua senha foi alterada com sucesso.")
+        return response
+
+    def get_success_url(self):
+        destino = self.request.session.get("destino_apos_alterar_senha", "")
+        if destino and url_has_allowed_host_and_scheme(
+            destino, allowed_hosts={self.request.get_host()}, require_https=self.request.is_secure(),
+        ) and destino != reverse("accounts:change_initial_password"):
+            return destino
+        return reverse("dashboard")
 
 
 class SignOutView(LogoutView):

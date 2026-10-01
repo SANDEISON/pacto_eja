@@ -199,6 +199,91 @@ class AuthenticationTests(TestCase):
         self.assertRedirects(response, reverse("dashboard"))
         self.assertEqual(int(self.client.session["_auth_user_id"]), user.pk)
 
+    def login_with_initial_password(self, **overrides):
+        user = get_user_model().objects.create_user(username="52998224725", password="pactoeja2026")
+        data = {"username": "529.982.247-25", "password": "pactoeja2026"}
+        data.update(overrides)
+        return user, self.client.post(reverse("accounts:signin"), data)
+
+    def test_initial_password_login_requires_password_change_before_dashboard(self):
+        user, response = self.login_with_initial_password(next=reverse("dashboard"))
+        self.assertRedirects(response, reverse("accounts:change_initial_password"))
+        self.assertEqual(int(self.client.session["_auth_user_id"]), user.pk)
+        self.assertTrue(self.client.session["alteracao_senha_obrigatoria"])
+        self.assertRedirects(self.client.get(reverse("dashboard")), reverse("accounts:change_initial_password"))
+        page = self.client.get(reverse("accounts:change_initial_password"))
+        self.assertContains(page, "Você está usando a senha inicial.")
+        self.assertContains(page, 'name="new_password1"')
+        self.assertContains(page, 'name="new_password2"')
+        self.assertNotContains(page, 'name="old_password"')
+
+    def test_required_password_change_rejects_invalid_passwords(self):
+        user, _ = self.login_with_initial_password()
+        cases = [
+            ({"new_password1": "SenhaNova2026!", "new_password2": "OutraSenha2026!"}, "new_password2"),
+            ({"new_password1": "123", "new_password2": "123"}, "new_password2"),
+            ({"new_password1": "pactoeja2026", "new_password2": "pactoeja2026"}, "new_password1"),
+        ]
+        for data, field in cases:
+            with self.subTest(data=data):
+                response = self.client.post(reverse("accounts:change_initial_password"), data)
+                self.assertEqual(response.status_code, 200)
+                self.assertIn(field, response.context["form"].errors)
+                self.assertTrue(self.client.session["alteracao_senha_obrigatoria"])
+                user.refresh_from_db()
+                self.assertTrue(user.check_password("pactoeja2026"))
+
+    def test_required_password_change_saves_password_and_preserves_session(self):
+        user, _ = self.login_with_initial_password()
+        response = self.client.post(
+            reverse("accounts:change_initial_password"),
+            {"new_password1": "SenhaNova2026!", "new_password2": "SenhaNova2026!"},
+        )
+        self.assertRedirects(response, reverse("dashboard"))
+        user.refresh_from_db()
+        self.assertTrue(user.check_password("SenhaNova2026!"))
+        self.assertFalse(user.check_password("pactoeja2026"))
+        self.assertNotIn("alteracao_senha_obrigatoria", self.client.session)
+        self.assertNotIn("destino_apos_alterar_senha", self.client.session)
+        self.assertEqual(int(self.client.session["_auth_user_id"]), user.pk)
+        self.client.post(reverse("accounts:logout"))
+        response = self.client.post(
+            reverse("accounts:signin"), {"username": "52998224725", "password": "SenhaNova2026!"},
+        )
+        self.assertRedirects(response, reverse("dashboard"))
+
+    def test_required_password_change_does_not_redirect_to_external_next(self):
+        self.login_with_initial_password(next="https://example.com/")
+        response = self.client.post(
+            reverse("accounts:change_initial_password"),
+            {"new_password1": "SenhaNova2026!", "new_password2": "SenhaNova2026!"},
+        )
+        self.assertRedirects(response, reverse("dashboard"))
+
+    def test_required_password_change_allows_logout(self):
+        self.login_with_initial_password()
+        self.assertRedirects(self.client.post(reverse("accounts:logout")), reverse("accounts:signin"))
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+    def test_required_password_change_requires_authenticated_session(self):
+        url = reverse("accounts:change_initial_password")
+        self.assertRedirects(self.client.get(url), f"{reverse('accounts:signin')}?next={url}")
+        self.assertRedirects(
+            self.client.post(url, {"new_password1": "SenhaNova2026!", "new_password2": "SenhaNova2026!"}),
+            f"{reverse('accounts:signin')}?next={url}",
+        )
+
+    def test_initial_password_for_wrong_account_does_not_start_password_change(self):
+        user = get_user_model().objects.create_user(username="52998224725", password="SenhaForte2026!")
+        response = self.client.post(
+            reverse("accounts:signin"), {"username": "52998224725", "password": "pactoeja2026"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("_auth_user_id", self.client.session)
+        self.assertNotIn("alteracao_senha_obrigatoria", self.client.session)
+        user.refresh_from_db()
+        self.assertTrue(user.check_password("SenhaForte2026!"))
+
     def test_logout_only_accepts_post(self):
         user = get_user_model().objects.create_user(username="user@example.com", password="SenhaForte2026!")
         self.client.force_login(user)

@@ -4,6 +4,7 @@ from pathlib import Path
 
 import reportlab
 from django.contrib.staticfiles import finders
+from django.db.models import Case, IntegerField, Value, When
 from django.utils import timezone
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER
@@ -21,6 +22,8 @@ from reportlab.platypus import (
     Table,
     TableStyle,
 )
+
+from ..models import ProgramacaoSala
 
 
 AZUL = colors.HexColor("#087FE5")
@@ -202,19 +205,25 @@ def gerar_comprovante_inscricao(inscricao):
     )
     elementos.append(tabela)
 
+    ordem_turnos = Case(
+        When(turno=ProgramacaoSala.Turno.MANHA, then=Value(1)),
+        When(turno=ProgramacaoSala.Turno.TARDE, then=Value(2)),
+        When(turno=ProgramacaoSala.Turno.NOITE, then=Value(3)),
+        default=Value(4),
+        output_field=IntegerField(),
+    )
     programacoes = list(
-        inscricao.programacoes.select_related("sala", "tematica").order_by(
-            "data", "turno", "sala__nome"
-        )
+        inscricao.programacoes.select_related("sala").annotate(
+            _ordem_turno=ordem_turnos,
+        ).order_by("data", "_ordem_turno", "sala__nome")
     )
     if programacoes:
         itens = [Paragraph("Programações selecionadas", estilos["subtitulo"])]
         for programacao in programacoes:
             itens.append(
                 Paragraph(
-                    f"- {_texto(programacao.data.strftime('%d/%m/%Y'))} - "
-                    f"{_texto(programacao.get_turno_display())}: {_texto(programacao.sala)} "
-                    f"({_texto(programacao.tematica)})",
+                    f"- {programacao.data:%d/%m/%Y} - "
+                    f"{_texto(programacao.get_turno_display())}: {_texto(programacao.sala.nome)}",
                     estilos["corpo"],
                 )
             )

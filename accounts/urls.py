@@ -7,6 +7,7 @@ app_name = "accounts"
 
 urlpatterns = [
     path("entrar/", views.SignInView.as_view(), name="signin"),
+    path("alterar-senha/", views.FirstAccessPasswordView.as_view(), name="change_initial_password"),
     path("recuperar-senha/", views.recover_password, name="password_recovery"),
     path("cadastrar/", views.signup, name="signup"),
     path("cadastrar/confirmacao-enviada/", views.signup_confirmation_sent, name="signup_confirmation_sent"),
