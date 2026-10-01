@@ -105,7 +105,7 @@
         nameInput.readOnly = false;
         emailInput.readOnly = false;
         submitButton.disabled = true;
-        setCpfStatus("error", "bi-exclamation-circle-fill", "Este CPF já está cadastrado. Não é permitido enviar o formulário novamente. Para corrigir seus dados, entre em contato pelo WhatsApp (83) 3048-8555.");
+        setCpfStatus("error", "bi-exclamation-circle-fill", "Este CPF já realizou o preenchimento deste formulário. Não é permitido enviá-lo novamente. Para corrigir seus dados, entre em contato pelo WhatsApp (83) 3048-8555.");
         cpfWhatsappHelp.hidden = false;
       } else {
         if (data.dados && loadedCpf !== cpf) {

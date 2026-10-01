@@ -196,7 +196,7 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
         if self.educador_encontrado and FuncaoEducador.objects.filter(educador=self.educador_encontrado).exists():
             self.cpf_ja_cadastrado = True
             raise forms.ValidationError(
-                "Este CPF já está cadastrado. Não é permitido enviar o formulário novamente. "
+                "Este CPF já realizou o preenchimento deste formulário. Não é permitido enviá-lo novamente. "
                 "Para corrigir seus dados, entre em contato pelo WhatsApp (83) 3048-8555."
             )
         return cpf
