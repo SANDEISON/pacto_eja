@@ -72,6 +72,29 @@
     background-color: rgba(100, 110, 120, 0.12);
   }
 
+  .custom-scroll-list {
+    max-height: 380px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(13, 110, 253, 0.4) rgba(0, 0, 0, 0.04);
+  }
+  .custom-scroll-list::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scroll-list::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: 10px;
+  }
+  .custom-scroll-list::-webkit-scrollbar-thumb {
+    background: rgba(13, 110, 253, 0.4);
+    border-radius: 10px;
+  }
+  .custom-scroll-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(13, 110, 253, 0.7);
+  }
+
   .filter-btn-group .btn-check:checked + .btn {
     box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
   }
@@ -400,10 +423,13 @@
 
         <!-- Ranking / Destaques Laterais -->
         <div class="col-12 col-lg-5 col-xl-4 border-start-lg ps-lg-4">
-          <h6 class="fw-bold mb-3 d-flex align-items-center gap-2">
-            <i class="bi bi-trophy-fill text-warning"></i> Principais Destaques
-          </h6>
-          <div id="topBreakdownList" class="d-flex flex-column gap-1">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="fw-bold m-0 d-flex align-items-center gap-2">
+              <i class="bi bi-trophy-fill text-warning"></i> Principais Destaques
+            </h6>
+            <span class="badge bg-primary-subtle text-primary fw-bold" id="topBreakdownBadge"></span>
+          </div>
+          <div id="topBreakdownList" class="d-flex flex-column gap-1 custom-scroll-list">
             <!-- Renderizado dinamicamente via JS -->
           </div>
         </div>
@@ -1366,28 +1392,47 @@
     renderSummaryTable(rawData, totalSum);
   }
 
-  // Renderiza a lista dos 5 principais destaques
+  // Renderiza a lista de todos os destaques ordenados por inscritos com barra de rolagem
   function renderTopBreakdown(rawData, totalSum) {
     const container = document.getElementById('topBreakdownList');
+    const badge = document.getElementById('topBreakdownBadge');
     container.innerHTML = '';
 
     if (!rawData || rawData.length === 0) {
+      if (badge) badge.innerText = '0';
       container.innerHTML = '<p class="text-muted small">Nenhum dado cadastrado.</p>';
       return;
     }
 
-    const sorted = [...rawData].sort((a, b) => b.qtd - a.qtd).slice(0, 5);
+    const sorted = [...rawData].sort((a, b) => b.qtd - a.qtd);
+
+    if (badge) {
+      const filterKey = document.getElementById('filterSelect') ? document.getElementById('filterSelect').value : '';
+      let unit = 'itens';
+      if (filterKey === 'municipio') unit = 'municípios';
+      else if (filterKey === 'escola') unit = 'escolas';
+      else if (filterKey === 'estado') unit = 'estados';
+      badge.innerText = `${sorted.length} ${unit}`;
+    }
 
     sorted.forEach((item, idx) => {
       const pct = totalSum ? ((item.qtd / totalSum) * 100).toFixed(1) : 0;
       const color = COLOR_PALETTE[idx % COLOR_PALETTE.length];
 
+      let rankBadgeClass = 'bg-light text-secondary border';
+      if (idx === 0) rankBadgeClass = 'bg-warning text-dark fw-bold border border-warning';
+      else if (idx === 1) rankBadgeClass = 'bg-secondary-subtle text-secondary-emphasis fw-bold border';
+      else if (idx === 2) rankBadgeClass = 'bg-info-subtle text-info-emphasis fw-bold border';
+
       const div = document.createElement('div');
       div.className = 'top-list-item';
       div.innerHTML = `
         <div class="d-flex justify-content-between align-items-center mb-1">
-          <span class="fw-semibold text-truncate me-2 small" title="${item.label}">${item.label}</span>
-          <span class="badge bg-secondary-subtle text-dark fw-bold">${item.qtd} (${pct}%)</span>
+          <div class="d-flex align-items-center text-truncate me-2">
+            <span class="badge ${rankBadgeClass} me-2 small" style="min-width: 28px; text-align: center;">${idx + 1}º</span>
+            <span class="fw-semibold text-truncate small" title="${item.label}">${item.label}</span>
+          </div>
+          <span class="badge bg-secondary-subtle text-dark fw-bold text-nowrap">${item.qtd} (${pct}%)</span>
         </div>
         <div class="progress" style="height: 6px;">
           <div class="progress-bar" role="progressbar" style="width: ${pct}%; background-color: ${color};" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"></div>
