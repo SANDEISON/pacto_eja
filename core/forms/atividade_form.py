@@ -67,13 +67,14 @@ class AtividadeForm(BootstrapFormMixin, forms.ModelForm):
     class Meta:
         model = Atividade
         fields = (
-            "tipo", "modalidade", "titulo", "descricao", "local", "link", "data_inicio", "data_fim",
+            "tipo", "modalidade", "titulo", "descricao", "endereco", "local", "link", "data_inicio", "data_fim",
             "inscricoes_inicio", "inscricoes_fim", "vagas", "permite_submissao",
             "modelo_submissao", "submissoes_fim", "ativo",
         )
         widgets = {
             "descricao": forms.Textarea(attrs={"rows": 5}),
-            "local": forms.TextInput(attrs={"placeholder": "Endereço, prédio, sala ou auditório"}),
+            "endereco": forms.TextInput(attrs={"placeholder": "Nome do local ou endereço completo"}),
+            "local": forms.TextInput(attrs={"placeholder": "https://maps.app.goo.gl/..."}),
             "link": forms.URLInput(attrs={"placeholder": "https://..."}),
             "data_inicio": forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"),
             "data_fim": forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"),
@@ -85,10 +86,8 @@ class AtividadeForm(BootstrapFormMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         """Configura formatos HTML5 e textos de ajuda exibidos na administração."""
         super().__init__(*args, **kwargs)
-        self.fields["local"].help_text = (
-            "Informe o endereço completo ou cole um link do Google Maps. O sistema criará "
-            "automaticamente um link de localização para endereços."
-        )
+        self.fields["endereco"].help_text = "Informe o nome do local ou o endereço como texto."
+        self.fields["local"].help_text = "Cole o link do local do evento no Google Maps."
         self.fields["link"].help_text = "Use este campo para informar o acesso ao evento on-line."
         for name in ("data_inicio", "data_fim", "inscricoes_inicio", "inscricoes_fim", "submissoes_fim"):
             self.fields[name].input_formats = ["%Y-%m-%dT%H:%M"]

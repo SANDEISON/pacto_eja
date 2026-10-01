@@ -344,6 +344,29 @@ class AtividadeFlowTests(TestCase):
         self.assertContains(dashboard, "Local do evento:")
         self.assertContains(dashboard, "Abrir no Google Maps")
 
+    def test_event_displays_address_before_maps_link(self):
+        self.atividade.endereco = "Littoral Hotel — Av. Cabo Branco, 2172"
+        self.atividade.local = "https://maps.app.goo.gl/nnyHA1yVHSxauqMU7"
+        self.atividade.save(update_fields=("endereco", "local"))
+
+        for url in (reverse("dashboard"), reverse("atividade_inscricao", args=[self.atividade.pk])):
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertContains(response, self.atividade.endereco)
+                self.assertContains(response, "Link Local do evento:")
+                self.assertContains(response, 'href="https://maps.app.goo.gl/nnyHA1yVHSxauqMU7"')
+                content = response.content.decode()
+                self.assertLess(content.index(self.atividade.endereco), content.index("Link Local do evento:"))
+
+    def test_presential_event_accepts_address_without_maps_link(self):
+        self.atividade.endereco = "Auditório central"
+        self.atividade.local = ""
+        self.atividade.full_clean()
+        self.atividade.save(update_fields=("endereco", "local"))
+        response = self.client.get(reverse("dashboard"))
+        self.assertContains(response, "<strong>Local:</strong> Auditório central", html=True)
+        self.assertNotContains(response, "Link Local do evento:")
+
     def test_user_can_save_incomplete_registration_and_resume_it(self):
         url = reverse("atividade_inscricao", args=[self.atividade.pk])
         response = self.client.post(
@@ -1454,7 +1477,9 @@ class AtividadeManagementTests(TestCase):
         self.assertEqual(self.client.get(reverse("atividade_list")).status_code, 200)
         response = self.client.get(reverse("atividade_create"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "O sistema criará automaticamente")
+        self.assertContains(response, 'name="endereco"')
+        self.assertContains(response, "Informe o nome do local ou o endereço como texto.")
+        self.assertContains(response, "Cole o link do local do evento no Google Maps.")
         self.assertContains(response, "Link do evento on-line")
         self.assertContains(response, "Use este campo para informar o acesso ao evento on-line.")
         self.assertContains(response, "Refeições disponíveis")

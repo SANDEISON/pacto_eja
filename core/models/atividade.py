@@ -31,7 +31,8 @@ class Atividade(models.Model):
     )
     titulo = models.CharField("título", max_length=180)
     descricao = models.TextField("descrição")
-    local = models.CharField("local/endereço", max_length=255, blank=True)
+    endereco = models.CharField("endereço", max_length=255, blank=True)
+    local = models.CharField("link Local do evento", max_length=255, blank=True)
     link = models.URLField("link do evento on-line", max_length=500, blank=True)
     data_inicio = models.DateTimeField("início")
     data_fim = models.DateTimeField("término")
@@ -75,7 +76,7 @@ class Atividade(models.Model):
         if self.modalidade in (
             self.ModalidadeParticipacao.PRESENCIAL,
             self.ModalidadeParticipacao.AMBAS,
-        ) and not self.local:
+        ) and not (self.endereco or self.local):
             errors["local"] = "Informe o endereço da atividade presencial."
         if self.data_inicio and self.data_fim and self.data_fim < self.data_inicio:
             errors["data_fim"] = "O término deve ocorrer depois do início."
