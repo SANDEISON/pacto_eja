@@ -33,7 +33,16 @@
           <div class="section-label"><span>1</span><div><h3>Identificação</h3><p>Comece informando o CPF.</p></div></div>
           <div class="row g-3">
             {% include "management/_field.html" with field=form.cpf column="col-12 col-md-5" %}
-            <div class="col-12 col-md-7 d-flex align-items-end"><div id="cpf-status" class="lookup-status" aria-live="polite"><i class="bi bi-search"></i><span>Digite o CPF completo para consultar.</span></div></div>
+            <div class="col-12 col-md-7 d-flex align-items-end">
+              <div class="w-100">
+                <div id="cpf-status" class="lookup-status" aria-live="polite"><i class="bi bi-search"></i><span>Digite o CPF completo para consultar.</span></div>
+                <div id="cpf-whatsapp-help" class="mt-2"{% if not form.cpf_ja_cadastrado %} hidden{% endif %}>
+                  <a class="btn btn-success btn-sm" href="https://wa.me/558330488555?text=Ol%C3%A1%2C%20meu%20CPF%20j%C3%A1%20est%C3%A1%20cadastrado%20no%20Pacto%20EJA%20e%20preciso%20corrigir%20meus%20dados.%20Poderiam%20me%20ajudar%3F" target="_blank" rel="noopener noreferrer">
+                    <i class="bi bi-whatsapp" aria-hidden="true"></i> Entrar em contato pelo WhatsApp
+                  </a>
+                </div>
+              </div>
+            </div>
             {% include "management/_field.html" with field=form.nome_completo column="col-12" %}
             {% include "management/_field.html" with field=form.data_nascimento column="col-12" %}
             {% include "management/_field.html" with field=form.email column="col-12 col-md-6" %}
@@ -111,5 +120,5 @@
     </div>
   </section>
 </main>
-<script src="{% static 'js/cadastro_educadores.js' %}?v=20261001-1"></script>
+<script src="{% static 'js/cadastro_educadores.js' %}?v=20261001-3"></script>
 {% endblock %}

@@ -18,6 +18,7 @@
   const addressStateSelect = document.getElementById("id_endereco_estado");
   const addressCitySelect = document.getElementById("id_endereco_cidade");
   const cpfStatus = document.getElementById("cpf-status");
+  const cpfWhatsappHelp = document.getElementById("cpf-whatsapp-help");
   const stateSelect = document.getElementById("id_estado");
   const citySelect = document.getElementById("id_cidade");
   const schoolInput = document.getElementById("id_escola");
@@ -76,6 +77,7 @@
     addressCitySelect.disabled = false;
   }
   function setCpfStatus(kind, icon, message) {
+    cpfWhatsappHelp.hidden = true;
     cpfStatus.className = "lookup-status" + (kind ? ` is-${kind}` : "");
     cpfStatus.innerHTML = `<i class="bi ${icon}"></i><span>${message}</span>`;
   }
@@ -99,7 +101,8 @@
         emailInput.readOnly = false;
         form.dataset.existingPerson = "true";
         submitButton.disabled = true;
-        setCpfStatus("error", "bi-exclamation-circle-fill", "Este CPF já está cadastrado. Não é permitido enviar o formulário novamente. Para corrigir seus dados, entre em contato com a coordenação.");
+        setCpfStatus("error", "bi-exclamation-circle-fill", "Este CPF já está cadastrado. Não é permitido enviar o formulário novamente. Para corrigir seus dados, entre em contato pelo WhatsApp (83) 3048-8555.");
+        cpfWhatsappHelp.hidden = false;
       } else {
         if (wasExisting) { nameInput.value = ""; emailInput.value = ""; birthDateInput.value = ""; corRacaSelect.value = ""; genderSelect.value = ""; clearAddress(); }
         nameInput.readOnly = false;
