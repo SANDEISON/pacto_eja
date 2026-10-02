@@ -1,0 +1,1521 @@
+{% extends "base.html" %}
+
+{% block title %}Relatórios dos Certificados | Pacto EJA{% endblock %}
+{% block page_title %}Relatórios dos Certificados{% endblock %}
+{% block breadcrumb %}
+  <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Início</a></li>
+  <li class="breadcrumb-item">Relatórios</li>
+  <li class="breadcrumb-item active" aria-current="page">Certificados</li>
+{% endblock %}
+
+{% block page_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+<style>
+  .report-header-banner {
+    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 45%, #052c65 100%);
+    color: #ffffff;
+    border-radius: 16px;
+    padding: 24px 28px;
+    box-shadow: 0 10px 30px rgba(13, 110, 253, 0.22);
+  }
+
+  .stat-card-widget {
+    border: 0;
+    border-radius: 14px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    overflow: hidden;
+  }
+  .stat-card-widget:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 25px rgba(0, 0, 0, 0.12) !important;
+  }
+  .stat-icon-wrapper {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+  }
+
+  .chart-card {
+    border-radius: 16px;
+    border: 1px solid rgba(120, 130, 140, 0.15);
+    background-color: var(--bs-body-bg, #ffffff);
+    overflow: hidden;
+  }
+
+  .map-wrapper {
+    position: relative;
+    height: 440px;
+    width: 100%;
+    border-radius: 0 0 16px 16px;
+    z-index: 1;
+  }
+
+  .chart-container-main {
+    position: relative;
+    height: 380px;
+    width: 100%;
+  }
+  .chart-container-sm {
+    position: relative;
+    height: 260px;
+    width: 100%;
+  }
+
+  .top-list-item {
+    padding: 10px 14px;
+    border-radius: 10px;
+    background-color: rgba(100, 110, 120, 0.06);
+    margin-bottom: 8px;
+    transition: background-color 0.2s;
+  }
+  .top-list-item:hover {
+    background-color: rgba(100, 110, 120, 0.12);
+  }
+
+  .custom-scroll-list {
+    max-height: 380px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(13, 110, 253, 0.4) rgba(0, 0, 0, 0.04);
+  }
+  .custom-scroll-list::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scroll-list::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: 10px;
+  }
+  .custom-scroll-list::-webkit-scrollbar-thumb {
+    background: rgba(13, 110, 253, 0.4);
+    border-radius: 10px;
+  }
+  .custom-scroll-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(13, 110, 253, 0.7);
+  }
+
+  .course-filter-pill {
+    transition: all 0.2s ease;
+    border-radius: 30px;
+    font-weight: 500;
+  }
+  .course-filter-pill.active {
+    background-color: #0d6efd !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.35);
+  }
+
+  .badge-stat {
+    font-size: 0.82rem;
+    padding: 6px 12px;
+    border-radius: 20px;
+  }
+
+  .leaflet-popup-content-wrapper {
+    border-radius: 12px;
+    padding: 4px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+
+  <!-- ======================================================== -->
+  <!-- BANNER PRINCIPAL COM INFORMAÇÕES E AÇÕES                 -->
+  <!-- ======================================================== -->
+  <div class="report-header-banner mb-4 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+    <div>
+      <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+        <span class="badge bg-white text-primary fw-bold px-3 py-1 rounded-pill">GESTÃO DE CERTIFICAÇÕES</span>
+        {% if curso_selecionado %}
+          <span class="badge bg-warning text-dark fw-bold px-3 py-1 rounded-pill">
+            <i class="bi bi-funnel-fill me-1"></i> {{ curso_selecionado.nome }}
+          </span>
+        {% else %}
+          <span class="badge bg-white text-dark fw-semibold px-2 py-1 rounded-pill">
+            <i class="bi bi-award me-1 text-primary"></i> Visão Geral (Todos os Cursos)
+          </span>
+        {% endif %}
+      </div>
+      <h2 class="fw-bold m-0 text-white">Relatório de Solicitações de Certificados</h2>
+      <p class="m-0 opacity-85 fs-6 mt-1">
+        Consulte os dados dos educadores que preencheram o formulário de solicitação de certificado do Pacto EJA, abrangência geográfica, escolas e perfil demográfico.
+      </p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap align-items-center">
+      {% if curso_selecionado %}
+        <a href="{% url 'reports_certificados' %}" class="btn btn-warning btn-sm fw-bold shadow-sm px-3 py-2 text-dark">
+          <i class="bi bi-x-circle me-1"></i> Ver Todos os Cursos
+        </a>
+      {% endif %}
+      <a href="{% url 'reports' %}" class="btn btn-outline-light btn-sm fw-semibold shadow-sm px-3 py-2">
+        <i class="bi bi-calendar2-check me-1"></i> Relatório de Atividades
+      </a>
+      <button type="button" class="btn btn-light btn-sm fw-semibold shadow-sm px-3 py-2" onclick="window.print()">
+        <i class="bi bi-printer me-1"></i> Imprimir / PDF
+      </button>
+      <button type="button" class="btn btn-success btn-sm fw-semibold shadow-sm px-3 py-2" onclick="exportFullCertificadosCSV()">
+        <i class="bi bi-file-earmark-excel me-1"></i> Exportar CSV
+      </button>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- BARRA DE SELEÇÃO RÁPIDA POR CURSO DE CERTIFICADO         -->
+  <!-- ======================================================== -->
+  <div class="card shadow-sm border-0 mb-4 bg-body-tertiary">
+    <div class="card-body p-3">
+      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+        <span class="small fw-bold text-muted text-uppercase tracking-wider">
+          <i class="bi bi-filter me-1 text-primary"></i> Filtrar Indicadores por Curso Solicitado:
+        </span>
+        <span class="small text-muted">{{ total_solicitantes }} educador(es) solicitante(s)</span>
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <a href="{% url 'reports_certificados' %}" 
+           class="btn btn-sm btn-outline-primary course-filter-pill {% if not curso_selecionado %}active{% endif %}">
+          <i class="bi bi-grid-fill me-1"></i> Todos os Cursos ({{ total_solicitantes }})
+        </a>
+        {% for c in cursos_catalogo %}
+          <a href="?curso={{ c.id }}" 
+             class="btn btn-sm btn-outline-primary course-filter-pill {% if curso_selecionado and curso_selecionado.id == c.id %}active{% endif %}">
+            <i class="bi bi-award me-1"></i> {{ c.nome }} 
+            <span class="badge bg-secondary-subtle text-dark ms-1">{{ c.total_solicitantes }}</span>
+          </a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- CARDS DE MÉTRICAS (KPIS)                                 -->
+  <!-- ======================================================== -->
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-sm-6 col-xl-2">
+      <div class="card shadow-sm border-0 stat-card-widget h-100 bg-body">
+        <div class="card-body p-3 d-flex align-items-center gap-3">
+          <div class="stat-icon-wrapper bg-primary-subtle text-primary">
+            <i class="bi bi-people-fill"></i>
+          </div>
+          <div>
+            <div class="text-muted small fw-semibold">Educadores</div>
+            <h3 class="fw-bold mb-0 text-primary">{{ total_solicitantes }}</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-2">
+      <div class="card shadow-sm border-0 stat-card-widget h-100 bg-body">
+        <div class="card-body p-3 d-flex align-items-center gap-3">
+          <div class="stat-icon-wrapper bg-warning-subtle text-warning-emphasis">
+            <i class="bi bi-award-fill"></i>
+          </div>
+          <div>
+            <div class="text-muted small fw-semibold">Certificados Pedidos</div>
+            <h3 class="fw-bold mb-0 text-warning-emphasis">{{ total_certificados_pedidos }}</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-2">
+      <div class="card shadow-sm border-0 stat-card-widget h-100 bg-body">
+        <div class="card-body p-3 d-flex align-items-center gap-3">
+          <div class="stat-icon-wrapper bg-success-subtle text-success">
+            <i class="bi bi-building"></i>
+          </div>
+          <div>
+            <div class="text-muted small fw-semibold">Municípios Atuação</div>
+            <h3 class="fw-bold mb-0 text-success">{{ total_municipios_atuacao }}</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-2">
+      <div class="card shadow-sm border-0 stat-card-widget h-100 bg-body">
+        <div class="card-body p-3 d-flex align-items-center gap-3">
+          <div class="stat-icon-wrapper bg-info-subtle text-info">
+            <i class="bi bi-geo-alt-fill"></i>
+          </div>
+          <div>
+            <div class="text-muted small fw-semibold">Municípios Residência</div>
+            <h3 class="fw-bold mb-0 text-info">{{ total_municipios_residencia }}</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-2">
+      <div class="card shadow-sm border-0 stat-card-widget h-100 bg-body">
+        <div class="card-body p-3 d-flex align-items-center gap-3">
+          <div class="stat-icon-wrapper bg-purple-subtle text-secondary" style="background-color: rgba(111, 66, 193, 0.12); color: #6f42c1 !important;">
+            <i class="bi bi-mortarboard-fill"></i>
+          </div>
+          <div>
+            <div class="text-muted small fw-semibold">Escolas</div>
+            <h3 class="fw-bold mb-0" style="color: #6f42c1;">{{ total_escolas }}</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-2">
+      <div class="card shadow-sm border-0 stat-card-widget h-100 bg-body">
+        <div class="card-body p-3 d-flex align-items-center gap-3">
+          <div class="stat-icon-wrapper bg-secondary-subtle text-secondary">
+            <i class="bi bi-diagram-3-fill"></i>
+          </div>
+          <div>
+            <div class="text-muted small fw-semibold">Vínculos EJA</div>
+            <h3 class="fw-bold mb-0 text-secondary">{{ total_vinculos }}</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- PAINEL CENTRAL: MAPA DO BRASIL & GRÁFICO PRINCIPAL       -->
+  <!-- ======================================================== -->
+  <div class="row g-4 mb-4">
+    <!-- Coluna Esquerda: Mapa / Gráfico Interativo -->
+    <div class="col-12 col-xl-8">
+      <div class="card shadow-sm border-0 chart-card h-100">
+        <div class="card-header bg-transparent border-0 pt-3 px-4 pb-0 d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2">
+          <div>
+            <span class="badge bg-primary-subtle text-primary fw-bold px-2 py-1 mb-1">DISTRIBUIÇÃO ANALÍTICA</span>
+            <h5 class="fw-bold m-0" id="mainSectionHeading">Cobertura Geográfica & Participação</h5>
+          </div>
+
+          <!-- Alternância de visualização: Mapa vs Gráfico -->
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            <div class="btn-group btn-group-sm" role="group" aria-label="Visualização principal">
+              <input type="radio" class="btn-check" name="mainViewToggle" id="viewToggleMap" value="map" checked autocomplete="off">
+              <label class="btn btn-outline-primary" for="viewToggleMap">
+                <i class="bi bi-map-fill me-1"></i> Mapa do Brasil
+              </label>
+
+              <input type="radio" class="btn-check" name="mainViewToggle" id="viewToggleChart" value="chart" autocomplete="off">
+              <label class="btn btn-outline-primary" for="viewToggleChart">
+                <i class="bi bi-bar-chart-fill me-1"></i> Gráfico Interativo
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body p-3 p-md-4">
+          <!-- VISUALIZAÇÃO 1: MAPA LEAFLET -->
+          <div id="mapViewContainer">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+              <div class="d-flex align-items-center gap-2">
+                <span class="small fw-semibold text-muted">Camada geográfica:</span>
+                <div class="btn-group btn-group-sm" role="group">
+                  <input type="radio" class="btn-check" name="mapMode" id="mapModeAtuacao" value="atuacao" checked autocomplete="off">
+                  <label class="btn btn-outline-secondary" for="mapModeAtuacao">Municípios de Atuação</label>
+
+                  <input type="radio" class="btn-check" name="mapMode" id="mapModeResidencia" value="residencia" autocomplete="off">
+                  <label class="btn btn-outline-secondary" for="mapModeResidencia">Municípios de Residência</label>
+                </div>
+              </div>
+              <span class="badge bg-light text-muted border small">Clique em um estado para filtrar</span>
+            </div>
+            <div id="mapBrazil" class="map-wrapper shadow-sm border rounded"></div>
+          </div>
+
+          <!-- VISUALIZAÇÃO 2: GRÁFICO CUSTOMIZÁVEL -->
+          <div id="chartViewContainer" class="d-none">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+              <div class="d-flex align-items-center gap-2 flex-wrap">
+                <label for="chartMetricSelect" class="small fw-semibold text-muted mb-0">Métrica:</label>
+                <select id="chartMetricSelect" class="form-select form-select-sm" style="min-width: 220px;">
+                  <option value="curso" selected>Cursos Solicitados</option>
+                  <option value="municipio_atuacao">Municípios de Atuação</option>
+                  <option value="municipio_residencia">Municípios de Residência</option>
+                  <option value="estado_atuacao">Estados de Atuação</option>
+                  <option value="estado_residencia">Estados de Residência</option>
+                  <option value="escola">Escolas</option>
+                  <option value="funcao">Função na EJA</option>
+                  <option value="caracterizacao">Caracterização / Turmas</option>
+                  <option value="tempo">Tempo de Atuação</option>
+                </select>
+              </div>
+
+              <div class="btn-group btn-group-sm" role="group" aria-label="Tipo de gráfico">
+                <input type="radio" class="btn-check" name="chartTypeRadio" id="typeBar" value="bar" checked autocomplete="off">
+                <label class="btn btn-outline-secondary" for="typeBar"><i class="bi bi-bar-chart"></i> Barras</label>
+
+                <input type="radio" class="btn-check" name="chartTypeRadio" id="typeDoughnut" value="doughnut" autocomplete="off">
+                <label class="btn btn-outline-secondary" for="typeDoughnut"><i class="bi bi-circle"></i> Rosca</label>
+
+                <input type="radio" class="btn-check" name="chartTypeRadio" id="typePie" value="pie" autocomplete="off">
+                <label class="btn btn-outline-secondary" for="typePie"><i class="bi bi-pie-chart"></i> Pizza</label>
+              </div>
+            </div>
+
+            <div class="chart-container-main">
+              <canvas id="mainChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Coluna Direita: Ranking & Destaques -->
+    <div class="col-12 col-xl-4">
+      <div class="card shadow-sm border-0 chart-card h-100">
+        <div class="card-header bg-transparent border-0 pt-3 px-4 pb-2 d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="fw-bold m-0" id="breakdownTitle">Ranking de Destaques</h6>
+            <span class="small text-muted" id="breakdownSubtitle">Municípios com maior volume</span>
+          </div>
+          <span class="badge bg-primary text-white" id="breakdownBadge">0</span>
+        </div>
+        <div class="card-body p-3 p-md-4 pt-1">
+          <div class="custom-scroll-list" id="breakdownList">
+            <!-- Gerado via JavaScript -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- GRADE DE GRÁFICOS SECUNDÁRIOS: DEMOGRAFIA & PERFIL EJA   -->
+  <!-- ======================================================== -->
+  <div class="row g-4 mb-4">
+    <!-- 1. Cursos Solicitados -->
+    <div class="col-12 col-md-6 col-xl-4">
+      <div class="card shadow-sm border-0 chart-card h-100">
+        <div class="card-header bg-transparent border-0 pt-3 px-4 pb-0">
+          <span class="badge bg-warning-subtle text-warning-emphasis fw-bold px-2 py-1 mb-1">CERTIFICADOS</span>
+          <h6 class="fw-bold m-0">Solicitações por Curso</h6>
+        </div>
+        <div class="card-body p-3">
+          <div class="chart-container-sm">
+            <canvas id="cursoChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Gênero -->
+    <div class="col-12 col-md-6 col-xl-4">
+      <div class="card shadow-sm border-0 chart-card h-100">
+        <div class="card-header bg-transparent border-0 pt-3 px-4 pb-0">
+          <span class="badge bg-info-subtle text-info-emphasis fw-bold px-2 py-1 mb-1">DEMOGRAFIA</span>
+          <h6 class="fw-bold m-0">Distribuição por Gênero</h6>
+        </div>
+        <div class="card-body p-3">
+          <div class="chart-container-sm">
+            <canvas id="generoChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Cor / Raça -->
+    <div class="col-12 col-md-6 col-xl-4">
+      <div class="card shadow-sm border-0 chart-card h-100">
+        <div class="card-header bg-transparent border-0 pt-3 px-4 pb-0">
+          <span class="badge bg-secondary-subtle text-secondary-emphasis fw-bold px-2 py-1 mb-1">DEMOGRAFIA</span>
+          <h6 class="fw-bold m-0">Distribuição por Cor / Raça</h6>
+        </div>
+        <div class="card-body p-3">
+          <div class="chart-container-sm">
+            <canvas id="corChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Faixa Etária -->
+    <div class="col-12 col-md-6 col-xl-4">
+      <div class="card shadow-sm border-0 chart-card h-100">
+        <div class="card-header bg-transparent border-0 pt-3 px-4 pb-0">
+          <span class="badge bg-success-subtle text-success fw-bold px-2 py-1 mb-1">DEMOGRAFIA</span>
+          <h6 class="fw-bold m-0">Faixa Etária dos Educadores</h6>
+        </div>
+        <div class="card-body p-3">
+          <div class="chart-container-sm">
+            <canvas id="faixaEtariaChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. Função na EJA -->
+    <div class="col-12 col-md-6 col-xl-4">
+      <div class="card shadow-sm border-0 chart-card h-100">
+        <div class="card-header bg-transparent border-0 pt-3 px-4 pb-0">
+          <span class="badge bg-primary-subtle text-primary fw-bold px-2 py-1 mb-1">ATUAÇÃO</span>
+          <h6 class="fw-bold m-0">Função Exercida na EJA</h6>
+        </div>
+        <div class="card-body p-3">
+          <div class="chart-container-sm">
+            <canvas id="funcaoChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. Tempo de Atuação -->
+    <div class="col-12 col-md-6 col-xl-4">
+      <div class="card shadow-sm border-0 chart-card h-100">
+        <div class="card-header bg-transparent border-0 pt-3 px-4 pb-0">
+          <span class="badge bg-secondary-subtle text-dark fw-bold px-2 py-1 mb-1">EXPERIÊNCIA</span>
+          <h6 class="fw-bold m-0">Tempo de Atuação na EJA</h6>
+        </div>
+        <div class="card-body p-3">
+          <div class="chart-container-sm">
+            <canvas id="tempoChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- TABELA ANALÍTICA DE SOLICITANTES & DETALHES              -->
+  <!-- ======================================================== -->
+  <div class="card shadow-sm border-0 chart-card mb-5">
+    <div class="card-header bg-transparent border-0 pt-4 px-4 pb-3">
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+        <div>
+          <span class="badge bg-primary-subtle text-primary fw-bold px-3 py-1 rounded-pill mb-1">DADOS GRANULARES</span>
+          <h4 class="fw-bold m-0">Relação Completa dos Solicitantes de Certificado</h4>
+          <p class="text-muted small m-0 mt-1" id="tableRecordCountInfo">Carregando participantes...</p>
+        </div>
+
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+          <div class="btn-group btn-group-sm" role="group" aria-label="Modo de tabela">
+            <input type="radio" class="btn-check" name="tableModeRadio" id="tableModeDetailed" value="detailed" checked autocomplete="off">
+            <label class="btn btn-outline-primary" for="tableModeDetailed">
+              <i class="bi bi-list-check me-1"></i> Visão Detalhada
+            </label>
+
+            <input type="radio" class="btn-check" name="tableModeRadio" id="tableModeSummary" value="summary" autocomplete="off">
+            <label class="btn btn-outline-primary" for="tableModeSummary">
+              <i class="bi bi-table me-1"></i> Resumo Agrupado
+            </label>
+          </div>
+
+          <button type="button" class="btn btn-success btn-sm fw-semibold shadow-sm px-3" onclick="exportFullCertificadosCSV()">
+            <i class="bi bi-file-earmark-spreadsheet me-1"></i> Baixar CSV
+          </button>
+        </div>
+      </div>
+
+      <!-- Filtros da Tabela -->
+      <div class="row g-2 mt-3 pt-3 border-top align-items-end" id="tableFiltersContainer">
+        <div class="col-12 col-md-3">
+          <label for="tableSearchInput" class="form-label small fw-bold text-muted mb-1">
+            <i class="bi bi-search me-1 text-primary"></i> Busca rápida:
+          </label>
+          <input type="text" id="tableSearchInput" class="form-control form-control-sm" placeholder="Nome, CPF, e-mail, município ou escola...">
+        </div>
+
+        <div class="col-6 col-sm-4 col-md-2">
+          <label for="tableFilterCurso" class="form-label small fw-bold text-muted mb-1">Curso:</label>
+          <select id="tableFilterCurso" class="form-select form-select-sm">
+            <option value="">Todos os cursos</option>
+          </select>
+        </div>
+
+        <div class="col-6 col-sm-4 col-md-2">
+          <label for="tableFilterEstado" class="form-label small fw-bold text-muted mb-1">Estado (UF):</label>
+          <select id="tableFilterEstado" class="form-select form-select-sm">
+            <option value="">Todos os estados</option>
+          </select>
+        </div>
+
+        <div class="col-6 col-sm-4 col-md-2">
+          <label for="tableFilterMunicipio" class="form-label small fw-bold text-muted mb-1">Município:</label>
+          <select id="tableFilterMunicipio" class="form-select form-select-sm">
+            <option value="">Todos os municípios</option>
+          </select>
+        </div>
+
+        <div class="col-6 col-sm-4 col-md-2">
+          <label for="tableFilterFuncao" class="form-label small fw-bold text-muted mb-1">Função na EJA:</label>
+          <select id="tableFilterFuncao" class="form-select form-select-sm">
+            <option value="">Todas as funções</option>
+          </select>
+        </div>
+
+        <div class="col-6 col-sm-4 col-md-1 d-flex gap-1">
+          <button type="button" id="btnClearTableFilters" class="btn btn-sm btn-outline-secondary w-100" title="Limpar Filtros">
+            <i class="bi bi-x-circle"></i> Limpar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabela 1: Visão Detalhada -->
+    <div class="table-responsive" id="tableDetailedContainer">
+      <table class="table table-hover align-middle mb-0" id="detailedTable">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-4" style="width: 50px;">#</th>
+            <th>Educador / CPF</th>
+            <th>Demografia</th>
+            <th>Residência</th>
+            <th>Atuação Escolar</th>
+            <th>Função & Tempo</th>
+            <th class="pe-4">Cursos Solicitados</th>
+          </tr>
+        </thead>
+        <tbody id="detailedTableBody">
+          <!-- Renderizado via JS -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Tabela 2: Resumo Agrupado -->
+    <div class="table-responsive d-none" id="tableSummaryContainer">
+      <table class="table table-hover align-middle mb-0" id="summaryTable">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-4" style="width: 60px;">Posição</th>
+            <th>Categoria / Item</th>
+            <th class="text-center" style="width: 140px;">Quantidade</th>
+            <th class="pe-4" style="width: 250px;">Participação</th>
+          </tr>
+        </thead>
+        <tbody id="summaryTableBody">
+          <!-- Renderizado via JS -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Rodapé de Paginação -->
+    <div class="card-footer bg-transparent border-0 py-3 px-4 d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3" id="tablePaginationFooter">
+      <div class="d-flex align-items-center gap-2">
+        <span class="small text-muted">Exibir:</span>
+        <select id="selectPageSize" class="form-select form-select-sm" style="width: 80px;">
+          <option value="10" selected>10</option>
+          <option value="25">25</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+        <span class="small text-muted" id="pageRangeInfo">Mostrando 1-10</span>
+      </div>
+
+      <nav aria-label="Navegação da tabela">
+        <ul class="pagination pagination-sm mb-0" id="paginationNav">
+          <!-- Gerado via JS -->
+        </ul>
+      </nav>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+{{ participantes_detalhados|json_script:"participants-data" }}
+{{ cursos_catalogo|json_script:"courses-catalog-data" }}
+{{ curso_dados|json_script:"course-chart-data" }}
+{{ municipio_atuacao_dados|json_script:"municipality-atuacao-data" }}
+{{ estado_atuacao_dados|json_script:"state-atuacao-data" }}
+{{ municipio_residencia_dados|json_script:"municipality-residencia-data" }}
+{{ estado_residencia_dados|json_script:"state-residencia-data" }}
+{{ escola_dados|json_script:"school-data" }}
+{{ genero_dados|json_script:"gender-data" }}
+{{ cor_dados|json_script:"race-color-data" }}
+{{ faixa_etaria_dados|json_script:"age-group-data" }}
+{{ funcao_dados|json_script:"role-data" }}
+{{ caracterizacao_dados|json_script:"characterization-data" }}
+{{ tempo_dados|json_script:"experience-time-data" }}
+
+<script>
+  const readJson = (id) => JSON.parse(document.getElementById(id).textContent);
+
+  const participantsData = readJson("participants-data");
+  const coursesCatalog = readJson("courses-catalog-data");
+
+  const datasets = {
+    curso: { title: "Cursos Solicitados", data: readJson("course-chart-data") },
+    municipio_atuacao: { title: "Municípios de Atuação Escolar", data: readJson("municipality-atuacao-data") },
+    municipio_residencia: { title: "Municípios de Residência", data: readJson("municipality-residencia-data") },
+    estado_atuacao: { title: "Estados de Atuação Escolar", data: readJson("state-atuacao-data") },
+    estado_residencia: { title: "Estados de Residência", data: readJson("state-residencia-data") },
+    escola: { title: "Escolas Atendidas", data: readJson("school-data") },
+    funcao: { title: "Função na EJA", data: readJson("role-data") },
+    caracterizacao: { title: "Caracterização / Atuação nas Turmas", data: readJson("characterization-data") },
+    tempo: { title: "Tempo de Atuação na EJA", data: readJson("experience-time-data") },
+    genero: { title: "Distribuição por Gênero", data: readJson("gender-data") },
+    cor: { title: "Distribuição por Cor / Raça", data: readJson("race-color-data") },
+    faixa_etaria: { title: "Faixa Etária", data: readJson("age-group-data") }
+  };
+
+  const COLOR_PALETTE = [
+    '#0d6efd', '#198754', '#0dcaf0', '#6f42c1', '#fd7e14',
+    '#d63384', '#20c997', '#ffc107', '#6610f2', '#084298',
+    '#146c43', '#087990', '#495057', '#b02a37', '#e0a800'
+  ];
+
+  let mainChartInstance = null;
+  let secondaryCharts = {};
+  let leafletMapInstance = null;
+  let currentFilteredParticipants = [...participantsData];
+
+  let currentPage = 1;
+  let pageSize = 10;
+
+  function formatCPF(cpf) {
+    if (!cpf) return '<span class="text-muted">—</span>';
+    const clean = cpf.replace(/\D/g, '');
+    if (clean.length === 11) {
+      return clean.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+    }
+    return cpf;
+  }
+
+  function getThemeTextColor() {
+    const isDark = document.body.getAttribute('data-bs-theme') === 'dark' || document.documentElement.getAttribute('data-bs-theme') === 'dark';
+    return isDark ? '#e9ecef' : '#212529';
+  }
+
+  function getColors(count) {
+    const colors = [];
+    for (let i = 0; i < count; i++) {
+      colors.push(COLOR_PALETTE[i % COLOR_PALETTE.length]);
+    }
+    return colors;
+  }
+
+  // Mapeamento de estados do Brasil
+  const STATE_NAME_TO_SIGLA = {
+    "acre": "AC", "alagoas": "AL", "amapá": "AP", "amapa": "AP", "amazonas": "AM",
+    "bahia": "BA", "ceará": "CE", "ceara": "CE", "distrito federal": "DF",
+    "espírito santo": "ES", "espirito santo": "ES", "goiás": "GO", "goias": "GO",
+    "maranhão": "MA", "maranhao": "MA", "mato grosso": "MT", "mato grosso do sul": "MS",
+    "minas gerais": "MG", "pará": "PA", "para": "PA", "paraíba": "PB", "paraiba": "PB",
+    "paraná": "PR", "parana": "PR", "pernambuco": "PE", "piauí": "PI", "piaui": "PI",
+    "rio de janeiro": "RJ", "rio grande do norte": "RN", "rio grande do sul": "RS",
+    "rondônia": "RO", "rondonia": "RO", "roraima": "RR", "santa catarina": "SC",
+    "são paulo": "SP", "sao paulo": "SP", "sergipe": "SE", "tocantins": "TO"
+  };
+
+  // ----------------------------------------------------
+  // INICIALIZAÇÃO DO MAPA DO BRASIL
+  // ----------------------------------------------------
+  function initBrazilMap() {
+    const mapContainer = document.getElementById('mapBrazil');
+    if (!mapContainer) return;
+
+    const isDark = document.body.getAttribute('data-bs-theme') === 'dark' || document.documentElement.getAttribute('data-bs-theme') === 'dark';
+
+    if (leafletMapInstance) leafletMapInstance.remove();
+
+    leafletMapInstance = L.map('mapBrazil', {
+      center: [-14.2350, -51.9253],
+      zoom: 4,
+      zoomControl: true,
+      scrollWheelZoom: false
+    });
+
+    // CARTO Basemaps API Key para a camada base neutra em tom cinza
+    const cartoApiKey = 'cb1_3hah_1_072f421d51111ef4352b9c82';
+    const tileUrl = isDark 
+      ? `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=${cartoApiKey}`
+      : `https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=${cartoApiKey}`;
+
+    L.tileLayer(tileUrl, {
+      attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap',
+      subdomains: 'abcd',
+      maxZoom: 19
+    }).addTo(leafletMapInstance);
+
+    const mapMode = document.querySelector('input[name="mapMode"]:checked')?.value || 'atuacao';
+    const stateDataset = mapMode === 'atuacao' ? datasets.estado_atuacao.data : datasets.estado_residencia.data;
+
+    const stateCountsBySigla = {};
+    (stateDataset || []).forEach(item => {
+      const stateName = (item.label || '').trim();
+      if (!stateName || stateName === 'Não informado') return;
+      const sigla = (item.sigla || STATE_NAME_TO_SIGLA[stateName.toLowerCase()] || '').toUpperCase();
+      if (sigla) {
+        stateCountsBySigla[sigla] = (stateCountsBySigla[sigla] || 0) + item.qtd;
+      }
+    });
+
+    function getStateColor(count) {
+      if (!count || count === 0) return isDark ? '#2b3035' : '#e9ecef';
+      if (count <= 2) return '#9ec5fe';
+      if (count <= 5) return '#3d8bfd';
+      if (count <= 10) return '#0d6efd';
+      return '#0a58ca';
+    }
+
+    fetch('https://cdn.jsdelivr.net/gh/codeforamerica/click_that_hood@master/public/data/brazil-states.geojson')
+      .then(res => res.json())
+      .then(geoJsonData => {
+        L.geoJSON(geoJsonData, {
+          style: function(feature) {
+            const sigla = (feature.properties.sigla || '').toUpperCase();
+            const count = stateCountsBySigla[sigla] || 0;
+            return {
+              fillColor: getStateColor(count),
+              weight: 1.5,
+              opacity: 1,
+              color: isDark ? '#495057' : '#ffffff',
+              fillOpacity: count > 0 ? 0.85 : 0.4
+            };
+          },
+          onEachFeature: function(feature, layer) {
+            const sigla = (feature.properties.sigla || '').toUpperCase();
+            const name = feature.properties.name || feature.properties.nome || sigla;
+            const count = stateCountsBySigla[sigla] || 0;
+
+            const popupContent = `
+              <div class="p-2 text-center">
+                <span class="badge bg-primary px-2 py-1 mb-1">${sigla}</span>
+                <h6 class="fw-bold mb-1">${name}</h6>
+                <div class="fw-semibold text-primary fs-6">${count} solicitante(s)</div>
+                <small class="text-muted">${mapMode === 'atuacao' ? 'Atuação escolar' : 'Residência'}</small>
+              </div>
+            `;
+            layer.bindPopup(popupContent);
+
+            layer.on({
+              mouseover: function(e) {
+                e.target.setStyle({ weight: 3, color: '#0d6efd', fillOpacity: 0.95 });
+              },
+              mouseout: function(e) {
+                e.target.setStyle({ weight: 1.5, color: isDark ? '#495057' : '#ffffff', fillOpacity: count > 0 ? 0.85 : 0.4 });
+              },
+              click: function() {
+                const filterEstado = document.getElementById('tableFilterEstado');
+                if (filterEstado) {
+                  filterEstado.value = sigla;
+                  applyTableFilters();
+                  document.getElementById('tableFiltersContainer').scrollIntoView({ behavior: 'smooth' });
+                }
+              }
+            });
+          }
+        }).addTo(leafletMapInstance);
+      })
+      .catch(err => {
+        console.warn("Falha ao carregar GeoJSON dos estados:", err);
+      });
+  }
+
+  // ----------------------------------------------------
+  // RENDERIZAÇÃO DO GRÁFICO PRINCIPAL
+  // ----------------------------------------------------
+  function renderMainChart() {
+    const metricKey = document.getElementById('chartMetricSelect').value;
+    const chartType = document.querySelector('input[name="chartTypeRadio"]:checked')?.value || 'bar';
+    const datasetObj = datasets[metricKey] || datasets.curso;
+
+    const rawData = datasetObj.data || [];
+    const labels = rawData.map(d => d.label || 'Não informado');
+    const values = rawData.map(d => d.qtd || 0);
+    const totalSum = values.reduce((a, b) => a + b, 0);
+
+    if (mainChartInstance) mainChartInstance.destroy();
+
+    const colors = getColors(labels.length);
+    const textColor = getThemeTextColor();
+    const ctx = document.getElementById('mainChart').getContext('2d');
+
+    const chartOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: chartType !== 'bar',
+          position: 'right',
+          labels: { color: textColor, font: { family: 'Inter, sans-serif', size: 12 } }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const val = context.parsed.y !== undefined ? context.parsed.y : context.parsed;
+              const pct = totalSum ? ((val / totalSum) * 100).toFixed(1) : 0;
+              return ` ${context.label}: ${val} (${pct}%)`;
+            }
+          }
+        }
+      }
+    };
+
+    if (chartType === 'bar') {
+      chartOptions.scales = {
+        x: { ticks: { color: textColor, font: { size: 11 } }, grid: { display: false } },
+        y: { ticks: { color: textColor }, grid: { color: 'rgba(150,150,150,0.1)' } }
+      };
+    }
+
+    mainChartInstance = new Chart(ctx, {
+      type: chartType,
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Quantidade',
+          data: values,
+          backgroundColor: chartType === 'bar' ? colors[0] : colors,
+          borderColor: chartType === 'bar' ? colors[0] : '#ffffff',
+          borderWidth: 1.5,
+          borderRadius: chartType === 'bar' ? 6 : 0
+        }]
+      },
+      options: chartOptions
+    });
+
+    renderBreakdownList(rawData, totalSum, datasetObj.title);
+    renderSummaryTable(rawData, totalSum);
+  }
+
+  // ----------------------------------------------------
+  // LISTA DE DESTAQUES (RANKING)
+  // ----------------------------------------------------
+  function renderBreakdownList(rawData, totalSum, title) {
+    const container = document.getElementById('breakdownList');
+    const badge = document.getElementById('breakdownBadge');
+    const subtitle = document.getElementById('breakdownSubtitle');
+    container.innerHTML = '';
+
+    if (subtitle && title) subtitle.innerText = title;
+
+    if (!rawData || rawData.length === 0) {
+      if (badge) badge.innerText = '0';
+      container.innerHTML = '<p class="text-muted small">Nenhum dado disponível.</p>';
+      return;
+    }
+
+    const sorted = [...rawData].sort((a, b) => b.qtd - a.qtd);
+    if (badge) badge.innerText = `${sorted.length} itens`;
+
+    sorted.forEach((item, idx) => {
+      const pct = totalSum ? ((item.qtd / totalSum) * 100).toFixed(1) : 0;
+      const color = COLOR_PALETTE[idx % COLOR_PALETTE.length];
+
+      let rankBadgeClass = 'bg-light text-secondary border';
+      if (idx === 0) rankBadgeClass = 'bg-warning text-dark fw-bold border border-warning';
+      else if (idx === 1) rankBadgeClass = 'bg-secondary-subtle text-secondary-emphasis fw-bold border';
+      else if (idx === 2) rankBadgeClass = 'bg-info-subtle text-info-emphasis fw-bold border';
+
+      const div = document.createElement('div');
+      div.className = 'top-list-item';
+      div.innerHTML = `
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <div class="d-flex align-items-center text-truncate me-2">
+            <span class="badge ${rankBadgeClass} me-2 small" style="min-width: 28px; text-align: center;">${idx + 1}º</span>
+            <span class="fw-semibold text-truncate small" title="${item.label}">${item.label}</span>
+          </div>
+          <span class="badge bg-secondary-subtle text-dark fw-bold text-nowrap">${item.qtd} (${pct}%)</span>
+        </div>
+        <div class="progress" style="height: 6px;">
+          <div class="progress-bar" role="progressbar" style="width: ${pct}%; background-color: ${color};" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+      `;
+      container.appendChild(div);
+    });
+  }
+
+  // ----------------------------------------------------
+  // RESUMO AGRUPADO PARA TABELA
+  // ----------------------------------------------------
+  function renderSummaryTable(rawData, totalSum) {
+    const tBody = document.getElementById('summaryTableBody');
+    if (!tBody) return;
+    tBody.innerHTML = '';
+
+    if (!rawData || rawData.length === 0) {
+      tBody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-muted">Nenhum dado encontrado.</td></tr>';
+      return;
+    }
+
+    rawData.forEach((item, idx) => {
+      const pct = totalSum ? ((item.qtd / totalSum) * 100).toFixed(1) : 0;
+      const color = COLOR_PALETTE[idx % COLOR_PALETTE.length];
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="ps-4 fw-bold text-muted">${idx + 1}</td>
+        <td class="fw-semibold">${item.label}</td>
+        <td class="text-center">
+          <span class="badge bg-primary-subtle text-primary px-3 py-2 fs-6 fw-bold">${item.qtd}</span>
+        </td>
+        <td class="pe-4">
+          <div class="d-flex align-items-center gap-2">
+            <div class="progress flex-grow-1" style="height: 8px;">
+              <div class="progress-bar" role="progressbar" style="width: ${pct}%; background-color: ${color};" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+            <span class="fw-bold small text-muted" style="min-width: 50px;">${pct}%</span>
+          </div>
+        </td>
+      `;
+      tBody.appendChild(tr);
+    });
+  }
+
+  // ----------------------------------------------------
+  // GRÁFICOS SECUNDÁRIOS FIXOS
+  // ----------------------------------------------------
+  function renderSecondaryCharts() {
+    const textColor = getThemeTextColor();
+
+    // 1. Cursos
+    const cursoData = datasets.curso.data;
+    if (cursoData.length) {
+      secondaryCharts.curso = new Chart(document.getElementById('cursoChart').getContext('2d'), {
+        type: 'doughnut',
+        data: {
+          labels: cursoData.map(d => d.label),
+          datasets: [{ data: cursoData.map(d => d.qtd), backgroundColor: COLOR_PALETTE }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { color: textColor, boxWidth: 12 } } }
+        }
+      });
+    }
+
+    // 2. Gênero
+    const generoData = datasets.genero.data;
+    if (generoData.length) {
+      secondaryCharts.genero = new Chart(document.getElementById('generoChart').getContext('2d'), {
+        type: 'doughnut',
+        data: {
+          labels: generoData.map(d => d.label),
+          datasets: [{ data: generoData.map(d => d.qtd), backgroundColor: ['#0d6efd', '#d63384', '#6f42c1', '#6c757d'] }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { color: textColor, boxWidth: 12 } } }
+        }
+      });
+    }
+
+    // 3. Cor / Raça
+    const corData = datasets.cor.data;
+    if (corData.length) {
+      secondaryCharts.cor = new Chart(document.getElementById('corChart').getContext('2d'), {
+        type: 'doughnut',
+        data: {
+          labels: corData.map(d => d.label),
+          datasets: [{ data: corData.map(d => d.qtd), backgroundColor: COLOR_PALETTE }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { color: textColor, boxWidth: 12 } } }
+        }
+      });
+    }
+
+    // 4. Faixa Etária
+    const faixaData = datasets.faixa_etaria.data;
+    if (faixaData.length) {
+      secondaryCharts.faixa = new Chart(document.getElementById('faixaEtariaChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: faixaData.map(d => d.label),
+          datasets: [{
+            label: 'Educadores',
+            data: faixaData.map(d => d.qtd),
+            backgroundColor: '#198754',
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: textColor, font: { size: 10 } }, grid: { display: false } },
+            y: { ticks: { color: textColor }, grid: { color: 'rgba(150,150,150,0.1)' } }
+          }
+        }
+      });
+    }
+
+    // 5. Função na EJA
+    const funcaoData = datasets.funcao.data;
+    if (funcaoData.length) {
+      secondaryCharts.funcao = new Chart(document.getElementById('funcaoChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: funcaoData.map(d => d.label),
+          datasets: [{
+            label: 'Vínculos',
+            data: funcaoData.map(d => d.qtd),
+            backgroundColor: '#0d6efd',
+            borderRadius: 6
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: textColor }, grid: { color: 'rgba(150,150,150,0.1)' } },
+            y: { ticks: { color: textColor, font: { size: 10 } }, grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    // 6. Tempo de Atuação
+    const tempoData = datasets.tempo.data;
+    if (tempoData.length) {
+      secondaryCharts.tempo = new Chart(document.getElementById('tempoChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: tempoData.map(d => d.label),
+          datasets: [{
+            label: 'Educadores',
+            data: tempoData.map(d => d.qtd),
+            backgroundColor: '#6c757d',
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: textColor }, grid: { display: false } },
+            y: { ticks: { color: textColor }, grid: { color: 'rgba(150,150,150,0.1)' } }
+          }
+        }
+      });
+    }
+  }
+
+  // ----------------------------------------------------
+  // TABELA DE SOLICITANTES & FILTROS DINÂMICOS
+  // ----------------------------------------------------
+  function populateTableFilters() {
+    const cursosSet = new Set();
+    const estadosSet = new Set();
+    const municipiosSet = new Set();
+    const funcoesSet = new Set();
+
+    participantsData.forEach(p => {
+      (p.cursos_certificados || []).forEach(c => cursosSet.add(c));
+      if (p.sigla_uf_atuacao) estadosSet.add(p.sigla_uf_atuacao);
+      else if (p.sigla_uf_residencia) estadosSet.add(p.sigla_uf_residencia);
+
+      if (p.municipio_atuacao && p.municipio_atuacao !== 'Não informado') municipiosSet.add(p.municipio_atuacao);
+      else if (p.municipio_residencia && p.municipio_residencia !== 'Não informado') municipiosSet.add(p.municipio_residencia);
+
+      if (p.funcao && p.funcao !== 'Não informado') funcoesSet.add(p.funcao);
+    });
+
+    const addOpts = (id, items) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      Array.from(items).sort().forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item;
+        opt.textContent = item;
+        el.appendChild(opt);
+      });
+    };
+
+    addOpts('tableFilterCurso', cursosSet);
+    addOpts('tableFilterEstado', estadosSet);
+    addOpts('tableFilterMunicipio', municipiosSet);
+    addOpts('tableFilterFuncao', funcoesSet);
+  }
+
+  function applyTableFilters() {
+    const rawSearch = (document.getElementById('tableSearchInput')?.value || '').trim();
+    const search = rawSearch.toLowerCase();
+    const digitsSearch = rawSearch.replace(/\D/g, '');
+    const curso = document.getElementById('tableFilterCurso')?.value || '';
+    const estado = document.getElementById('tableFilterEstado')?.value || '';
+    const municipio = document.getElementById('tableFilterMunicipio')?.value || '';
+    const funcao = document.getElementById('tableFilterFuncao')?.value || '';
+
+    currentFilteredParticipants = participantsData.filter(p => {
+      if (curso && !(p.cursos_certificados || []).includes(curso)) return false;
+      if (estado) {
+        const estAt = p.sigla_uf_atuacao || '';
+        const estRes = p.sigla_uf_residencia || '';
+        if (estAt !== estado && estRes !== estado) return false;
+      }
+      if (municipio) {
+        const munAt = p.municipio_atuacao || '';
+        const munRes = p.municipio_residencia || '';
+        if (munAt !== municipio && munRes !== municipio) return false;
+      }
+      if (funcao && p.funcao !== funcao) return false;
+
+      if (search) {
+        const pCpfRaw = (p.cpf || '').toString();
+        const pCpfDigits = pCpfRaw.replace(/\D/g, '');
+        const pCpfFormatted = formatCPF(pCpfRaw).toLowerCase();
+
+        let matchCpf = false;
+        if (digitsSearch && pCpfDigits.includes(digitsSearch)) {
+          matchCpf = true;
+        } else if (pCpfRaw.toLowerCase().includes(search) || pCpfFormatted.includes(search)) {
+          matchCpf = true;
+        }
+
+        const matchNome = (p.nome || '').toLowerCase().includes(search);
+        const matchEmail = (p.email || '').toLowerCase().includes(search);
+        const matchEscola = (p.escola || '').toLowerCase().includes(search);
+        const matchMunAt = (p.municipio_atuacao || '').toLowerCase().includes(search);
+        const matchMunRes = (p.municipio_residencia || '').toLowerCase().includes(search);
+        const matchCursos = (p.cursos_certificados || []).some(c => c.toLowerCase().includes(search));
+        if (!matchNome && !matchCpf && !matchEmail && !matchEscola && !matchMunAt && !matchMunRes && !matchCursos) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    currentPage = 1;
+    renderDetailedTable();
+  }
+
+  function renderDetailedTable() {
+    const tBody = document.getElementById('detailedTableBody');
+    const countInfo = document.getElementById('tableRecordCountInfo');
+    const rangeInfo = document.getElementById('pageRangeInfo');
+    if (!tBody) return;
+
+    tBody.innerHTML = '';
+    const total = currentFilteredParticipants.length;
+
+    if (countInfo) {
+      countInfo.innerHTML = `Exibindo <span class="badge bg-primary text-white">${total}</span> de ${participantsData.length} registro(s) encontrado(s)`;
+    }
+
+    if (total === 0) {
+      tBody.innerHTML = '<tr><td colspan="7" class="text-center py-5 text-muted">Nenhum participante encontrado com os filtros aplicados.</td></tr>';
+      if (rangeInfo) rangeInfo.innerText = '0 registros';
+      renderPagination(0, 1, pageSize);
+      return;
+    }
+
+    const totalPages = Math.ceil(total / pageSize);
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+
+    const startIdx = (currentPage - 1) * pageSize;
+    const endIdx = Math.min(startIdx + pageSize, total);
+    const pageData = currentFilteredParticipants.slice(startIdx, endIdx);
+
+    if (rangeInfo) {
+      rangeInfo.innerText = `Mostrando ${startIdx + 1}–${endIdx} de ${total}`;
+    }
+
+    pageData.forEach((p, idx) => {
+      const globalIdx = startIdx + idx + 1;
+      const tr = document.createElement('tr');
+
+      // Badges dos cursos solicitados
+      let cursosHtml = '';
+      if (p.cursos_certificados && p.cursos_certificados.length > 0) {
+        cursosHtml = p.cursos_certificados.map(c => 
+          `<span class="badge bg-primary-subtle text-primary border border-primary-subtle mb-1 d-inline-block text-wrap" style="max-width: 240px; font-size: 0.78rem;">${c}</span>`
+        ).join(' ');
+      } else {
+        cursosHtml = '<span class="text-muted small">Nenhum</span>';
+      }
+
+      // Endereço Residencial com Tooltip
+      const endCompleto = `${p.logradouro || ''}, ${p.numero || ''} ${p.complemento || ''} - ${p.bairro || ''}, ${p.municipio_residencia || ''}/${p.sigla_uf_residencia || ''} CEP: ${p.cep || ''}`.trim();
+
+      tr.innerHTML = `
+        <td class="ps-4 fw-bold text-muted">${globalIdx}</td>
+        <td>
+          <div class="fw-bold text-dark">${p.nome}</div>
+          <div class="small font-monospace text-secondary">${formatCPF(p.cpf)}</div>
+          <div class="small text-muted text-truncate" style="max-width: 200px;">${p.email || '—'}</div>
+        </td>
+        <td>
+          <div><span class="badge bg-light text-dark border me-1">${p.genero}</span></div>
+          <div class="small text-muted mt-1">${p.cor} &bull; ${p.idade ? p.idade + ' anos' : p.data_nascimento}</div>
+        </td>
+        <td>
+          <div class="fw-semibold">${p.municipio_residencia} <span class="badge bg-secondary-subtle text-dark">${p.sigla_uf_residencia}</span></div>
+          <div class="small text-muted text-truncate" style="max-width: 180px;" title="${endCompleto}">
+            <i class="bi bi-geo-alt"></i> ${p.bairro || 'Endereço cadastrado'}
+          </div>
+        </td>
+        <td>
+          <div class="fw-semibold text-truncate" style="max-width: 220px;" title="${p.escola}">${p.escola}</div>
+          <div class="small text-muted">${p.municipio_atuacao} / ${p.sigla_uf_atuacao}</div>
+        </td>
+        <td>
+          <div class="fw-semibold">${p.funcao}</div>
+          <div class="small text-muted">${p.caracterizacao || 'Atuação regular'} &bull; <span class="badge bg-light text-secondary border">${p.tempo}</span></div>
+        </td>
+        <td class="pe-4">${cursosHtml}</td>
+      `;
+      tBody.appendChild(tr);
+    });
+
+    renderPagination(totalPages, currentPage, pageSize);
+  }
+
+  function renderPagination(totalPages, activePage, size) {
+    const nav = document.getElementById('paginationNav');
+    if (!nav) return;
+    nav.innerHTML = '';
+    if (totalPages <= 1) return;
+
+    const prevLi = document.createElement('li');
+    prevLi.className = `page-item ${activePage === 1 ? 'disabled' : ''}`;
+    prevLi.innerHTML = `<button class="page-link"><i class="bi bi-chevron-left me-1"></i>Anterior</button>`;
+    if (activePage > 1) {
+      prevLi.querySelector('button').addEventListener('click', () => {
+        currentPage--;
+        renderDetailedTable();
+      });
+    }
+    nav.appendChild(prevLi);
+
+    let startPage = Math.max(1, activePage - 2);
+    let endPage = Math.min(totalPages, startPage + 4);
+    if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+
+    if (startPage > 1) {
+      const firstLi = document.createElement('li');
+      firstLi.className = 'page-item';
+      firstLi.innerHTML = `<button class="page-link">1</button>`;
+      firstLi.querySelector('button').addEventListener('click', () => {
+        currentPage = 1;
+        renderDetailedTable();
+      });
+      nav.appendChild(firstLi);
+      if (startPage > 2) {
+        const dotsLi = document.createElement('li');
+        dotsLi.className = 'page-item disabled';
+        dotsLi.innerHTML = `<span class="page-link">...</span>`;
+        nav.appendChild(dotsLi);
+      }
+    }
+
+    for (let p = startPage; p <= endPage; p++) {
+      const li = document.createElement('li');
+      li.className = `page-item ${p === activePage ? 'active' : ''}`;
+      li.innerHTML = `<button class="page-link">${p}</button>`;
+      const pageNum = p;
+      li.querySelector('button').addEventListener('click', () => {
+        currentPage = pageNum;
+        renderDetailedTable();
+      });
+      nav.appendChild(li);
+    }
+
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) {
+        const dotsLi = document.createElement('li');
+        dotsLi.className = 'page-item disabled';
+        dotsLi.innerHTML = `<span class="page-link">...</span>`;
+        nav.appendChild(dotsLi);
+      }
+      const lastLi = document.createElement('li');
+      lastLi.className = 'page-item';
+      lastLi.innerHTML = `<button class="page-link">${totalPages}</button>`;
+      lastLi.querySelector('button').addEventListener('click', () => {
+        currentPage = totalPages;
+        renderDetailedTable();
+      });
+      nav.appendChild(lastLi);
+    }
+
+    const nextLi = document.createElement('li');
+    nextLi.className = `page-item ${activePage === totalPages ? 'disabled' : ''}`;
+    nextLi.innerHTML = `<button class="page-link">Próximo<i class="bi bi-chevron-right ms-1"></i></button>`;
+    if (activePage < totalPages) {
+      nextLi.querySelector('button').addEventListener('click', () => {
+        currentPage++;
+        renderDetailedTable();
+      });
+    }
+    nav.appendChild(nextLi);
+  }
+
+  // ----------------------------------------------------
+  // EXPORTAÇÃO CSV COMPLETA (BOM UTF-8 PARA EXCEL)
+  // ----------------------------------------------------
+  function exportFullCertificadosCSV() {
+    const dataToExport = currentFilteredParticipants.length > 0 ? currentFilteredParticipants : participantsData;
+    if (!dataToExport || dataToExport.length === 0) {
+      alert("Nenhum dado disponível para exportação.");
+      return;
+    }
+
+    let csvContent = "\uFEFFNome Completo;CPF;E-mail;Telefone;Data de Nascimento;Idade;Gênero;Cor / Raça;Cursos Solicitados;Município Residência;UF Residência;CEP;Bairro;Logradouro;Escola;Município Atuação;UF Atuação;Função na EJA;Caracterização / Turmas;Tempo de Atuação\n";
+
+    const clean = (val) => `"${(val || '').toString().replace(/"/g, '""')}"`;
+
+    dataToExport.forEach(p => {
+      const cursosStr = (p.cursos_certificados || []).join(", ");
+      csvContent += [
+        clean(p.nome),
+        clean(p.cpf),
+        clean(p.email),
+        clean(p.telefone),
+        clean(p.data_nascimento),
+        clean(p.idade),
+        clean(p.genero),
+        clean(p.cor),
+        clean(cursosStr),
+        clean(p.municipio_residencia),
+        clean(p.sigla_uf_residencia),
+        clean(p.cep),
+        clean(p.bairro),
+        clean(p.logradouro ? `${p.logradouro}, ${p.numero || ''} ${p.complemento || ''}`.trim() : ''),
+        clean(p.escola),
+        clean(p.municipio_atuacao),
+        clean(p.sigla_uf_atuacao),
+        clean(p.funcao),
+        clean(p.caracterizacao),
+        clean(p.tempo)
+      ].join(";") + "\n";
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `solicitacoes_certificados_pacto_eja_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  // ----------------------------------------------------
+  // EVENT LISTENERS & INICIALIZAÇÃO
+  // ----------------------------------------------------
+  document.addEventListener('DOMContentLoaded', () => {
+    // 1. Inicializa Mapa e Gráficos
+    initBrazilMap();
+    renderMainChart();
+    renderSecondaryCharts();
+
+    // 2. Preenche Filtros e Tabela
+    populateTableFilters();
+    renderDetailedTable();
+
+    // Alternância Mapa vs Gráfico no Painel Principal
+    document.querySelectorAll('input[name="mainViewToggle"]').forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        const val = e.target.value;
+        const mapContainer = document.getElementById('mapViewContainer');
+        const chartContainer = document.getElementById('chartViewContainer');
+        const heading = document.getElementById('mainSectionHeading');
+
+        if (val === 'map') {
+          mapContainer.classList.remove('d-none');
+          chartContainer.classList.add('d-none');
+          if (heading) heading.innerText = 'Cobertura Geográfica & Participação';
+          if (leafletMapInstance) leafletMapInstance.invalidateSize();
+        } else {
+          mapContainer.classList.add('d-none');
+          chartContainer.classList.remove('d-none');
+          if (heading) heading.innerText = 'Análise por Métrica Customizada';
+          renderMainChart();
+        }
+      });
+    });
+
+    // Seletor de métrica do gráfico principal
+    const chartMetricSelect = document.getElementById('chartMetricSelect');
+    if (chartMetricSelect) chartMetricSelect.addEventListener('change', renderMainChart);
+
+    // Tipo de gráfico do gráfico principal
+    document.querySelectorAll('input[name="chartTypeRadio"]').forEach(radio => {
+      radio.addEventListener('change', renderMainChart);
+    });
+
+    // Modo do mapa (Atuação vs Residência)
+    document.querySelectorAll('input[name="mapMode"]').forEach(radio => {
+      radio.addEventListener('change', initBrazilMap);
+    });
+
+    // Filtros da Tabela
+    const tableSearch = document.getElementById('tableSearchInput');
+    if (tableSearch) tableSearch.addEventListener('input', applyTableFilters);
+
+    const fCurso = document.getElementById('tableFilterCurso');
+    if (fCurso) fCurso.addEventListener('change', applyTableFilters);
+
+    const fEstado = document.getElementById('tableFilterEstado');
+    if (fEstado) fEstado.addEventListener('change', applyTableFilters);
+
+    const fMunicipio = document.getElementById('tableFilterMunicipio');
+    if (fMunicipio) fMunicipio.addEventListener('change', applyTableFilters);
+
+    const fFuncao = document.getElementById('tableFilterFuncao');
+    if (fFuncao) fFuncao.addEventListener('change', applyTableFilters);
+
+    const btnClear = document.getElementById('btnClearTableFilters');
+    if (btnClear) {
+      btnClear.addEventListener('click', () => {
+        if (tableSearch) tableSearch.value = '';
+        if (fCurso) fCurso.value = '';
+        if (fEstado) fEstado.value = '';
+        if (fMunicipio) fMunicipio.value = '';
+        if (fFuncao) fFuncao.value = '';
+        applyTableFilters();
+      });
+    }
+
+    const selectSize = document.getElementById('selectPageSize');
+    if (selectSize) {
+      selectSize.addEventListener('change', (e) => {
+        pageSize = parseInt(e.target.value, 10) || 10;
+        currentPage = 1;
+        renderDetailedTable();
+      });
+    }
+
+    // Alternância da Tabela: Detalhada vs Resumo Agrupado
+    document.querySelectorAll('input[name="tableModeRadio"]').forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        const mode = e.target.value;
+        const detContainer = document.getElementById('tableDetailedContainer');
+        const sumContainer = document.getElementById('tableSummaryContainer');
+        const filtersContainer = document.getElementById('tableFiltersContainer');
+        const paginationFooter = document.getElementById('tablePaginationFooter');
+
+        if (mode === 'detailed') {
+          detContainer.classList.remove('d-none');
+          sumContainer.classList.add('d-none');
+          filtersContainer.classList.remove('d-none');
+          paginationFooter.classList.remove('d-none');
+          renderDetailedTable();
+        } else {
+          detContainer.classList.add('d-none');
+          sumContainer.classList.remove('d-none');
+          filtersContainer.classList.add('d-none');
+          paginationFooter.classList.add('d-none');
+          const metricKey = document.getElementById('chartMetricSelect').value;
+          const datasetObj = datasets[metricKey] || datasets.curso;
+          const rawData = datasetObj.data || [];
+          const totalSum = rawData.reduce((a, b) => a + (b.qtd || 0), 0);
+          renderSummaryTable(rawData, totalSum);
+        }
+      });
+    });
+  });
+</script>
+{% endblock %}

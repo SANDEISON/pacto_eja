@@ -11,9 +11,12 @@ class SearchableListMixin:
         queryset = super().get_queryset()
         query = self.request.GET.get("q", "").strip()
         if query:
+            digits_query = "".join(ch for ch in query if ch.isdigit())
             filters = Q()
             for field in self.search_fields:
                 filters |= Q(**{f"{field}__icontains": query})
+                if digits_query and "cpf" in field.lower():
+                    filters |= Q(**{f"{field}__icontains": digits_query})
             queryset = queryset.filter(filters)
         return queryset
 

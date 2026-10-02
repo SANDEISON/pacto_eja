@@ -538,21 +538,30 @@
       <!-- Barra de Filtros Específicos para a Tabela de Participantes -->
       <div id="participantFiltersContainer" class="bg-body-tertiary p-3 rounded-3 border">
         <div class="row g-2 align-items-center mb-2">
-          <div class="col-12 col-sm-6 col-md-3">
+          <div class="col-12 col-sm-6 col-lg">
             <label for="filterEstado" class="form-label mb-1 small fw-semibold text-muted">🗺️ Estado:</label>
             <select id="filterEstado" class="form-select form-select-sm">
               <option value="">Todos os Estados</option>
             </select>
           </div>
 
-          <div class="col-12 col-sm-6 col-md-3">
+          <div class="col-12 col-sm-6 col-lg">
             <label for="filterMunicipio" class="form-label mb-1 small fw-semibold text-muted">🏙️ Município:</label>
             <select id="filterMunicipio" class="form-select form-select-sm">
               <option value="">Todos os Municípios</option>
             </select>
           </div>
 
-          <div class="col-12 col-sm-6 col-md-3">
+          <div class="col-12 col-sm-6 col-lg">
+            <label for="filterModalidade" class="form-label mb-1 small fw-semibold text-muted">💻 Modalidade:</label>
+            <select id="filterModalidade" class="form-select form-select-sm">
+              <option value="">Todas as Modalidades</option>
+              <option value="presencial">Presencial</option>
+              <option value="online">Remoto (On-line)</option>
+            </select>
+          </div>
+
+          <div class="col-12 col-sm-6 col-lg">
             <label for="filterRepresentante" class="form-label mb-1 small fw-semibold text-muted">🏛️ Rep. Undime/Consed:</label>
             <select id="filterRepresentante" class="form-select form-select-sm">
               <option value="">Todos</option>
@@ -561,7 +570,7 @@
             </select>
           </div>
 
-          <div class="col-12 col-sm-6 col-md-3">
+          <div class="col-12 col-sm-6 col-lg">
             <label for="filterGenero" class="form-label mb-1 small fw-semibold text-muted">👤 Gênero:</label>
             <select id="filterGenero" class="form-select form-select-sm">
               <option value="">Todos os Gêneros</option>
@@ -1106,12 +1115,14 @@
 
     const filterEstadoEl = document.getElementById('filterEstado');
     const filterMunicipioEl = document.getElementById('filterMunicipio');
+    const filterModalidadeEl = document.getElementById('filterModalidade');
     const filterRepEl = document.getElementById('filterRepresentante');
     const filterGeneroEl = document.getElementById('filterGenero');
     const searchInputEl = document.getElementById('participantSearchInput');
 
     const estado = filterEstadoEl ? filterEstadoEl.value : '';
     const municipio = filterMunicipioEl ? filterMunicipioEl.value : '';
+    const modalidade = filterModalidadeEl ? filterModalidadeEl.value : '';
     const representante = filterRepEl ? filterRepEl.value : '';
     const genero = filterGeneroEl ? filterGeneroEl.value : '';
     const searchTerm = searchInputEl ? searchInputEl.value.toLowerCase().trim() : '';
@@ -1122,9 +1133,38 @@
       if (representante && p.representante_undime_consed !== representante) return false;
       if (genero && p.genero !== genero) return false;
 
+      if (modalidade) {
+        if (selectedActivityId) {
+          const currentInsc = (p.atividades || []).find(a => String(a.id) === String(selectedActivityId));
+          let modAtual = '';
+          if (currentInsc && currentInsc.modalidade) {
+            modAtual = currentInsc.modalidade.toLowerCase();
+          } else {
+            const rawLabel = (p.modalidade_inscrito_atual || '').toLowerCase();
+            if (rawLabel.includes('presencial')) modAtual = 'presencial';
+            else if (rawLabel.includes('line') || rawLabel.includes('remoto')) modAtual = 'online';
+          }
+          if (modAtual !== modalidade) return false;
+        } else {
+          const matchLista = (p.atividades || []).some(a => (a.modalidade || '').toLowerCase() === modalidade);
+          if (!matchLista) return false;
+        }
+      }
+
       if (searchTerm) {
+        const pCpfRaw = (p.cpf || '').toString();
+        const pCpfDigits = pCpfRaw.replace(/\D/g, '');
+        const pCpfFormatted = formatCPF(pCpfRaw).toLowerCase();
+        const digitsSearch = searchTerm.replace(/\D/g, '');
+
+        let matchCpf = false;
+        if (digitsSearch && pCpfDigits.includes(digitsSearch)) {
+          matchCpf = true;
+        } else if (pCpfRaw.toLowerCase().includes(searchTerm) || pCpfFormatted.includes(searchTerm)) {
+          matchCpf = true;
+        }
+
         const matchName = (p.nome || '').toLowerCase().includes(searchTerm);
-        const matchCpf = (p.cpf || '').toLowerCase().includes(searchTerm);
         const matchEmail = (p.email || '').toLowerCase().includes(searchTerm);
         const matchPhone = (p.telefone || '').toLowerCase().includes(searchTerm);
         const matchCity = (p.municipio || '').toLowerCase().includes(searchTerm);
@@ -1476,12 +1516,12 @@
     });
   }
 
-  // Exportação CSV 1: Participantes Detalhados ou Inscritos da Atividade
+  // Exportação CSV 1: Participantes Detalhados ou Inscritos da Atividade (Respeita filtros ativos)
   function exportFullParticipantsCSV() {
     const dataToExport = currentFilteredParticipants;
 
     if (!dataToExport || dataToExport.length === 0) {
-      alert("Nenhum participante encontrado para exportar.");
+      alert("Nenhum participante encontrado com os filtros aplicados para exportar.");
       return;
     }
 
@@ -1489,11 +1529,13 @@
 
     let csvContent = "";
     let fileName = "";
+    const cleanField = (val) => `"${(val || '').toString().replace(/"/g, '""')}"`;
+    const modFilter = document.getElementById('filterModalidade')?.value;
+    const modSuffix = modFilter ? `_${modFilter}` : '';
 
     if (currentActivity) {
       csvContent = "\uFEFFNome Completo;CPF;E-mail;Telefone;Município;Estado;Escola;Rep. Undime / Consed;Atividade;Modalidade do Inscrito;Data da Inscrição;Escolaridade;Gênero;Cor / Raça\n";
       dataToExport.forEach(p => {
-        const cleanField = (val) => `"${(val || '').replace(/"/g, '""')}"`;
         csvContent += [
           cleanField(p.nome),
           cleanField(p.cpf),
@@ -1512,12 +1554,11 @@
         ].join(";") + "\n";
       });
       const cleanTitle = currentActivity.titulo.toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 30);
-      fileName = `inscritos_${cleanTitle}_${new Date().toISOString().slice(0,10)}.csv`;
+      fileName = `inscritos_${cleanTitle}${modSuffix}_${new Date().toISOString().slice(0,10)}.csv`;
     } else {
       csvContent = "\uFEFFNome Completo;CPF;E-mail;Telefone;Município;Estado;Escola;Rep. Undime / Consed;Atividades Inscritas;Escolaridade;Gênero;Cor / Raça\n";
       dataToExport.forEach(p => {
-        const cleanField = (val) => `"${(val || '').replace(/"/g, '""')}"`;
-        const atividadesStr = (p.atividades_nomes || []).join(", ");
+        const atividadesStr = (p.atividades || []).map(a => `${a.titulo} (${a.modalidade_label || a.modalidade})`).join(", ") || (p.atividades_nomes || []).join(", ");
         csvContent += [
           cleanField(p.nome),
           cleanField(p.cpf),
@@ -1533,7 +1574,7 @@
           cleanField(p.cor)
         ].join(";") + "\n";
       });
-      fileName = `relatorio_participantes_pacto_eja_${new Date().toISOString().slice(0,10)}.csv`;
+      fileName = `relatorio_participantes${modSuffix}_pacto_eja_${new Date().toISOString().slice(0,10)}.csv`;
     }
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -1668,6 +1709,9 @@
   const filterMunicipio = document.getElementById('filterMunicipio');
   if (filterMunicipio) filterMunicipio.addEventListener('change', applyParticipantFilters);
 
+  const filterModalidade = document.getElementById('filterModalidade');
+  if (filterModalidade) filterModalidade.addEventListener('change', applyParticipantFilters);
+
   const filterRepresentante = document.getElementById('filterRepresentante');
   if (filterRepresentante) filterRepresentante.addEventListener('change', applyParticipantFilters);
 
@@ -1691,6 +1735,7 @@
     btnClearFilters.addEventListener('click', () => {
       if (document.getElementById('filterEstado')) document.getElementById('filterEstado').value = '';
       if (document.getElementById('filterMunicipio')) document.getElementById('filterMunicipio').value = '';
+      if (document.getElementById('filterModalidade')) document.getElementById('filterModalidade').value = '';
       if (document.getElementById('filterRepresentante')) document.getElementById('filterRepresentante').value = '';
       if (document.getElementById('filterGenero')) document.getElementById('filterGenero').value = '';
       if (document.getElementById('participantSearchInput')) document.getElementById('participantSearchInput').value = '';

@@ -196,7 +196,15 @@ ADMINLTE = {
         {"text": "Eventos e atividades", "route": "atividade_list", "icon": "bi bi-calendar2-event-fill", "can": activity_management_access},
         {"text": "Chamadas e avaliações", "route": "chamada_avaliadores_list", "icon": "bi bi-person-check-fill", "can": review_management_access},
         {"text": "Educadores", "route": "educator_list", "icon": "bi bi-people-fill", "can": educator_management_access},
-        {"text": "Relatórios", "route": "reports", "icon": "bi bi-bar-chart-fill", "can": staff_only},
+        {
+            "text": "Relatórios",
+            "icon": "bi bi-bar-chart-fill",
+            "can": staff_only,
+            "submenu": [
+                {"text": "Atividades", "route": "reports", "icon": "bi bi-calendar2-check", "can": staff_only},
+                {"text": "Certificados", "route": "reports_certificados", "icon": "bi bi-award", "can": staff_only},
+            ],
+        },
         {"header": "SISTEMA", "can": management_access},
         {
             "text": "Administrar",
