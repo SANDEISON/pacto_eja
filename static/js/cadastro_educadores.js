@@ -18,7 +18,11 @@
   const addressStateSelect = document.getElementById("id_endereco_estado");
   const addressCitySelect = document.getElementById("id_endereco_cidade");
   const cpfStatus = document.getElementById("cpf-status");
-  const cpfWhatsappHelp = document.getElementById("cpf-whatsapp-help");
+  const cpfEditHelp = document.getElementById("cpf-edit-help");
+  const editRegistrationButton = document.getElementById("edit-registration");
+  const editCpfInput = document.getElementById("id_editar_cpf");
+  const submitLabel = document.getElementById("submit-label");
+  let lockedControls = [];
   const stateSelect = document.getElementById("id_estado");
   const citySelect = document.getElementById("id_cidade");
   const schoolInput = document.getElementById("id_escola");
@@ -79,13 +83,25 @@
     addressCitySelect.disabled = false;
   }
   function setCpfStatus(kind, icon, message) {
-    cpfWhatsappHelp.hidden = true;
+    cpfEditHelp.hidden = true;
     cpfStatus.className = "lookup-status" + (kind ? ` is-${kind}` : "");
     cpfStatus.innerHTML = `<i class="bi ${icon}"></i><span>${message}</span>`;
   }
-  async function lookupCpf() {
-    // Bloqueia somente o formulário concluído e recupera dados de cadastros incompletos.
+  function unlockForm() {
+    lockedControls.forEach(([control, disabled]) => { control.disabled = disabled; });
+    lockedControls = [];
+  }
+  function lockForm() {
+    unlockForm();
+    lockedControls = Array.from(form.querySelectorAll("input:not([type='hidden']), select, button"))
+      .filter(control => control !== cpfInput && control !== editRegistrationButton && control !== submitButton)
+      .map(control => [control, control.disabled]);
+    lockedControls.forEach(([control]) => { control.disabled = true; });
+  }
+  async function lookupCpf(edit = false) {
+    // Cadastros concluídos exigem a escolha de edição antes de liberar o envio.
     const cpf = digits(cpfInput.value);
+    const editing = edit || editCpfInput.value === cpf;
     const requestId = ++cpfRequestId;
     if (cpf.length !== 11) {
       form.dataset.registered = "false";
@@ -96,19 +112,21 @@
     setCpfStatus("", "bi-arrow-repeat", "Consultando o cadastro...");
     submitButton.disabled = true;
     try {
-      const response = await fetch(`${form.dataset.cpfUrl}?cpf=${cpf}`, { headers: { "X-Requested-With": "XMLHttpRequest" } });
+      const response = await fetch(`${form.dataset.cpfUrl}?cpf=${cpf}${editing ? "&editar=1" : ""}`, { headers: { "X-Requested-With": "XMLHttpRequest" } });
       const data = await response.json();
       if (requestId !== cpfRequestId || cpf !== digits(cpfInput.value)) return;
       if (!response.ok || !data.valid) throw new Error(data.message || "CPF inválido.");
       form.dataset.registered = String(data.registered);
-      if (data.registered) {
+      if (data.registered && !editing) {
         nameInput.readOnly = false;
         emailInput.readOnly = false;
         submitButton.disabled = true;
-        setCpfStatus("error", "bi-exclamation-circle-fill", "Este CPF já realizou o preenchimento deste formulário. Não é permitido enviá-lo novamente. Para corrigir seus dados, entre em contato pelo WhatsApp (83) 3048-8555.");
-        cpfWhatsappHelp.hidden = false;
+        setCpfStatus("error", "bi-exclamation-circle-fill", "Este CPF já realizou o preenchimento deste formulário. Clique abaixo para realizar alteração nos seus dados.");
+        cpfEditHelp.hidden = false;
+        lockForm();
       } else {
-        if (data.dados && loadedCpf !== cpf) {
+        unlockForm();
+        if (data.dados && (loadedCpf !== cpf || edit)) {
           const fields = {
             nome_completo: nameInput, email: emailInput, data_nascimento: birthDateInput,
             cor_raca: corRacaSelect, genero: genderSelect, endereco_cep: addressCepInput,
@@ -121,14 +139,24 @@
           certificateInputs.forEach(input => {
             input.checked = (data.dados.curso_certificado || []).map(String).includes(input.value);
           });
+          if (editing) {
+            document.getElementById("id_email_confirmacao").value = data.dados.email || "";
+            assignments = data.dados.atuacoes || [];
+            clearEditor();
+            renderAssignments();
+          }
           loadedCpf = cpf;
           await loadAddressCities(data.dados.endereco_cidade);
           if (requestId !== cpfRequestId || cpf !== digits(cpfInput.value)) return;
         }
-        nameInput.readOnly = Boolean(data.dados?.nome_completo);
-        emailInput.readOnly = Boolean(data.dados?.email);
+        editCpfInput.value = data.registered && editing ? cpf : "";
+        submitLabel.textContent = editCpfInput.value ? "Salvar Alterações" : "Salvar cadastro";
+        nameInput.readOnly = !editing && Boolean(data.dados?.nome_completo);
+        emailInput.readOnly = !editing && Boolean(data.dados?.email);
         submitButton.disabled = false;
-        setCpfStatus("new", "bi-person-plus-fill", data.exists
+        setCpfStatus("new", "bi-person-plus-fill", editCpfInput.value
+          ? "Cadastro localizado. Altere os dados e clique em Salvar Alterações."
+          : data.exists
           ? "Cadastro localizado. Confira os dados e complete o formulário."
           : "Complete os dados para criar a conta.");
       }
@@ -139,6 +167,7 @@
       form.dataset.registered = "false";
       submitButton.disabled = true;
       setCpfStatus("error", "bi-exclamation-circle-fill", error.message);
+      if (edit) cpfEditHelp.hidden = false;
     }
   }
 
@@ -431,6 +460,10 @@
   }
 
   cpfInput.addEventListener("input", function () {
+    unlockForm();
+    editCpfInput.value = "";
+    submitLabel.textContent = "Salvar cadastro";
+    cpfEditHelp.hidden = true;
     cpfInput.value = maskCpf(cpfInput.value);
     cpfRequestId += 1;
     submitButton.disabled = true;
@@ -446,9 +479,22 @@
       genderSelect.value = "";
       certificateInputs.forEach(input => { input.checked = false; });
       clearAddress();
+      assignments = [];
+      clearEditor();
+      renderAssignments();
     }
     clearTimeout(cpfTimer);
     cpfTimer = setTimeout(lookupCpf, 350);
+  });
+  editRegistrationButton.addEventListener("click", async function () {
+    clearTimeout(cpfTimer);
+    editRegistrationButton.disabled = true;
+    try {
+      await lookupCpf(true);
+      if (editCpfInput.value) nameInput.focus();
+    } finally {
+      editRegistrationButton.disabled = false;
+    }
   });
   addressCepInput.addEventListener("input", function () { addressCepInput.value = maskCep(addressCepInput.value); });
   addressStateSelect.addEventListener("change", function () { loadAddressCities(); });
@@ -504,7 +550,7 @@
     }
   });
   form.addEventListener("submit", function (event) {
-    if (form.dataset.registered === "true" || submitButton.disabled) {
+    if ((form.dataset.registered === "true" && editCpfInput.value !== digits(cpfInput.value)) || submitButton.disabled) {
       event.preventDefault();
       cpfInput.focus();
       return;

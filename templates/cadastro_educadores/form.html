@@ -19,7 +19,7 @@
     <div class="educator-form-card">
       <header class="form-heading">
         <span class="step-badge"><i class="bi bi-pencil-square"></i></span>
-        <div><h2>Solicitação de certificado</h2><p>Os campos com asterisco são obrigatórios. Cada CPF pode enviar este formulário uma única vez.</p></div>
+        <div><h2>Solicitação de certificado</h2><p>Os campos com asterisco são obrigatórios. Se já preencheu o formulário, informe seu CPF para alterar os dados.</p></div>
       </header>
 
       {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
@@ -29,6 +29,7 @@
             data-cidades-url="{% url 'cadastro_educador_cidades' %}"
             data-escolas-url="{% url 'cadastro_educador_escolas' %}">
         {% csrf_token %}
+        {{ form.editar_cpf }}
 
         <section class="educator-section">
           <div class="section-label"><span>1</span><div><h3>Identificação</h3><p>Comece informando o CPF.</p></div></div>
@@ -37,10 +38,10 @@
             <div class="col-12 col-md-7 d-flex align-items-end">
               <div class="w-100">
                 <div id="cpf-status" class="lookup-status" aria-live="polite"><i class="bi bi-search"></i><span>Digite o CPF completo para consultar.</span></div>
-                <div id="cpf-whatsapp-help" class="mt-2"{% if not form.cpf_ja_cadastrado %} hidden{% endif %}>
-                  <a class="btn btn-success btn-sm" href="https://wa.me/558330488555?text=Ol%C3%A1%2C%20meu%20CPF%20j%C3%A1%20est%C3%A1%20cadastrado%20no%20Pacto%20EJA%20e%20preciso%20corrigir%20meus%20dados.%20Poderiam%20me%20ajudar%3F" target="_blank" rel="noopener noreferrer">
-                    <i class="bi bi-whatsapp" aria-hidden="true"></i> Entrar em contato pelo WhatsApp
-                  </a>
+                <div id="cpf-edit-help" class="mt-2"{% if not form.cpf_ja_cadastrado %} hidden{% endif %}>
+                  <button id="edit-registration" class="btn btn-success btn-sm" type="button">
+                    <i class="bi bi-pencil-square" aria-hidden="true"></i> Clique aqui para realizar alteração
+                  </button>
                 </div>
               </div>
             </div>
@@ -112,10 +113,10 @@
           </fieldset>
         </section>
 
-        <footer class="educator-actions"><button class="btn btn-primary" type="submit"><i class="bi bi-check2-circle"></i> Salvar cadastro</button></footer>
+        <footer class="educator-actions"><button class="btn btn-primary" type="submit"><i class="bi bi-check2-circle"></i> <span id="submit-label">{% if form.edicao %}Salvar Alterações{% else %}Salvar cadastro{% endif %}</span></button></footer>
       </form>
     </div>
   </section>
 </main>
-<script src="{% static 'js/cadastro_educadores.js' %}?v=20261001-7"></script>
+<script src="{% static 'js/cadastro_educadores.js' %}?v=20261002-1"></script>
 {% endblock %}

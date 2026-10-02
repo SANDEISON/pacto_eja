@@ -135,6 +135,7 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
         required=False,
     )
     atuacoes_json = forms.CharField(required=False, widget=forms.HiddenInput())
+    editar_cpf = forms.CharField(required=False, widget=forms.HiddenInput())
     curso_certificado = forms.ModelMultipleChoiceField(
         label="Solicito liberação do Certificado do Curso:",
         queryset=CursoCertificado.objects.all(),
@@ -147,6 +148,10 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
         super().__init__(*args, **kwargs)
         self.educador_encontrado = None
         self.usuario_encontrado = None
+        self.edicao = bool(
+            self.is_bound and self.data.get("editar_cpf")
+            and self.data.get("editar_cpf") == somente_digitos(self.data.get("cpf", ""))
+        )
         if not self.is_bound:
             self.fields["atuacoes_json"].initial = "[]"
 
@@ -183,7 +188,7 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
         self._apply_bootstrap_classes()
 
     def clean_cpf(self):
-        """Normaliza o CPF e bloqueia apenas cadastros com atuações já enviadas."""
+        """Normaliza o CPF e exige a escolha de edição para cadastros concluídos."""
         cpf = somente_digitos(self.cleaned_data["cpf"])
         validate_cpf(cpf)
         self.educador_encontrado = Educador.objects.select_related("usuario").filter(cpf=cpf).first()
@@ -193,11 +198,11 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
         )
         if self.educador_encontrado is None and self.usuario_encontrado:
             self.educador_encontrado = Educador.objects.filter(usuario=self.usuario_encontrado).first()
-        if self.educador_encontrado and FuncaoEducador.objects.filter(educador=self.educador_encontrado).exists():
+        if not self.edicao and self.educador_encontrado and FuncaoEducador.objects.filter(educador=self.educador_encontrado).exists():
             self.cpf_ja_cadastrado = True
             raise forms.ValidationError(
-                "Este CPF já realizou o preenchimento deste formulário. Não é permitido enviá-lo novamente. "
-                "Para corrigir seus dados, entre em contato pelo WhatsApp (83) 3048-8555."
+                "Este CPF já realizou o preenchimento deste formulário. "
+                "Clique abaixo para realizar alteração nos seus dados."
             )
         return cpf
 
@@ -226,7 +231,7 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
             self.add_error("email", "Já existe um usuário cadastrado com este e-mail.")
         cleaned_data["nome_completo"] = nome_completo
         cleaned_data["email"] = email
-        if self.usuario_encontrado:
+        if self.usuario_encontrado and not self.edicao:
             usuario = self.usuario_encontrado
             nome_existente = (
                 educador.nome_completo if educador else ""
@@ -325,7 +330,7 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
                 continue
             chaves.add(chave)
 
-            if educador and FuncaoEducador.objects.filter(
+            if not self.edicao and educador and FuncaoEducador.objects.filter(
                 educador=educador,
                 educador_escola__cidade=cidade,
                 educador_escola__escola=escola,
@@ -365,7 +370,7 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
         else:
             usuario = User.objects.select_for_update().get(pk=usuario.pk)
         educador, _ = Educador.objects.get_or_create(usuario=usuario)
-        if FuncaoEducador.objects.filter(educador=educador).exists():
+        if not self.edicao and FuncaoEducador.objects.filter(educador=educador).exists():
             raise IntegrityError("Este educador já enviou o formulário.")
         usuario.email = email
         usuario.first_name = primeiro_nome
@@ -392,18 +397,23 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
             },
         )
 
+        existentes = {
+            (v.cidade_id, v.escola_id, v.funcao_id, v.funcao_caracterizacao_turmas_id): v
+            for v in EducadorEscola.objects.filter(funcao_educador__educador=educador)
+        } if self.edicao else {}
         vinculos = []
         for atuacao in self.cleaned_data["atuacoes"]:
-            vinculo = EducadorEscola.objects.create(
-                cidade=atuacao["cidade"],
-                escola=atuacao["escola"],
-                funcao=atuacao["funcao"],
-                funcao_caracterizacao_turmas=atuacao["funcao_caracterizacao_turmas"],
-                tempo_atuacao=atuacao["tempo_atuacao"],
-            )
-            FuncaoEducador.objects.create(
-                educador=educador,
-                educador_escola=vinculo,
-            )
+            chave = tuple(atuacao[campo].pk for campo in (
+                "cidade", "escola", "funcao", "funcao_caracterizacao_turmas",
+            ))
+            vinculo = existentes.pop(chave, None)
+            if vinculo:
+                vinculo.tempo_atuacao = atuacao["tempo_atuacao"]
+                vinculo.save(update_fields=("tempo_atuacao",))
+            else:
+                vinculo = EducadorEscola.objects.create(**atuacao)
+                FuncaoEducador.objects.create(educador=educador, educador_escola=vinculo)
             vinculos.append(vinculo)
+        if existentes:
+            EducadorEscola.objects.filter(pk__in=[v.pk for v in existentes.values()]).delete()
         return vinculos

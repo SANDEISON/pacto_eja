@@ -499,6 +499,94 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         self.assertEqual(educador.endereco.logradouro, "Avenida Fernandes Lima")
         self.assertEqual(list(educador.cursos_certificados.all()), [self.curso_certificado])
 
+    def test_existing_registration_can_be_edited_without_duplicate_records(self):
+        self.submit_registration(self.registration_data())
+        educador = Educador.objects.get(cpf="52998224725")
+        usuario = educador.usuario
+        original_assignment = EducadorEscola.objects.get(funcao_educador__educador=educador)
+        total_users = User.objects.count()
+
+        response = self.client.post(reverse("cadastro_educador"), self.registration_data(
+            editar_cpf=educador.cpf,
+            nome_completo="Maria Nome Corrigido",
+            email="corrigido@example.com",
+            endereco_logradouro="Rua Corrigida",
+            genero=self.genero_nao_binario.pk,
+            curso_certificado=[self.outro_curso_certificado.pk],
+            atuacoes_json=json.dumps([self.assignment_data(tempo_atuacao="mais_6_anos")]),
+        ))
+
+        self.assertRedirects(response, reverse("cadastro_educador_success"))
+        educador.refresh_from_db()
+        usuario.refresh_from_db()
+        original_assignment.refresh_from_db()
+        self.assertEqual(User.objects.count(), total_users)
+        self.assertEqual(educador.nome_completo, "Maria Nome Corrigido")
+        self.assertEqual(usuario.get_full_name(), "Maria Nome Corrigido")
+        self.assertEqual(usuario.email, "corrigido@example.com")
+        self.assertTrue(usuario.check_password("52998224725"))
+        self.assertEqual(educador.endereco.logradouro, "Rua Corrigida")
+        self.assertEqual(educador.genero, self.genero_nao_binario)
+        self.assertEqual(list(educador.cursos_certificados.all()), [self.outro_curso_certificado])
+        self.assertEqual(original_assignment.tempo_atuacao, "mais_6_anos")
+        self.assertEqual(FuncaoEducador.objects.filter(educador=educador).count(), 1)
+        self.assertEqual(Endereco.objects.filter(educador=educador).count(), 1)
+
+    def test_edit_replaces_removed_assignments(self):
+        self.submit_registration(self.registration_data())
+        original_assignment = EducadorEscola.objects.get()
+        response = self.client.post(reverse("cadastro_educador"), self.registration_data(
+            editar_cpf="52998224725",
+            atuacoes_json=json.dumps([self.assignment_data(
+                funcao_caracterizacao_turmas=self.ensino_medio.pk,
+            )]),
+        ))
+        self.assertRedirects(response, reverse("cadastro_educador_success"))
+        self.assertFalse(EducadorEscola.objects.filter(pk=original_assignment.pk).exists())
+        self.assertEqual(FuncaoEducador.objects.count(), 1)
+        self.assertEqual(EducadorEscola.objects.get().funcao_caracterizacao_turmas, self.ensino_medio)
+
+    def test_invalid_edit_keeps_existing_data_and_edit_mode(self):
+        self.submit_registration(self.registration_data())
+        response = self.client.post(reverse("cadastro_educador"), self.registration_data(
+            editar_cpf="52998224725", email_confirmacao="outro@example.com",
+            endereco_logradouro="Rua Corrigida", atuacoes_json="[]",
+        ))
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["form"].edicao)
+        self.assertContains(response, "Salvar Alterações")
+        self.assertEqual(Endereco.objects.get().logradouro, "Avenida Fernandes Lima")
+        self.assertEqual(FuncaoEducador.objects.count(), 1)
+
+    def test_edit_requires_matching_cpf_and_unique_email(self):
+        self.submit_registration(self.registration_data())
+        response = self.client.post(reverse("cadastro_educador"), self.registration_data(
+            editar_cpf="11111111111",
+        ))
+        self.assertIn("cpf", response.context["form"].errors)
+        User.objects.create_user(username="outro", email="outro@example.com")
+        response = self.client.post(reverse("cadastro_educador"), self.registration_data(
+            editar_cpf="52998224725", email="outro@example.com",
+        ))
+        self.assertFormError(response.context["form"], "email", "Já existe um usuário cadastrado com este e-mail.")
+        self.assertEqual(User.objects.get(username="52998224725").email, "maria.educadora@example.com")
+
+    def test_edit_lookup_loads_saved_data_and_assignments(self):
+        self.submit_registration(self.registration_data())
+        url = reverse("cadastro_educador_cpf_lookup")
+        response = self.client.get(url, {"cpf": "52998224725"})
+        self.assertTrue(response.json()["registered"])
+        self.assertNotIn("dados", response.json())
+        response = self.client.get(url, {"cpf": "52998224725", "editar": "1"})
+        dados = response.json()["dados"]
+        self.assertEqual(dados["nome_completo"], "Maria Educadora da Silva")
+        self.assertEqual(dados["endereco_logradouro"], "Avenida Fernandes Lima")
+        self.assertEqual(dados["curso_certificado"], [self.curso_certificado.pk])
+        self.assertEqual(len(dados["atuacoes"]), 1)
+        for key, value in self.assignment_data().items():
+            self.assertEqual(dados["atuacoes"][0][key], value)
+        self.assertEqual(response["Cache-Control"], "no-store")
+
     def test_cpf_username_without_profile_cpf_reuses_existing_account(self):
         usuario = User.objects.create_user(username="52998224725")
         total_usuarios = User.objects.count()
