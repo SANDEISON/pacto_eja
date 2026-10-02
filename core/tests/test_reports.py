@@ -9,6 +9,22 @@ from core.models import Atividade, Formacao, Inscricao, Nivel, Situacao
 class ReportsViewTests(TestCase):
     """Garante acesso e serialização segura dos dados dos relatórios."""
 
+    def test_certificate_reports_include_registered_educators(self):
+        from core.models import CursoCertificado
+
+        usuario = get_user_model().objects.create_user(
+            username="52998224725", is_staff=True, first_name="Educadora de Teste",
+        )
+        curso = CursoCertificado.objects.first()
+        usuario.educador.cursos_certificados.add(curso)
+        self.client.force_login(usuario)
+        response = self.client.get(reverse("reports_certificados"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["total_solicitantes"], 1)
+        self.assertEqual(response.context["participantes_detalhados"][0]["nome"], "Educadora de Teste")
+        self.assertContains(response, 'id="participants-data"')
+        self.assertContains(response, 'id="report-visualization-warning"')
+
     def test_reports_require_staff_user(self):
         usuario = get_user_model().objects.create_user(
             username="52998224725",
