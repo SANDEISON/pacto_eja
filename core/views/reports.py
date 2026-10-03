@@ -3,7 +3,7 @@ from django.db.models import Count, F
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView
 
-from core.models import Atividade, Educador, EducadorEscola, Inscricao
+from core.models import Atividade, Educador, EducadorEscola, Inscricao, ProgramacaoSala
 
 
 ROTULOS_TEMPO_ATUACAO = {
@@ -156,6 +156,8 @@ def listar_participantes_detalhados(educadores_qs=None, atividade_selecionada_id
         "funcoes__educador_escola__escola",
         "funcoes__educador_escola__funcao",
         "usuario__inscricoes_atividades__atividade",
+        "usuario__inscricoes_atividades__programacoes__sala",
+        "usuario__inscricoes_atividades__programacoes__tematica",
     )
     participantes = []
 
@@ -167,6 +169,9 @@ def listar_participantes_detalhados(educadores_qs=None, atividade_selecionada_id
         atividades_modalidades = []
         atividades_status = []
         atividades_nomes = []
+        programacoes_ids = []
+        programacoes_labels = []
+        programacoes_detalhadas = []
 
         modalidade_inscrito_atividade_atual = ""
         data_inscricao_atividade_atual = ""
@@ -182,6 +187,27 @@ def listar_participantes_detalhados(educadores_qs=None, atividade_selecionada_id
             atividades_status.append(status_insc)
             atividades_status.append(status_ativo)
             atividades_nomes.append(atividade.titulo)
+
+            insc_progs = []
+            for p_sala in insc.programacoes.all():
+                prog_label = f"{p_sala.sala.nome} — {p_sala.get_turno_display()} ({p_sala.data.strftime('%d/%m/%Y')})"
+                if p_sala.tematica:
+                    prog_label += f" ({p_sala.tematica.nome})"
+
+                if not atividade_selecionada_id or atividade.id == atividade_selecionada_id:
+                    programacoes_ids.append(p_sala.id)
+                    programacoes_labels.append(prog_label)
+                    programacoes_detalhadas.append({
+                        "id": p_sala.id,
+                        "label": prog_label,
+                        "sala": p_sala.sala.nome,
+                        "turno": p_sala.get_turno_display(),
+                        "data": p_sala.data.strftime("%d/%m/%Y"),
+                        "modalidade": p_sala.get_modalidade_display(),
+                        "tematica": p_sala.tematica.nome if p_sala.tematica else "",
+                        "atividade_id": atividade.id,
+                    })
+                insc_progs.append(prog_label)
 
             if atividade_selecionada_id and atividade.id == atividade_selecionada_id:
                 modalidade_inscrito_atividade_atual = insc.get_modalidade_display()
@@ -200,6 +226,7 @@ def listar_participantes_detalhados(educadores_qs=None, atividade_selecionada_id
                 "modalidade_label": insc.get_modalidade_display(),
                 "atividade_modalidade": atividade.modalidade,
                 "atividade_modalidade_label": atividade.get_modalidade_display(),
+                "programacoes": insc_progs,
                 "data_inscricao": (
                     insc.inscrito_em.strftime("%d/%m/%Y %H:%M")
                     if insc.inscrito_em
@@ -216,6 +243,9 @@ def listar_participantes_detalhados(educadores_qs=None, atividade_selecionada_id
             "atividades_modalidades": list(set(atividades_modalidades)),
             "atividades_status": list(set(atividades_status)),
             "atividades_nomes": atividades_nomes,
+            "programacoes_ids": list(set(programacoes_ids)),
+            "programacoes_labels": list(set(programacoes_labels)),
+            "programacoes": programacoes_detalhadas,
             "modalidade_inscrito_atual": modalidade_inscrito_atividade_atual,
             "data_inscricao_atual": data_inscricao_atividade_atual,
         }
@@ -415,11 +445,41 @@ class ReportsView(TemplateView):
             if p.get("municipio") and p["municipio"] != "Não informado"
         })
 
+        # Programações disponíveis
+        programacoes_catalogo = []
+        if atividade_selecionada:
+            progs_qs = (
+                atividade_selecionada.programacoes.select_related("sala", "tematica")
+                .order_by("data", "turno", "sala__nome")
+            )
+        else:
+            progs_qs = (
+                ProgramacaoSala.objects.filter(atividades__isnull=False)
+                .distinct()
+                .select_related("sala", "tematica")
+                .order_by("data", "turno", "sala__nome")
+            )
+
+        for prog in progs_qs:
+            prog_label = f"{prog.sala.nome} — {prog.get_turno_display()} ({prog.data.strftime('%d/%m/%Y')})"
+            if prog.tematica:
+                prog_label += f" ({prog.tematica.nome})"
+            programacoes_catalogo.append({
+                "id": prog.id,
+                "label": prog_label,
+                "sala": prog.sala.nome,
+                "turno": prog.get_turno_display(),
+                "data": prog.data.strftime("%d/%m/%Y"),
+                "modalidade": prog.get_modalidade_display(),
+                "tematica": prog.tematica.nome if prog.tematica else "",
+            })
+
         context.update(
             exibir_dashboard=exibir_dashboard,
             visao_geral=visao_geral,
             atividade_selecionada=atividade_selecionada_dict,
             atividades_catalogo=atividades_catalogo,
+            programacoes_catalogo=programacoes_catalogo,
             total_educadores=educadores_base.count(),
             total_vinculos=vinculos.count(),
             total_escolas=vinculos.values("escola").distinct().count(),

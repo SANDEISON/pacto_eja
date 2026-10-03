@@ -3,7 +3,16 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from core.models import Atividade, Formacao, Inscricao, Nivel, Situacao
+from core.models import (
+    Atividade,
+    Formacao,
+    Inscricao,
+    Nivel,
+    ProgramacaoSala,
+    Sala,
+    Situacao,
+    TematicaSala,
+)
 
 
 class ReportsViewTests(TestCase):
@@ -171,5 +180,70 @@ class ReportsViewTests(TestCase):
         self.assertEqual(participantes[0]["nome"], "Aluno Inscrito")
         self.assertEqual(participantes[0]["modalidade_inscrito_atual"], "On-line")
         self.assertIsNotNone(participantes[0]["data_inscricao_atual"])
+
+    def test_reports_include_programacoes_disponiveis_and_participants_selection(self):
+        agora = timezone.now()
+        staff_user = get_user_model().objects.create_user(
+            username="52998224730",
+            password="SenhaForte2026!",
+            is_staff=True,
+            first_name="Admin",
+        )
+
+        user_com_prog = get_user_model().objects.create_user(
+            username="52998224731",
+            password="SenhaForte2026!",
+            first_name="Educador Com Programação",
+        )
+        user_com_prog.educador.nome_completo = "Educador Com Programação"
+        user_com_prog.educador.save()
+
+        sala = Sala.objects.create(nome="Auditório Principal")
+        tematica = TematicaSala.objects.create(nome="Práticas em EJA")
+        prog = ProgramacaoSala.objects.create(
+            sala=sala,
+            tematica=tematica,
+            data=(agora + timezone.timedelta(days=10)).date(),
+            turno=ProgramacaoSala.Turno.MANHA,
+            modalidade=ProgramacaoSala.Modalidade.PRESENCIAL,
+            quantidade_max_participantes=50,
+        )
+
+        atividade = Atividade.objects.create(
+            titulo="Congresso EJA 2026",
+            descricao="Congresso",
+            tipo=Atividade.Tipo.EVENTO,
+            modalidade=Atividade.ModalidadeParticipacao.PRESENCIAL,
+            data_inicio=agora + timezone.timedelta(days=10),
+            data_fim=agora + timezone.timedelta(days=11),
+            inscricoes_fim=agora + timezone.timedelta(days=5),
+            local="Centro de Convenções",
+        )
+        atividade.programacoes.add(prog)
+
+        inscricao = Inscricao.objects.create(
+            atividade=atividade,
+            usuario=user_com_prog,
+            modalidade=Inscricao.Modalidade.PRESENCIAL,
+        )
+        inscricao.programacoes.add(prog)
+
+        self.client.force_login(staff_user)
+        response = self.client.get(reverse("reports") + f"?atividade={atividade.id}")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("programacoes_catalogo", response.context)
+        progs_cat = response.context["programacoes_catalogo"]
+        self.assertEqual(len(progs_cat), 1)
+        self.assertEqual(progs_cat[0]["id"], prog.id)
+        self.assertIn("Auditório Principal", progs_cat[0]["label"])
+
+        participantes = response.context["participantes_detalhados"]
+        self.assertEqual(len(participantes), 1)
+        self.assertIn(prog.id, participantes[0]["programacoes_ids"])
+        self.assertEqual(len(participantes[0]["programacoes"]), 1)
+        self.assertEqual(participantes[0]["programacoes"][0]["id"], prog.id)
+        self.assertContains(response, 'id="filterProgramacao"')
+        self.assertContains(response, 'id="programacoes-catalog-data"')
 
 
