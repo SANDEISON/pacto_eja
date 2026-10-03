@@ -548,28 +548,21 @@
       <!-- Barra de Filtros Específicos para a Tabela de Participantes -->
       <div id="participantFiltersContainer" class="bg-body-tertiary p-3 rounded-3 border">
         <div class="row g-2 align-items-center mb-2">
-          <div class="col-12 col-sm-6 col-md-4 col-lg-2">
+          <div class="col-12 col-sm-6 col-lg">
             <label for="filterEstado" class="form-label mb-1 small fw-semibold text-muted">🗺️ Estado:</label>
             <select id="filterEstado" class="form-select form-select-sm">
               <option value="">Todos os Estados</option>
             </select>
           </div>
 
-          <div class="col-12 col-sm-6 col-md-4 col-lg-2">
+          <div class="col-12 col-sm-6 col-lg">
             <label for="filterMunicipio" class="form-label mb-1 small fw-semibold text-muted">🏙️ Município:</label>
             <select id="filterMunicipio" class="form-select form-select-sm">
               <option value="">Todos os Municípios</option>
             </select>
           </div>
 
-          <div class="col-12 col-sm-6 col-md-4 col-lg-2">
-            <label for="filterProgramacao" class="form-label mb-1 small fw-semibold text-muted">📅 Programações disponíveis:</label>
-            <select id="filterProgramacao" class="form-select form-select-sm">
-              <option value="">Todas as Programações</option>
-            </select>
-          </div>
-
-          <div class="col-12 col-sm-6 col-md-4 col-lg-2">
+          <div class="col-12 col-sm-6 col-lg">
             <label for="filterModalidade" class="form-label mb-1 small fw-semibold text-muted">💻 Modalidade:</label>
             <select id="filterModalidade" class="form-select form-select-sm">
               <option value="">Todas as Modalidades</option>
@@ -578,7 +571,7 @@
             </select>
           </div>
 
-          <div class="col-12 col-sm-6 col-md-4 col-lg-2">
+          <div class="col-12 col-sm-6 col-lg">
             <label for="filterRepresentante" class="form-label mb-1 small fw-semibold text-muted">🏛️ Rep. Undime/Consed:</label>
             <select id="filterRepresentante" class="form-select form-select-sm">
               <option value="">Todos</option>
@@ -587,7 +580,7 @@
             </select>
           </div>
 
-          <div class="col-12 col-sm-6 col-md-4 col-lg-2">
+          <div class="col-12 col-sm-6 col-lg">
             <label for="filterGenero" class="form-label mb-1 small fw-semibold text-muted">👤 Gênero:</label>
             <select id="filterGenero" class="form-select form-select-sm">
               <option value="">Todos os Gêneros</option>
@@ -1013,35 +1006,6 @@
     addOptions('filterFuncao', funcoes);
     addOptions('filterGenero', generos);
 
-    // Programações disponíveis
-    const progSelect = document.getElementById('filterProgramacao');
-    if (progSelect) {
-      progSelect.innerHTML = '<option value="">Todas as Programações disponíveis</option>';
-      const progsMap = new Map();
-
-      (programacoesCatalog || []).forEach(prog => {
-        if (prog && prog.id) {
-          progsMap.set(String(prog.id), prog.label);
-        }
-      });
-
-      participantsData.forEach(p => {
-        (p.programacoes || []).forEach(pr => {
-          if (pr && pr.id && !progsMap.has(String(pr.id))) {
-            progsMap.set(String(pr.id), pr.label);
-          }
-        });
-      });
-
-      if (progsMap.size > 0) {
-        progsMap.forEach((label, id) => {
-          const opt = document.createElement('option');
-          opt.value = id;
-          opt.textContent = label;
-          progSelect.appendChild(opt);
-        });
-      }
-    }
   }
 
   // Renderiza o Catálogo de Atividades na Página Inicial
@@ -1220,7 +1184,6 @@
 
     const filterEstadoEl = document.getElementById('filterEstado');
     const filterMunicipioEl = document.getElementById('filterMunicipio');
-    const filterProgEl = document.getElementById('filterProgramacao');
     const filterModalidadeEl = document.getElementById('filterModalidade');
     const filterRepEl = document.getElementById('filterRepresentante');
     const filterGeneroEl = document.getElementById('filterGenero');
@@ -1228,7 +1191,6 @@
 
     const estado = filterEstadoEl ? filterEstadoEl.value : '';
     const municipio = filterMunicipioEl ? filterMunicipioEl.value : '';
-    const programacaoId = filterProgEl ? filterProgEl.value : '';
     const modalidade = filterModalidadeEl ? filterModalidadeEl.value : '';
     const representante = filterRepEl ? filterRepEl.value : '';
     const genero = filterGeneroEl ? filterGeneroEl.value : '';
@@ -1237,10 +1199,6 @@
     currentFilteredParticipants = participantsData.filter(p => {
       if (estado && p.estado !== estado && p.sigla_uf !== estado) return false;
       if (municipio && p.municipio !== municipio) return false;
-      if (programacaoId) {
-        const matchProg = (p.programacoes_ids || []).some(id => String(id) === String(programacaoId));
-        if (!matchProg) return false;
-      }
       if (representante && p.representante_undime_consed !== representante) return false;
       if (genero && p.genero !== genero) return false;
 
@@ -1858,9 +1816,6 @@
   const filterMunicipio = document.getElementById('filterMunicipio');
   if (filterMunicipio) filterMunicipio.addEventListener('change', applyParticipantFilters);
 
-  const filterProgramacao = document.getElementById('filterProgramacao');
-  if (filterProgramacao) filterProgramacao.addEventListener('change', applyParticipantFilters);
-
   const filterModalidade = document.getElementById('filterModalidade');
   if (filterModalidade) filterModalidade.addEventListener('change', applyParticipantFilters);
 
@@ -1887,7 +1842,6 @@
     btnClearFilters.addEventListener('click', () => {
       if (document.getElementById('filterEstado')) document.getElementById('filterEstado').value = '';
       if (document.getElementById('filterMunicipio')) document.getElementById('filterMunicipio').value = '';
-      if (document.getElementById('filterProgramacao')) document.getElementById('filterProgramacao').value = '';
       if (document.getElementById('filterModalidade')) document.getElementById('filterModalidade').value = '';
       if (document.getElementById('filterRepresentante')) document.getElementById('filterRepresentante').value = '';
       if (document.getElementById('filterGenero')) document.getElementById('filterGenero').value = '';
