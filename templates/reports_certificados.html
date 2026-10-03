@@ -638,12 +638,20 @@
 {{ funcao_dados|json_script:"role-data" }}
 {{ caracterizacao_dados|json_script:"characterization-data" }}
 {{ tempo_dados|json_script:"experience-time-data" }}
+<script id="server-config" type="application/json">{"participantsApiUrl": "{% url 'reports_certificados_participantes' %}", "exportCsvUrl": "{% url 'reports_certificados_export_csv' %}", "totalSolicitantes": {{ total_solicitantes|default:0 }}}</script>
 
 <script>
   const readJson = (id) => JSON.parse(document.getElementById(id).textContent);
 
   const participantsData = readJson("participants-data");
   const coursesCatalog = readJson("courses-catalog-data");
+  let serverConfig = { participantsApiUrl: '', exportCsvUrl: '', totalSolicitantes: 0 };
+  const configEl = document.getElementById("server-config");
+  if (configEl && configEl.textContent) {
+    try {
+      serverConfig = JSON.parse(configEl.textContent);
+    } catch (e) {}
+  }
 
   const datasets = {
     curso: { title: "Cursos Solicitados", data: readJson("course-chart-data") },
@@ -1105,12 +1113,39 @@
   // ----------------------------------------------------
   // TABELA DE SOLICITANTES & FILTROS DINÂMICOS
   // ----------------------------------------------------
+  let isServerPagination = Boolean(serverConfig.participantsApiUrl && (serverConfig.totalSolicitantes > 50 || participantsData.length === 50));
+  let searchDebounceTimer = null;
+
   function populateTableFilters() {
     const cursosSet = new Set();
     const estadosSet = new Set();
     const municipiosSet = new Set();
     const funcoesSet = new Set();
 
+    // 1. Catálogo e datasets agregados (contêm todos os valores da base inteira)
+    if (Array.isArray(coursesCatalog)) {
+      coursesCatalog.forEach(c => { if (c.nome) cursosSet.add(c.nome); });
+    }
+    if (datasets.curso && Array.isArray(datasets.curso.data)) {
+      datasets.curso.data.forEach(c => { if (c.label) cursosSet.add(c.label); });
+    }
+    if (datasets.estado_atuacao && Array.isArray(datasets.estado_atuacao.data)) {
+      datasets.estado_atuacao.data.forEach(e => { if (e.sigla) estadosSet.add(e.sigla); });
+    }
+    if (datasets.estado_residencia && Array.isArray(datasets.estado_residencia.data)) {
+      datasets.estado_residencia.data.forEach(e => { if (e.sigla) estadosSet.add(e.sigla); });
+    }
+    if (datasets.municipio_atuacao && Array.isArray(datasets.municipio_atuacao.data)) {
+      datasets.municipio_atuacao.data.forEach(m => { if (m.label && m.label !== 'Não informado') municipiosSet.add(m.label); });
+    }
+    if (datasets.municipio_residencia && Array.isArray(datasets.municipio_residencia.data)) {
+      datasets.municipio_residencia.data.forEach(m => { if (m.label && m.label !== 'Não informado') municipiosSet.add(m.label); });
+    }
+    if (datasets.funcao && Array.isArray(datasets.funcao.data)) {
+      datasets.funcao.data.forEach(f => { if (f.label && f.label !== 'Não informado') funcoesSet.add(f.label); });
+    }
+
+    // 2. Amostra inicial de participantes
     participantsData.forEach(p => {
       (p.cursos_certificados || []).forEach(c => cursosSet.add(c));
       if (p.sigla_uf_atuacao) estadosSet.add(p.sigla_uf_atuacao);
@@ -1139,14 +1174,61 @@
     addOpts('tableFilterFuncao', funcoesSet);
   }
 
-  function applyTableFilters() {
+  function getTableFilterValues() {
     const rawSearch = (document.getElementById('tableSearchInput')?.value || '').trim();
-    const search = rawSearch.toLowerCase();
-    const digitsSearch = rawSearch.replace(/\D/g, '');
     const curso = document.getElementById('tableFilterCurso')?.value || '';
     const estado = document.getElementById('tableFilterEstado')?.value || '';
     const municipio = document.getElementById('tableFilterMunicipio')?.value || '';
     const funcao = document.getElementById('tableFilterFuncao')?.value || '';
+    return { rawSearch, curso, estado, municipio, funcao };
+  }
+
+  function loadServerTableData(page = 1) {
+    if (!serverConfig.participantsApiUrl || typeof fetch === 'undefined') {
+      renderDetailedTable();
+      return;
+    }
+
+    currentPage = page;
+    const { rawSearch, curso, estado, municipio, funcao } = getTableFilterValues();
+    const params = new URLSearchParams();
+    params.set('page', currentPage);
+    params.set('page_size', pageSize);
+    if (rawSearch) params.set('search', rawSearch);
+    if (curso) params.set('curso_nome', curso);
+    if (estado) params.set('estado', estado);
+    if (municipio) params.set('municipio', municipio);
+    if (funcao) params.set('funcao', funcao);
+
+    if (typeof window !== 'undefined' && window.location) {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('curso')) params.set('curso', urlParams.get('curso'));
+    }
+
+    const tBody = document.getElementById('detailedTableBody');
+    if (tBody && currentPage === 1) {
+      tBody.innerHTML = '<tr><td colspan="7" class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Carregando participantes...</td></tr>';
+    }
+
+    fetch(`${serverConfig.participantsApiUrl}?${params.toString()}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          renderDetailedTable(data.participants, data.total, data.page, data.page_size);
+        } else {
+          renderDetailedTable();
+        }
+      })
+      .catch(err => {
+        console.warn("Falha na busca paginada, usando fallback local:", err);
+        renderDetailedTable();
+      });
+  }
+
+  function applyTableFilters(triggerServer = true) {
+    const { rawSearch, curso, estado, municipio, funcao } = getTableFilterValues();
+    const search = rawSearch.toLowerCase();
+    const digitsSearch = rawSearch.replace(/\D/g, '');
 
     currentFilteredParticipants = participantsData.filter(p => {
       if (curso && !(p.cursos_certificados || []).includes(curso)) return false;
@@ -1188,36 +1270,54 @@
     });
 
     currentPage = 1;
-    renderDetailedTable();
+
+    if (triggerServer && isServerPagination && typeof fetch !== 'undefined') {
+      loadServerTableData(1);
+    } else {
+      renderDetailedTable();
+    }
   }
 
-  function renderDetailedTable() {
+  function renderDetailedTable(customPageData = null, customTotal = null, customPage = null, customPageSize = null) {
     const tBody = document.getElementById('detailedTableBody');
     const countInfo = document.getElementById('tableRecordCountInfo');
     const rangeInfo = document.getElementById('pageRangeInfo');
     if (!tBody) return;
 
     tBody.innerHTML = '';
-    const total = currentFilteredParticipants.length;
+    const isCustom = customPageData !== null;
+    const total = isCustom ? customTotal : currentFilteredParticipants.length;
+    const activePage = isCustom ? customPage : currentPage;
+    const activeSize = isCustom ? customPageSize : pageSize;
+    const baseTotal = serverConfig.totalSolicitantes || participantsData.length;
 
     if (countInfo) {
-      countInfo.innerHTML = `Exibindo <span class="badge bg-primary text-white">${total}</span> de ${participantsData.length} registro(s) encontrado(s)`;
+      countInfo.innerHTML = `Exibindo <span class="badge bg-primary text-white">${total}</span> de ${baseTotal} registro(s) encontrado(s)`;
     }
 
     if (total === 0) {
       tBody.innerHTML = '<tr><td colspan="7" class="text-center py-5 text-muted">Nenhum participante encontrado com os filtros aplicados.</td></tr>';
       if (rangeInfo) rangeInfo.innerText = '0 registros';
-      renderPagination(0, 1, pageSize);
+      renderPagination(0, 1, activeSize, isCustom);
       return;
     }
 
-    const totalPages = Math.ceil(total / pageSize);
-    if (currentPage > totalPages) currentPage = totalPages;
-    if (currentPage < 1) currentPage = 1;
+    const totalPages = Math.ceil(total / activeSize);
+    let pageData = [];
+    let startIdx = 0;
+    let endIdx = 0;
 
-    const startIdx = (currentPage - 1) * pageSize;
-    const endIdx = Math.min(startIdx + pageSize, total);
-    const pageData = currentFilteredParticipants.slice(startIdx, endIdx);
+    if (isCustom) {
+      pageData = customPageData;
+      startIdx = (activePage - 1) * activeSize;
+      endIdx = Math.min(startIdx + pageData.length, total);
+    } else {
+      if (currentPage > totalPages) currentPage = totalPages;
+      if (currentPage < 1) currentPage = 1;
+      startIdx = (currentPage - 1) * activeSize;
+      endIdx = Math.min(startIdx + activeSize, total);
+      pageData = currentFilteredParticipants.slice(startIdx, endIdx);
+    }
 
     if (rangeInfo) {
       rangeInfo.innerText = `Mostrando ${startIdx + 1}–${endIdx} de ${total}`;
@@ -1270,23 +1370,29 @@
       tBody.appendChild(tr);
     });
 
-    renderPagination(totalPages, currentPage, pageSize);
+    renderPagination(totalPages, activePage, activeSize, isCustom);
   }
 
-  function renderPagination(totalPages, activePage, size) {
+  function renderPagination(totalPages, activePage, size, isCustom = false) {
     const nav = document.getElementById('paginationNav');
     if (!nav) return;
     nav.innerHTML = '';
     if (totalPages <= 1) return;
 
+    const goToPage = (p) => {
+      currentPage = p;
+      if (isCustom && isServerPagination && typeof fetch !== 'undefined') {
+        loadServerTableData(p);
+      } else {
+        renderDetailedTable();
+      }
+    };
+
     const prevLi = document.createElement('li');
     prevLi.className = `page-item ${activePage === 1 ? 'disabled' : ''}`;
     prevLi.innerHTML = `<button class="page-link"><i class="bi bi-chevron-left me-1"></i>Anterior</button>`;
     if (activePage > 1) {
-      prevLi.querySelector('button').addEventListener('click', () => {
-        currentPage--;
-        renderDetailedTable();
-      });
+      prevLi.querySelector('button').addEventListener('click', () => goToPage(activePage - 1));
     }
     nav.appendChild(prevLi);
 
@@ -1298,10 +1404,7 @@
       const firstLi = document.createElement('li');
       firstLi.className = 'page-item';
       firstLi.innerHTML = `<button class="page-link">1</button>`;
-      firstLi.querySelector('button').addEventListener('click', () => {
-        currentPage = 1;
-        renderDetailedTable();
-      });
+      firstLi.querySelector('button').addEventListener('click', () => goToPage(1));
       nav.appendChild(firstLi);
       if (startPage > 2) {
         const dotsLi = document.createElement('li');
@@ -1316,10 +1419,7 @@
       li.className = `page-item ${p === activePage ? 'active' : ''}`;
       li.innerHTML = `<button class="page-link">${p}</button>`;
       const pageNum = p;
-      li.querySelector('button').addEventListener('click', () => {
-        currentPage = pageNum;
-        renderDetailedTable();
-      });
+      li.querySelector('button').addEventListener('click', () => goToPage(pageNum));
       nav.appendChild(li);
     }
 
@@ -1333,10 +1433,7 @@
       const lastLi = document.createElement('li');
       lastLi.className = 'page-item';
       lastLi.innerHTML = `<button class="page-link">${totalPages}</button>`;
-      lastLi.querySelector('button').addEventListener('click', () => {
-        currentPage = totalPages;
-        renderDetailedTable();
-      });
+      lastLi.querySelector('button').addEventListener('click', () => goToPage(totalPages));
       nav.appendChild(lastLi);
     }
 
@@ -1344,18 +1441,34 @@
     nextLi.className = `page-item ${activePage === totalPages ? 'disabled' : ''}`;
     nextLi.innerHTML = `<button class="page-link">Próximo<i class="bi bi-chevron-right ms-1"></i></button>`;
     if (activePage < totalPages) {
-      nextLi.querySelector('button').addEventListener('click', () => {
-        currentPage++;
-        renderDetailedTable();
-      });
+      nextLi.querySelector('button').addEventListener('click', () => goToPage(activePage + 1));
     }
     nav.appendChild(nextLi);
   }
 
   // ----------------------------------------------------
-  // EXPORTAÇÃO CSV COMPLETA (BOM UTF-8 PARA EXCEL)
+  // EXPORTAÇÃO CSV COMPLETA
   // ----------------------------------------------------
   function exportFullCertificadosCSV() {
+    const { rawSearch, curso, estado, municipio, funcao } = getTableFilterValues();
+
+    // Se estiver em navegador real com rota de exportação via streaming no servidor
+    if (typeof window !== 'undefined' && window.location && serverConfig.exportCsvUrl) {
+      const params = new URLSearchParams();
+      if (rawSearch) params.set('search', rawSearch);
+      if (curso) params.set('curso_nome', curso);
+      if (estado) params.set('estado', estado);
+      if (municipio) params.set('municipio', municipio);
+      if (funcao) params.set('funcao', funcao);
+
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('curso')) params.set('curso', urlParams.get('curso'));
+
+      window.location.href = `${serverConfig.exportCsvUrl}?${params.toString()}`;
+      return;
+    }
+
+    // Fallback client-side (usado também no ambiente de testes do Node.js)
     const dataToExport = currentFilteredParticipants.length > 0 ? currentFilteredParticipants : participantsData;
     if (!dataToExport || dataToExport.length === 0) {
       alert("Nenhum dado disponível para exportação.");
@@ -1413,7 +1526,11 @@
 
     // 2. Preenche Filtros e Tabela
     populateTableFilters();
-    renderDetailedTable();
+    if (isServerPagination && typeof fetch !== 'undefined') {
+      loadServerTableData(1);
+    } else {
+      renderDetailedTable();
+    }
 
     // Alternância Mapa vs Gráfico no Painel Principal
     document.querySelectorAll('input[name="mainViewToggle"]').forEach(radio => {
@@ -1453,19 +1570,29 @@
 
     // Filtros da Tabela
     const tableSearch = document.getElementById('tableSearchInput');
-    if (tableSearch) tableSearch.addEventListener('input', applyTableFilters);
+    if (tableSearch) {
+      tableSearch.addEventListener('input', () => {
+        applyTableFilters(false);
+        if (isServerPagination && typeof fetch !== 'undefined') {
+          clearTimeout(searchDebounceTimer);
+          searchDebounceTimer = setTimeout(() => {
+            loadServerTableData(1);
+          }, 300);
+        }
+      });
+    }
 
     const fCurso = document.getElementById('tableFilterCurso');
-    if (fCurso) fCurso.addEventListener('change', applyTableFilters);
+    if (fCurso) fCurso.addEventListener('change', () => applyTableFilters(true));
 
     const fEstado = document.getElementById('tableFilterEstado');
-    if (fEstado) fEstado.addEventListener('change', applyTableFilters);
+    if (fEstado) fEstado.addEventListener('change', () => applyTableFilters(true));
 
     const fMunicipio = document.getElementById('tableFilterMunicipio');
-    if (fMunicipio) fMunicipio.addEventListener('change', applyTableFilters);
+    if (fMunicipio) fMunicipio.addEventListener('change', () => applyTableFilters(true));
 
     const fFuncao = document.getElementById('tableFilterFuncao');
-    if (fFuncao) fFuncao.addEventListener('change', applyTableFilters);
+    if (fFuncao) fFuncao.addEventListener('change', () => applyTableFilters(true));
 
     const btnClear = document.getElementById('btnClearTableFilters');
     if (btnClear) {
@@ -1475,7 +1602,7 @@
         if (fEstado) fEstado.value = '';
         if (fMunicipio) fMunicipio.value = '';
         if (fFuncao) fFuncao.value = '';
-        applyTableFilters();
+        applyTableFilters(true);
       });
     }
 
@@ -1484,7 +1611,11 @@
       selectSize.addEventListener('change', (e) => {
         pageSize = parseInt(e.target.value, 10) || 10;
         currentPage = 1;
-        renderDetailedTable();
+        if (isServerPagination && typeof fetch !== 'undefined') {
+          loadServerTableData(1);
+        } else {
+          renderDetailedTable();
+        }
       });
     }
 

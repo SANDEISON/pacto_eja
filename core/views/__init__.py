@@ -67,6 +67,8 @@ __all__ = [
     "preencher_avaliacao",
     "reports",
     "reports_certificados",
+    "reports_certificados_participantes",
+    "reports_certificados_export_csv",
     "cadastro_educador",
     "cadastro_educador_confirmar_email",
     "cadastro_educador_confirmacao_enviada",
@@ -117,4 +119,8 @@ from .cadastro_educador_success import cadastro_educador_success
 from .cidades_por_estado import cidades_por_estado
 from .cpf_lookup import cpf_lookup
 from .reports import reports
-from .reports_certificados import reports_certificados
+from .reports_certificados import (
+    reports_certificados,
+    reports_certificados_export_csv,
+    reports_certificados_participantes,
+)

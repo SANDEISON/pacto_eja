@@ -15,6 +15,8 @@ urlpatterns = [
     path("relatorios/", views.reports, name="reports"),
     path("relatorios/atividades/", views.reports, name="reports_atividades"),
     path("relatorios/certificados/", views.reports_certificados, name="reports_certificados"),
+    path("relatorios/certificados/participantes/", views.reports_certificados_participantes, name="reports_certificados_participantes"),
+    path("relatorios/certificados/exportar-csv/", views.reports_certificados_export_csv, name="reports_certificados_export_csv"),
     path("", RedirectView.as_view(pattern_name="cadastro_educador", permanent=False), name="home"),
     path("painel/", views.dashboard, name="dashboard"),
     path("atividades/<int:pk>/inscricao/", views.inscricao_atividade, name="atividade_inscricao"),
