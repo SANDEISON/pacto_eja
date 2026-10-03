@@ -279,7 +279,11 @@ class ReportsView(TemplateView):
         context = super().get_context_data(**kwargs)
 
         # 1. Catálogo completo de atividades para a central/modal de seleção
-        atividades = Atividade.objects.prefetch_related("inscricoes").order_by("titulo")
+        atividades = Atividade.objects.prefetch_related(
+            "inscricoes",
+            "programacoes__sala",
+            "programacoes__tematica",
+        ).order_by("titulo")
         atividades_catalogo = []
         for a in atividades:
             insc_count = a.inscricoes.count()
@@ -295,6 +299,23 @@ class ReportsView(TemplateView):
                 if a.inscricoes_abertas
                 else ("Inscrições Encerradas" if a.ativo else "Inativa")
             )
+
+            progs_disponiveis = []
+            progs_ids = []
+            for p in a.programacoes.all():
+                p_label = f"{p.sala.nome} — {p.get_turno_display()} ({p.data.strftime('%d/%m/%Y')})"
+                if p.tematica:
+                    p_label += f" ({p.tematica.nome})"
+                progs_disponiveis.append({
+                    "id": p.id,
+                    "label": p_label,
+                    "sala": p.sala.nome,
+                    "turno": p.get_turno_display(),
+                    "data": p.data.strftime("%d/%m/%Y"),
+                    "modalidade": p.get_modalidade_display(),
+                    "tematica": p.tematica.nome if p.tematica else "",
+                })
+                progs_ids.append(p.id)
 
             atividades_catalogo.append({
                 "id": a.id,
@@ -330,6 +351,9 @@ class ReportsView(TemplateView):
                 "inscricoes_abertas": a.inscricoes_abertas,
                 "status_slug": status_insc if a.ativo else "inativa",
                 "status_label": status_label,
+                "programacoes": progs_disponiveis,
+                "programacoes_ids": progs_ids,
+                "total_programacoes": len(progs_disponiveis),
             })
 
         # 2. Verificação de filtro por atividade ativa ou visão geral via URL

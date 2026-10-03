@@ -243,7 +243,11 @@ class ReportsViewTests(TestCase):
         self.assertIn(prog.id, participantes[0]["programacoes_ids"])
         self.assertEqual(len(participantes[0]["programacoes"]), 1)
         self.assertEqual(participantes[0]["programacoes"][0]["id"], prog.id)
-        self.assertContains(response, 'id="filterProgramacao"')
-        self.assertContains(response, 'id="programacoes-catalog-data"')
+        # Tela inicial (Catálogo de Atividades)
+        response_catalogo = self.client.get(reverse("reports"))
+        self.assertEqual(response_catalogo.status_code, 200)
+        self.assertContains(response_catalogo, 'id="catalogFilterProgramacao"')
+        self.assertEqual(response_catalogo.context["atividades_catalogo"][0]["total_programacoes"], 1)
+        self.assertEqual(response_catalogo.context["atividades_catalogo"][0]["programacoes"][0]["id"], prog.id)
 
 

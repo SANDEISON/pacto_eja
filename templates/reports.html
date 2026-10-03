@@ -149,13 +149,13 @@
   <div class="card shadow-sm border-0 mb-4 bg-body-tertiary">
     <div class="card-body p-3 p-md-4">
       <div class="row g-3 align-items-end">
-        <div class="col-12 col-md-4">
+        <div class="col-12 col-md-3">
           <label for="catalogSearchInput" class="form-label small fw-bold text-muted mb-1">
             <i class="bi bi-search me-1 text-primary"></i> Pesquisar Atividade:
           </label>
           <input type="text" id="catalogSearchInput" class="form-control" placeholder="Buscar por título, descrição ou local...">
         </div>
-        <div class="col-12 col-sm-4 col-md-2">
+        <div class="col-12 col-sm-6 col-md-2">
           <label for="catalogFilterTipo" class="form-label small fw-bold text-muted mb-1">📌 Tipo:</label>
           <select id="catalogFilterTipo" class="form-select">
             <option value="">Todos os Tipos</option>
@@ -164,7 +164,7 @@
             <option value="curso">Curso</option>
           </select>
         </div>
-        <div class="col-12 col-sm-4 col-md-3">
+        <div class="col-12 col-sm-6 col-md-2">
           <label for="catalogFilterModalidade" class="form-label small fw-bold text-muted mb-1">💻 Modalidade:</label>
           <select id="catalogFilterModalidade" class="form-select">
             <option value="">Todas as Modalidades</option>
@@ -173,7 +173,7 @@
             <option value="ambas">Ambas</option>
           </select>
         </div>
-        <div class="col-12 col-sm-4 col-md-3">
+        <div class="col-12 col-sm-6 col-md-2">
           <label for="catalogFilterStatus" class="form-label small fw-bold text-muted mb-1">⚡ Status:</label>
           <select id="catalogFilterStatus" class="form-select">
             <option value="">Todos os Status</option>
@@ -181,6 +181,16 @@
             <option value="encerradas">Inscrições Encerradas</option>
             <option value="ativa">Ativa</option>
             <option value="inativa">Inativa</option>
+          </select>
+        </div>
+        <div class="col-12 col-sm-6 col-md-3">
+          <label for="catalogFilterProgramacao" class="form-label small fw-bold text-muted mb-1">
+            <i class="bi bi-calendar-event me-1 text-primary"></i> Programações disponíveis:
+          </label>
+          <select id="catalogFilterProgramacao" class="form-select">
+            <option value="">Todas as Programações</option>
+            <option value="com_programacao">Com Programações Cadastradas</option>
+            <option value="sem_programacao">Sem Programações</option>
           </select>
         </div>
       </div>
@@ -1043,22 +1053,35 @@
     const tipoSelect = document.getElementById('catalogFilterTipo');
     const modSelect = document.getElementById('catalogFilterModalidade');
     const statusSelect = document.getElementById('catalogFilterStatus');
+    const progSelect = document.getElementById('catalogFilterProgramacao');
     const countInfo = document.getElementById('catalogCountInfo');
 
     const search = searchInput ? (searchInput.value || '').toLowerCase().trim() : '';
     const tipo = tipoSelect ? tipoSelect.value : '';
     const mod = modSelect ? modSelect.value : '';
     const status = statusSelect ? statusSelect.value : '';
+    const prog = progSelect ? progSelect.value : '';
 
     const filtered = (activitiesCatalog || []).filter(act => {
       if (tipo && act.tipo !== tipo) return false;
       if (mod && act.modalidade !== mod && act.modalidade !== 'ambas') return false;
       if (status && act.status_slug !== status) return false;
+
+      if (prog) {
+        if (prog === 'com_programacao' && (!act.programacoes || act.programacoes.length === 0)) return false;
+        if (prog === 'sem_programacao' && act.programacoes && act.programacoes.length > 0) return false;
+        if (prog !== 'com_programacao' && prog !== 'sem_programacao') {
+          const progId = parseInt(prog, 10);
+          if (!act.programacoes_ids || !act.programacoes_ids.includes(progId)) return false;
+        }
+      }
+
       if (search) {
         const matchTitle = (act.titulo || '').toLowerCase().includes(search);
         const matchDesc = (act.descricao || '').toLowerCase().includes(search);
         const matchLocal = (act.local || '').toLowerCase().includes(search);
-        if (!matchTitle && !matchDesc && !matchLocal) return false;
+        const matchProgs = (act.programacoes || []).some(pr => (pr.label || '').toLowerCase().includes(search));
+        if (!matchTitle && !matchDesc && !matchLocal && !matchProgs) return false;
       }
       return true;
     });
@@ -1093,6 +1116,11 @@
       if (act.status_slug === 'abertas') statusBadgeClass = 'bg-success';
       else if (act.status_slug === 'encerradas') statusBadgeClass = 'bg-warning text-dark';
 
+      const progsCount = (act.programacoes || []).length;
+      const progsBadgeHtml = progsCount > 0
+        ? `<span class="badge bg-primary-subtle text-primary border" title="${act.programacoes.map(p => p.label).join(', ')}"><i class="bi bi-calendar-check me-1"></i>${progsCount} disponível(is)</span>`
+        : `<span class="badge bg-light text-muted border">Sem programações</span>`;
+
       col.innerHTML = `
         <div class="card h-100 shadow-sm border-0 stat-card-widget" style="border-top: 4px solid #0d6efd !important;">
           <div class="card-body p-4 d-flex flex-column justify-content-between">
@@ -1117,6 +1145,9 @@
                 <div class="mb-1 text-truncate">
                   <i class="bi bi-geo-alt-fill me-2 text-danger"></i><strong>Local/Link:</strong> ${act.local_ou_link || 'Não informado'}
                 </div>
+                <div class="mb-1 text-truncate">
+                  <i class="bi bi-calendar-event me-2 text-primary"></i><strong>Programações:</strong> ${progsBadgeHtml}
+                </div>
                 <div class="d-flex justify-content-between align-items-center pt-2 mt-2 border-top">
                   <span><i class="bi bi-people-fill me-1 text-primary"></i><strong>${act.total_inscritos}</strong> inscritos</span>
                   <span><i class="bi bi-ticket-perforated me-1 text-success"></i>${act.vagas ? act.vagas + ' vagas' : 'Ilimitadas'}</span>
@@ -1136,15 +1167,50 @@
     });
   }
 
+  // Popula opções de programações no seletor de filtros do catálogo de atividades
+  function populateCatalogProgramacoesDropdown() {
+    const select = document.getElementById('catalogFilterProgramacao');
+    if (!select) return;
+
+    select.innerHTML = `
+      <option value="">Todas as Programações</option>
+      <option value="com_programacao">Com Programações Cadastradas</option>
+      <option value="sem_programacao">Sem Programações</option>
+    `;
+
+    const progsMap = new Map();
+    (activitiesCatalog || []).forEach(act => {
+      (act.programacoes || []).forEach(p => {
+        if (p && p.id && !progsMap.has(p.id)) {
+          progsMap.set(p.id, p.label);
+        }
+      });
+    });
+
+    if (progsMap.size > 0) {
+      const optGroup = document.createElement('optgroup');
+      optGroup.label = 'Por Programação Específica';
+      progsMap.forEach((label, id) => {
+        const opt = document.createElement('option');
+        opt.value = id;
+        opt.textContent = label;
+        optGroup.appendChild(opt);
+      });
+      select.appendChild(optGroup);
+    }
+  }
+
   window.resetCatalogFilters = function() {
     const searchInput = document.getElementById('catalogSearchInput');
     const tipoSelect = document.getElementById('catalogFilterTipo');
     const modSelect = document.getElementById('catalogFilterModalidade');
     const statusSelect = document.getElementById('catalogFilterStatus');
+    const progSelect = document.getElementById('catalogFilterProgramacao');
     if (searchInput) searchInput.value = '';
     if (tipoSelect) tipoSelect.value = '';
     if (modSelect) modSelect.value = '';
     if (statusSelect) statusSelect.value = '';
+    if (progSelect) progSelect.value = '';
     renderActivitiesCatalog();
   };
 
@@ -1779,6 +1845,9 @@
   const catalogFilterStatus = document.getElementById('catalogFilterStatus');
   if (catalogFilterStatus) catalogFilterStatus.addEventListener('change', renderActivitiesCatalog);
 
+  const catalogFilterProgramacao = document.getElementById('catalogFilterProgramacao');
+  if (catalogFilterProgramacao) catalogFilterProgramacao.addEventListener('change', renderActivitiesCatalog);
+
   const btnResetCatalogFilters = document.getElementById('btnResetCatalogFilters');
   if (btnResetCatalogFilters) btnResetCatalogFilters.addEventListener('click', resetCatalogFilters);
 
@@ -1871,6 +1940,7 @@
   // Inicialização no DOM
   document.addEventListener('DOMContentLoaded', () => {
     // 1. Renderiza o catálogo de atividades da tela inicial
+    populateCatalogProgramacoesDropdown();
     renderActivitiesCatalog();
 
     // 2. Se o dashboard analítico estiver ativo no DOM, inicializa tabelas e gráficos
