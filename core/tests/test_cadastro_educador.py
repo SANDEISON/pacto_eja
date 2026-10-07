@@ -1,15 +1,19 @@
 from datetime import date
+from importlib import import_module
 import json
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.apps import apps
 from django.core import mail
+from django.db import IntegrityError, connection
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from ..models import (
     CadastroPendente, Cidade, CorRaca, CursoCertificado, Educador, EducadorEscola, EducadorGenero, Endereco,
-    Escola, Estado, Funcao, FuncaoCaracterizacaoTurma, FuncaoEducador,
+    Escola, Estado, Funcao, FuncaoCaracterizacaoTurma, FuncaoEducador, EnvioCadastroEducador,
 )
 
 
@@ -83,6 +87,97 @@ class EducadorEscolaCadastroPublicoTests(TestCase):
         self.assertTrue(User.objects.filter(username="52998224725").exists())
         self.assertEqual(mail.outbox, [])
         self.assertFalse(CadastroPendente.objects.exists())
+
+    def test_successful_registration_records_one_completed_submission(self):
+        self.submit_registration(self.registration_data())
+        envio = EnvioCadastroEducador.objects.get()
+        self.assertEqual(envio.educador.usuario.username, "52998224725")
+        self.assertEqual(envio.operacao, EnvioCadastroEducador.Operacao.CADASTRO)
+        self.assertEqual(envio.total_atuacoes, 1)
+        self.assertIsNotNone(envio.concluido_em)
+        self.assertIsInstance(envio.numero, int)
+        self.assertGreater(envio.numero, 0)
+
+    def test_edit_records_a_separate_submission_and_keeps_the_original(self):
+        self.submit_registration(self.registration_data())
+        original = EnvioCadastroEducador.objects.get()
+        response = self.client.post(reverse("cadastro_educador"), self.registration_data(
+            editar_cpf="52998224725", endereco_logradouro="Rua Corrigida",
+        ))
+        self.assertRedirects(response, reverse("cadastro_educador_success"))
+        envios = list(EnvioCadastroEducador.objects.order_by("concluido_em"))
+        self.assertEqual(len(envios), 2)
+        self.assertEqual(envios[0].pk, original.pk)
+        self.assertEqual(envios[1].educador_id, original.educador_id)
+        self.assertEqual(envios[1].operacao, EnvioCadastroEducador.Operacao.EDICAO)
+        self.assertGreater(envios[1].numero, original.numero)
+        self.assertNotEqual(envios[1].pk, original.pk)
+        self.assertEqual(FuncaoEducador.objects.count(), 1)
+
+    def test_invalid_and_rejected_submissions_do_not_create_history(self):
+        self.client.post(reverse("cadastro_educador"), self.registration_data(email_confirmacao=""))
+        self.assertFalse(EnvioCadastroEducador.objects.exists())
+        self.submit_registration(self.registration_data())
+        self.client.post(reverse("cadastro_educador"), self.registration_data())
+        self.client.post(reverse("cadastro_educador"), self.registration_data(
+            editar_cpf="52998224725", email_confirmacao="outro@example.com",
+        ))
+        self.assertEqual(EnvioCadastroEducador.objects.count(), 1)
+
+    def test_history_failure_rolls_back_the_registration(self):
+        with patch.object(EnvioCadastroEducador.objects, "create", side_effect=IntegrityError("Falha no histórico")):
+            response = self.client.post(reverse("cadastro_educador"), self.registration_data())
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["form"].non_field_errors())
+        self.assertFalse(User.objects.filter(username="52998224725").exists())
+        self.assertFalse(FuncaoEducador.objects.exists())
+        self.assertFalse(Endereco.objects.exists())
+        self.assertFalse(EnvioCadastroEducador.objects.exists())
+
+    def import_legacy_registrations(self):
+        migration = import_module("core.migrations.0043_registros_legados_cadastro")
+        migration.importar_registros_legados(apps, SimpleNamespace(connection=connection))
+
+    def test_legacy_import_creates_one_reference_even_with_duplicate_assignments(self):
+        self.submit_registration(self.registration_data())
+        EnvioCadastroEducador.objects.all().delete()
+        original = EducadorEscola.objects.get()
+        primeira_data = original.criado_em
+        educador = Educador.objects.get(cpf="52998224725")
+        original.pk = None
+        original.save()
+        FuncaoEducador.objects.create(educador=educador, educador_escola=original)
+
+        self.import_legacy_registrations()
+        self.import_legacy_registrations()
+
+        legado = EnvioCadastroEducador.objects.get()
+        self.assertEqual(legado.operacao, EnvioCadastroEducador.Operacao.LEGADO)
+        self.assertIsNone(legado.concluido_em)
+        self.assertEqual(legado.data_referencia, primeira_data)
+        self.assertEqual(legado.total_atuacoes, 2)
+        self.assertEqual(FuncaoEducador.objects.count(), 2)
+
+    def test_legacy_import_skips_recorded_submissions_and_accounts_without_assignments(self):
+        self.submit_registration(self.registration_data())
+        original = EnvioCadastroEducador.objects.get()
+        User.objects.create_user(username="conta-sem-atuacoes")
+        self.import_legacy_registrations()
+        self.assertEqual(EnvioCadastroEducador.objects.count(), 1)
+        self.assertEqual(EnvioCadastroEducador.objects.get().pk, original.pk)
+
+    def test_edit_of_legacy_registration_records_a_proven_submission(self):
+        self.submit_registration(self.registration_data())
+        EnvioCadastroEducador.objects.all().delete()
+        self.import_legacy_registrations()
+        response = self.client.post(reverse("cadastro_educador"), self.registration_data(
+            editar_cpf="52998224725", endereco_logradouro="Rua Corrigida",
+        ))
+        self.assertRedirects(response, reverse("cadastro_educador_success"))
+        self.assertEqual(EnvioCadastroEducador.objects.count(), 2)
+        envio = EnvioCadastroEducador.objects.get(operacao=EnvioCadastroEducador.Operacao.EDICAO)
+        self.assertIsNotNone(envio.concluido_em)
+        self.assertIsNone(envio.data_referencia)
 
     def test_public_form_does_not_require_login(self):
         response = self.client.get(reverse("cadastro_educador"))
