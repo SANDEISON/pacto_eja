@@ -68,6 +68,32 @@ Os models são separados por assunto e exportados por `core.models`. O mesmo pad
 
 ### Relações principais do domínio
 
+Os envios concluídos de `cadastro-educadores/` são registrados em
+`EnvioCadastroEducador`, na mesma transação do formulário. Cada registro contém
+um identificador único, o educador (e seu usuário), a data/hora, a operação
+(cadastro inicial ou edição) e a quantidade de atuações após o envio. Tentativas
+inválidas, cadastros repetidos bloqueados e transações desfeitas não entram no
+histórico. Contas existentes sem atuações que concluem o formulário são
+classificadas como cadastro inicial.
+
+Consulte **Envios do cadastro de educadores** no Django Admin
+(`/admin/core/enviocadastroeducador/`), buscando pelo nome ou CPF e filtrando
+por operação ou data. A consulta é somente leitura. Vários envios de edição
+para a mesma pessoa não significam usuários duplicados.
+O ID exibido na lista é um número sequencial gerado pelo PostgreSQL, inclusive
+para os registros legados. O UUID original permanece como identificador interno.
+
+Os envios comprovados começam após a migração `0042_envio_cadastro_educador`
+e implantação do código atualizado (`python manage.py migrate`). A migração
+`0043_registros_legados_cadastro` importa uma referência por educador com atuações
+e sem histórico, identificada como **Registro legado**. Esses registros mantêm
+**Envio concluído em** vazio e mostram a data da primeira atuação em uma coluna
+separada. Não representam envios comprovados nem sua quantidade; educadores
+sem atuações não são importados e a importação não duplica registros existentes.
+Para investigar dados antigos, procure contas com o mesmo
+CPF/e-mail e atuações repetidas por educador, município, escola, função e
+caracterização de turma; várias atuações diferentes podem ser legítimas.
+
 A migração `0039_escola_outra_por_municipio` cria a escola **Outra** em cada município
 cadastrado com código IBGE. Essa opção aparece no início da lista de escolas do
 cadastro de educadores e pode ser usada para salvar a atuação normalmente.

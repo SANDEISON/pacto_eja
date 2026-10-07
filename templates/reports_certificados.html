@@ -125,6 +125,9 @@
 {% endblock %}
 
 {% block content %}
+<div id="report-visualization-warning" class="alert alert-warning" role="status" hidden>
+  Não foi possível carregar o mapa ou os gráficos. Os dados continuam disponíveis na tabela e na exportação CSV.
+</div>
 <div class="container-fluid px-0">
 
   <!-- ======================================================== -->
@@ -682,6 +685,10 @@
   let currentPage = 1;
   let pageSize = 10;
 
+  function showVisualizationWarning() {
+    document.getElementById('report-visualization-warning').hidden = false;
+  }
+
   function formatCPF(cpf) {
     if (!cpf) return '<span class="text-muted">—</span>';
     const clean = cpf.replace(/\D/g, '');
@@ -721,6 +728,10 @@
   // INICIALIZAÇÃO DO MAPA DO BRASIL
   // ----------------------------------------------------
   function initBrazilMap() {
+    if (typeof L === 'undefined') {
+      showVisualizationWarning();
+      return;
+    }
     const mapContainer = document.getElementById('mapBrazil');
     if (!mapContainer) return;
 
@@ -818,6 +829,7 @@
         }).addTo(leafletMapInstance);
       })
       .catch(err => {
+        showVisualizationWarning();
         console.warn("Falha ao carregar GeoJSON dos estados:", err);
       });
   }
@@ -834,6 +846,13 @@
     const labels = rawData.map(d => d.label || 'Não informado');
     const values = rawData.map(d => d.qtd || 0);
     const totalSum = values.reduce((a, b) => a + b, 0);
+
+    renderBreakdownList(rawData, totalSum, datasetObj.title);
+    renderSummaryTable(rawData, totalSum);
+    if (typeof Chart === 'undefined') {
+      showVisualizationWarning();
+      return;
+    }
 
     if (mainChartInstance) mainChartInstance.destroy();
 
@@ -885,8 +904,6 @@
       options: chartOptions
     });
 
-    renderBreakdownList(rawData, totalSum, datasetObj.title);
-    renderSummaryTable(rawData, totalSum);
   }
 
   // ----------------------------------------------------
@@ -977,6 +994,10 @@
   // GRÁFICOS SECUNDÁRIOS FIXOS
   // ----------------------------------------------------
   function renderSecondaryCharts() {
+    if (typeof Chart === 'undefined') {
+      showVisualizationWarning();
+      return;
+    }
     const textColor = getThemeTextColor();
 
     // 1. Cursos
@@ -1519,18 +1540,22 @@
   // EVENT LISTENERS & INICIALIZAÇÃO
   // ----------------------------------------------------
   document.addEventListener('DOMContentLoaded', () => {
-    // 1. Inicializa Mapa e Gráficos
-    initBrazilMap();
-    renderMainChart();
-    renderSecondaryCharts();
-
-    // 2. Preenche Filtros e Tabela
+    // Os dados e filtros independem das bibliotecas externas de visualização.
     populateTableFilters();
     if (isServerPagination && typeof fetch !== 'undefined') {
       loadServerTableData(1);
     } else {
       renderDetailedTable();
     }
+
+    [initBrazilMap, renderMainChart, renderSecondaryCharts].forEach(initialize => {
+      try {
+        initialize();
+      } catch (error) {
+        showVisualizationWarning();
+        console.warn('Falha ao iniciar uma visualização do relatório:', error);
+      }
+    });
 
     // Alternância Mapa vs Gráfico no Painel Principal
     document.querySelectorAll('input[name="mainViewToggle"]').forEach(radio => {

@@ -12,6 +12,7 @@ from ..models import (
     EducadorGenero,
     EducadorEscola,
     Endereco,
+    EnvioCadastroEducador,
     Escola,
     Estado,
     Funcao,
@@ -370,7 +371,8 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
         else:
             usuario = User.objects.select_for_update().get(pk=usuario.pk)
         educador, _ = Educador.objects.get_or_create(usuario=usuario)
-        if not self.edicao and FuncaoEducador.objects.filter(educador=educador).exists():
+        cadastro_existente = FuncaoEducador.objects.filter(educador=educador).exists()
+        if not self.edicao and cadastro_existente:
             raise IntegrityError("Este educador já enviou o formulário.")
         usuario.email = email
         usuario.first_name = primeiro_nome
@@ -416,4 +418,12 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
             vinculos.append(vinculo)
         if existentes:
             EducadorEscola.objects.filter(pk__in=[v.pk for v in existentes.values()]).delete()
+        EnvioCadastroEducador.objects.create(
+            educador=educador,
+            operacao=(
+                EnvioCadastroEducador.Operacao.EDICAO
+                if cadastro_existente else EnvioCadastroEducador.Operacao.CADASTRO
+            ),
+            total_atuacoes=FuncaoEducador.objects.filter(educador=educador).count(),
+        )
         return vinculos
