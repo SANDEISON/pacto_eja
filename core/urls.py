@@ -74,6 +74,7 @@ urlpatterns = [
     path("administracao/programacoes-salas/", views.CatalogListView.as_view(catalog_key="programacoes-salas"), name="room_schedule_list"),
     path("administracao/tematicas-salas/", views.CatalogListView.as_view(catalog_key="tematicas-salas"), name="room_theme_list"),
     path("administracao/cadastros-educadores/<int:pk>/editar/", views.educator_profile_update, name="educator_profile_update"),
+    path("administracao/cadastros-educadores/<int:pk>/redefinir-senha/", views.educator_password_reset, name="educator_password_reset"),
     path("administracao/<str:catalog_key>/cadastrar/", views.CatalogCreateView.as_view(), name="catalog_create"),
     path("administracao/<str:catalog_key>/<int:pk>/editar/", views.CatalogUpdateView.as_view(), name="catalog_update"),
     path("administracao/<str:catalog_key>/<int:pk>/excluir/", views.CatalogDeleteView.as_view(), name="catalog_delete"),

@@ -35,6 +35,7 @@ from .educator_delete_view import EducatorDeleteView
 from .educator_list_view import EducatorListView
 from .educator_update_view import EducatorUpdateView
 from .educator_profile_update import educator_profile_update
+from .educator_password_reset import educator_password_reset
 from .escolas_por_cidade import escolas_por_cidade
 from .group_create_view import GroupCreateView
 from .group_delete_view import GroupDeleteView
@@ -98,6 +99,7 @@ __all__ = [
     "EducatorListView",
     "EducatorUpdateView",
     "educator_profile_update",
+    "educator_password_reset",
     "escolas_por_cidade",
     "GroupCreateView",
     "GroupDeleteView",

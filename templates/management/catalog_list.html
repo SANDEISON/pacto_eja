@@ -25,6 +25,16 @@
             {% for cell in row.cells %}<td>{% if forloop.first %}<strong>{{ cell }}</strong>{% else %}{{ cell }}{% endif %}</td>{% endfor %}
             <td class="text-end text-nowrap">
               {% if can_change %}<a class="btn btn-sm btn-outline-primary" href="{% url 'catalog_update' catalog_key row.object.pk %}" title="Editar {{ row.object }}"><i class="bi bi-pencil"></i><span class="visually-hidden">Editar</span></a>{% endif %}
+              {% if catalog_key == 'cadastros-educadores' and can_change %}
+                {% if request.user.is_superuser or not row.object.usuario.is_staff and not row.object.usuario.is_superuser %}
+                <form method="post" action="{% url 'educator_password_reset' row.object.pk %}" class="d-inline">
+                  {% csrf_token %}
+                  <button class="btn btn-sm btn-outline-warning" type="submit" title="Redefinir senha de {{ row.object }}">
+                    <i class="bi bi-key" aria-hidden="true"></i> Redefinir senha
+                  </button>
+                </form>
+                {% endif %}
+              {% endif %}
               {% if can_delete %}<a class="btn btn-sm btn-outline-danger" href="{% url 'catalog_delete' catalog_key row.object.pk %}" title="Excluir {{ row.object }}"><i class="bi bi-trash"></i><span class="visually-hidden">Excluir</span></a>{% endif %}
             </td>
           </tr>
