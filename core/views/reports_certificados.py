@@ -577,6 +577,60 @@ class Echo:
         return value
 
 
+def extrair_dados_vinculo(vinculo, mun_res="", sigla_res=""):
+    """Retorna dicionário com os campos de um único vínculo escolar para exportação."""
+    if not vinculo:
+        return {
+            "escola": "Não informado",
+            "municipio_atuacao": mun_res or "Não informado",
+            "sigla_uf_atuacao": sigla_res or "",
+            "funcao": "Não informado",
+            "caracterizacao": "Não informado",
+            "tempo": "Não informado",
+        }
+
+    escola_nome = (
+        vinculo.escola.nome.strip()
+        if getattr(vinculo, "escola", None) and getattr(vinculo.escola, "nome", None)
+        else "Não informado"
+    )
+    funcao_nome = (
+        vinculo.funcao.nome.strip()
+        if getattr(vinculo, "funcao", None) and getattr(vinculo.funcao, "nome", None)
+        else "Não informado"
+    )
+    carac_nome = (
+        vinculo.funcao_caracterizacao_turmas.nome.strip()
+        if getattr(vinculo, "funcao_caracterizacao_turmas", None)
+        and getattr(vinculo.funcao_caracterizacao_turmas, "nome", None)
+        else "Não informado"
+    )
+    tempo_rotulo = ROTULOS_TEMPO_ATUACAO.get(
+        vinculo.tempo_atuacao, vinculo.tempo_atuacao or "Não informado"
+    )
+
+    cidade_at = getattr(vinculo, "cidade", None)
+    if cidade_at:
+        mun_at = (cidade_at.nome_cidade or "").strip() or "Não informado"
+        sigla_at = (
+            cidade_at.estado.sigla
+            if (getattr(cidade_at, "estado", None) and cidade_at.estado.sigla)
+            else ""
+        )
+    else:
+        mun_at = mun_res or "Não informado"
+        sigla_at = sigla_res or ""
+
+    return {
+        "escola": escola_nome,
+        "municipio_atuacao": mun_at,
+        "sigla_uf_atuacao": sigla_at,
+        "funcao": funcao_nome,
+        "caracterizacao": carac_nome,
+        "tempo": tempo_rotulo,
+    }
+
+
 @staff_required
 def reports_certificados_export_csv(request):
     """Gera streaming de CSV com codificação UTF-8 BOM e baixo consumo de memória."""
@@ -618,8 +672,8 @@ def reports_certificados_export_csv(request):
             "Nome Completo", "CPF", "E-mail", "Telefone", "Data de Nascimento",
             "Idade", "Gênero", "Cor / Raça", "Cursos Solicitados", "Município Residência",
             "UF Residência", "CEP", "Bairro", "Logradouro", "Escola",
-            "Município Atuação", "UF Atuação", "Função na EJA", "Caracterização / Turmas",
-            "Tempo de Atuação"
+            "Função na EJA", "Atuação na EJA", "Tempo de Atuação",
+            "Município Atuação", "UF Atuação"
         ]
         yield writer.writerow(headers)
 
@@ -628,31 +682,87 @@ def reports_certificados_export_csv(request):
             vinculos = [
                 f.educador_escola for f in educador.funcoes.all() if f.educador_escola
             ]
-            p = montar_registro_participante(educador, vinculo=vinculos, cursos=cursos)
+            p = montar_registro_participante(educador, vinculo=None, cursos=cursos)
             cursos_str = ", ".join(p.get("cursos_certificados", []))
-            row = [
-                p.get("nome", ""),
-                formatar_cpf_csv(p.get("cpf", "")),
-                p.get("email", ""),
-                p.get("telefone", ""),
-                p.get("data_nascimento", ""),
-                p.get("idade", ""),
-                p.get("genero", ""),
-                p.get("cor", ""),
-                cursos_str,
-                p.get("municipio_residencia", ""),
-                p.get("sigla_uf_residencia", ""),
-                p.get("cep", ""),
-                p.get("bairro", ""),
-                f"{p.get('logradouro', '')} {p.get('numero', '')} {p.get('complemento', '')}".strip(),
-                p.get("escola", ""),
-                p.get("municipio_atuacao", ""),
-                p.get("sigla_uf_atuacao", ""),
-                p.get("funcao", ""),
-                p.get("caracterizacao", ""),
-                p.get("tempo", ""),
-            ]
-            yield writer.writerow(row)
+            mun_res = p.get("municipio_residencia", "")
+            sigla_res = p.get("sigla_uf_residencia", "")
+            endereco_completo = f"{p.get('logradouro', '')} {p.get('numero', '')} {p.get('complemento', '')}".strip()
+
+            if not vinculos:
+                v_data = extrair_dados_vinculo(None, mun_res=mun_res, sigla_res=sigla_res)
+                row = [
+                    p.get("nome", ""),
+                    formatar_cpf_csv(p.get("cpf", "")),
+                    p.get("email", ""),
+                    p.get("telefone", ""),
+                    p.get("data_nascimento", ""),
+                    p.get("idade", ""),
+                    p.get("genero", ""),
+                    p.get("cor", ""),
+                    cursos_str,
+                    p.get("municipio_residencia", ""),
+                    p.get("sigla_uf_residencia", ""),
+                    p.get("cep", ""),
+                    p.get("bairro", ""),
+                    endereco_completo,
+                    v_data["escola"],
+                    v_data["funcao"],
+                    v_data["caracterizacao"],
+                    v_data["tempo"],
+                    v_data["municipio_atuacao"],
+                    v_data["sigla_uf_atuacao"],
+                ]
+                yield writer.writerow(row)
+            else:
+                for idx, v in enumerate(vinculos):
+                    v_data = extrair_dados_vinculo(v, mun_res=mun_res, sigla_res=sigla_res)
+                    if idx == 0:
+                        row = [
+                            p.get("nome", ""),
+                            formatar_cpf_csv(p.get("cpf", "")),
+                            p.get("email", ""),
+                            p.get("telefone", ""),
+                            p.get("data_nascimento", ""),
+                            p.get("idade", ""),
+                            p.get("genero", ""),
+                            p.get("cor", ""),
+                            cursos_str,
+                            p.get("municipio_residencia", ""),
+                            p.get("sigla_uf_residencia", ""),
+                            p.get("cep", ""),
+                            p.get("bairro", ""),
+                            endereco_completo,
+                            v_data["escola"],
+                            v_data["funcao"],
+                            v_data["caracterizacao"],
+                            v_data["tempo"],
+                            v_data["municipio_atuacao"],
+                            v_data["sigla_uf_atuacao"],
+                        ]
+                    else:
+                        row = [
+                            "",
+                            "",
+                            "",
+                            "",
+                            "",
+                            "",
+                            "",
+                            "",
+                            "",
+                            "",
+                            "",
+                            "",
+                            "",
+                            "",
+                            v_data["escola"],
+                            v_data["funcao"],
+                            v_data["caracterizacao"],
+                            v_data["tempo"],
+                            v_data["municipio_atuacao"],
+                            v_data["sigla_uf_atuacao"],
+                        ]
+                    yield writer.writerow(row)
 
     hoje_str = timezone.now().strftime("%Y-%m-%d")
     response = StreamingHttpResponse(row_generator(), content_type="text/csv; charset=utf-8")

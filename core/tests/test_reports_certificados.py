@@ -228,10 +228,21 @@ class ReportsCertificadosViewTests(TestCase):
         self.assertEqual(res_csv.status_code, 200)
         content = res_csv.streaming_content
         full_csv = "".join(chunk.decode("utf-8") if isinstance(chunk, bytes) else chunk for chunk in content)
-        linhas_ana = [line for line in full_csv.splitlines() if "Ana Silva" in line]
-        self.assertEqual(len(linhas_ana), 1, "Deve exportar exatamente 1 linha por educador no CSV de certificados")
-        self.assertIn("Escola Municipal Paulo Freire", linhas_ana[0])
-        self.assertIn("Escola Estadual Castro Alves", linhas_ana[0])
-        self.assertIn("Professor(a)", linhas_ana[0])
-        self.assertIn("Coordenador(a)", linhas_ana[0])
+        linhas = full_csv.splitlines()
+        idx_ana = next(i for i, line in enumerate(linhas) if "Ana Silva" in line)
+        linha_principal = linhas[idx_ana]
+        linha_secundaria = linhas[idx_ana + 1]
+
+        # Linha do cabeçalho tem nova ordem e texto 'Atuação na EJA'
+        self.assertIn("Escola;Função na EJA;Atuação na EJA;Tempo de Atuação;Município Atuação;UF Atuação", linhas[0])
+        # Linha principal contém dados pessoais e o primeiro vínculo
+        self.assertTrue(linha_principal.startswith("Ana Silva;333.333.333-33;"))
+        # Linha secundária tem os campos pessoais em branco e o segundo vínculo preenchido
+        self.assertTrue(linha_secundaria.startswith(";;;;;;;;;;;;;;"))
+        self.assertTrue(linha_principal.endswith(";João Pessoa;PB"))
+        self.assertTrue(linha_secundaria.endswith(";João Pessoa;PB"))
+        self.assertTrue(
+            ("Escola Municipal Paulo Freire" in linha_principal and "Escola Estadual Castro Alves" in linha_secundaria)
+            or ("Escola Estadual Castro Alves" in linha_principal and "Escola Municipal Paulo Freire" in linha_secundaria)
+        )
 
