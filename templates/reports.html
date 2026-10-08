@@ -783,11 +783,27 @@
   // Formata CPF para exibição bonita
   function formatCPF(cpf) {
     if (!cpf) return '<span class="text-muted">—</span>';
-    const clean = cpf.replace(/\D/g, '');
-    if (clean.length === 11) {
-      return clean.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+    const clean = String(cpf).replace(/\D/g, '');
+    if (clean.length > 0) {
+      const padded = clean.padStart(11, '0');
+      if (padded.length === 11) {
+        return padded.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+      }
     }
     return cpf;
+  }
+
+  // Formata CPF como texto formatado para CSV (evitando que o Excel remova zeros à esquerda)
+  function formatCpfCsv(cpf) {
+    if (!cpf) return '';
+    const clean = String(cpf).replace(/\D/g, '');
+    if (clean.length > 0) {
+      const padded = clean.padStart(11, '0');
+      if (padded.length === 11) {
+        return padded.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+      }
+    }
+    return String(cpf);
   }
 
   function getThemeTextColor() {
@@ -1238,9 +1254,11 @@
         const matchPhone = (p.telefone || '').toLowerCase().includes(searchTerm);
         const matchCity = (p.municipio || '').toLowerCase().includes(searchTerm);
         const matchState = (p.estado || '').toLowerCase().includes(searchTerm) || (p.sigla_uf || '').toLowerCase().includes(searchTerm);
+        const matchEscola = (p.escola || '').toLowerCase().includes(searchTerm);
+        const matchFuncao = (p.funcao || '').toLowerCase().includes(searchTerm);
         const matchActivities = (p.atividades_nomes || []).some(n => (n || '').toLowerCase().includes(searchTerm));
         const matchProgramacao = (p.programacoes_labels || []).some(pr => (pr || '').toLowerCase().includes(searchTerm));
-        if (!matchName && !matchCpf && !matchEmail && !matchPhone && !matchCity && !matchState && !matchActivities && !matchProgramacao) {
+        if (!matchName && !matchCpf && !matchEmail && !matchPhone && !matchCity && !matchState && !matchEscola && !matchFuncao && !matchActivities && !matchProgramacao) {
           return false;
         }
       }
@@ -1634,17 +1652,19 @@
     const modSuffix = modFilter ? `_${modFilter}` : '';
 
     if (currentActivity) {
-      csvContent = "\uFEFFNome Completo;CPF;E-mail;Telefone;Município;Estado;Escola;Rep. Undime / Consed;Atividade;Modalidade do Inscrito;Programações Selecionadas;Data da Inscrição;Escolaridade;Gênero;Cor / Raça\n";
+      csvContent = "\uFEFFNome Completo;CPF;E-mail;Telefone;Município;Estado;Escola;Função;Tempo de Atuação EJA;Rep. Undime / Consed;Atividade;Modalidade do Inscrito;Programações Selecionadas;Data da Inscrição;Escolaridade;Gênero;Cor / Raça\n";
       dataToExport.forEach(p => {
         const progsStr = (p.programacoes || []).map(pr => pr.label).join(", ") || "Nenhuma";
         csvContent += [
           cleanField(p.nome),
-          cleanField(p.cpf),
+          cleanField(formatCpfCsv(p.cpf)),
           cleanField(p.email),
           cleanField(p.telefone),
           cleanField(p.municipio),
           cleanField(p.estado),
           cleanField(p.escola),
+          cleanField(p.funcao),
+          cleanField(p.tempo),
           cleanField(p.representante_undime_consed || "Não informado"),
           cleanField(currentActivity.titulo),
           cleanField(p.modalidade_inscrito_atual || "Não informado"),
@@ -1658,18 +1678,20 @@
       const cleanTitle = currentActivity.titulo.toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 30);
       fileName = `inscritos_${cleanTitle}${modSuffix}_${new Date().toISOString().slice(0,10)}.csv`;
     } else {
-      csvContent = "\uFEFFNome Completo;CPF;E-mail;Telefone;Município;Estado;Escola;Rep. Undime / Consed;Atividades Inscritas;Programações Selecionadas;Escolaridade;Gênero;Cor / Raça\n";
+      csvContent = "\uFEFFNome Completo;CPF;E-mail;Telefone;Município;Estado;Escola;Função;Tempo de Atuação EJA;Rep. Undime / Consed;Atividades Inscritas;Programações Selecionadas;Escolaridade;Gênero;Cor / Raça\n";
       dataToExport.forEach(p => {
         const atividadesStr = (p.atividades || []).map(a => `${a.titulo} (${a.modalidade_label || a.modalidade})`).join(", ") || (p.atividades_nomes || []).join(", ");
         const progsStr = (p.programacoes || []).map(pr => pr.label).join(", ") || "Nenhuma";
         csvContent += [
           cleanField(p.nome),
-          cleanField(p.cpf),
+          cleanField(formatCpfCsv(p.cpf)),
           cleanField(p.email),
           cleanField(p.telefone),
           cleanField(p.municipio),
           cleanField(p.estado),
           cleanField(p.escola),
+          cleanField(p.funcao),
+          cleanField(p.tempo),
           cleanField(p.representante_undime_consed || "Não informado"),
           cleanField(atividadesStr),
           cleanField(progsStr),

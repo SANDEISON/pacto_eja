@@ -97,9 +97,24 @@ def obter_cidade_educador(educador, vinculo=None):
 
 
 def registro_participante(educador, vinculo=None):
-    """Monta uma linha do relatório detalhado, com ou sem vínculo escolar."""
+    """Monta uma linha única do relatório detalhado, agregando os vínculos escolares do educador."""
     registro = dados_basicos_educador(educador)
-    cidade = obter_cidade_educador(educador, vinculo)
+
+    if vinculo is None:
+        lista_vinculos = []
+    elif isinstance(vinculo, (list, tuple)):
+        lista_vinculos = list(vinculo)
+    else:
+        lista_vinculos = [vinculo]
+
+    cidade = None
+    for v in lista_vinculos:
+        cid = obter_cidade_educador(educador, v)
+        if cid:
+            cidade = cid
+            break
+    if not cidade:
+        cidade = obter_cidade_educador(educador)
 
     if cidade:
         nome_cidade = cidade.nome_cidade or "Não informado"
@@ -118,33 +133,37 @@ def registro_participante(educador, vinculo=None):
         estado_nome = "Não informado"
         sigla_uf = ""
 
-    if not vinculo:
-        registro.update(
-            municipio=nome_cidade,
-            estado=estado_nome,
-            sigla_uf=sigla_uf,
-            escola="Não informado",
-            funcao="Não informado",
-            tempo="Não informado",
-        )
-        return registro
+    escolas_nomes = []
+    funcoes_nomes = []
+    tempos_nomes = []
+
+    for v in lista_vinculos:
+        if getattr(v, "escola", None) and getattr(v.escola, "nome", None):
+            nome_esc = v.escola.nome.strip()
+            if nome_esc and nome_esc not in escolas_nomes:
+                escolas_nomes.append(nome_esc)
+        if getattr(v, "funcao", None) and getattr(v.funcao, "nome", None):
+            nome_func = v.funcao.nome.strip()
+            if nome_func and nome_func not in funcoes_nomes:
+                funcoes_nomes.append(nome_func)
+        if getattr(v, "tempo_atuacao", None):
+            rotulo_tempo = ROTULOS_TEMPO_ATUACAO.get(v.tempo_atuacao, v.tempo_atuacao)
+            if rotulo_tempo and rotulo_tempo not in tempos_nomes:
+                tempos_nomes.append(rotulo_tempo)
 
     registro.update(
         municipio=nome_cidade,
         estado=estado_nome,
         sigla_uf=sigla_uf,
-        escola=vinculo.escola.nome if getattr(vinculo, "escola", None) else "Não informado",
-        funcao=vinculo.funcao.nome if getattr(vinculo, "funcao", None) else "Não informado",
-        tempo=ROTULOS_TEMPO_ATUACAO.get(
-            vinculo.tempo_atuacao,
-            vinculo.tempo_atuacao or "Não informado",
-        ),
+        escola=", ".join(escolas_nomes) if escolas_nomes else "Não informado",
+        funcao=", ".join(funcoes_nomes) if funcoes_nomes else "Não informado",
+        tempo=", ".join(tempos_nomes) if tempos_nomes else "Não informado",
     )
     return registro
 
 
 def listar_participantes_detalhados(educadores_qs=None, atividade_selecionada_id=None):
-    """Expande cada educador em uma linha por vínculo escolar cadastrado, incluindo inscrições em atividades."""
+    """Retorna uma linha única por educador, agregando vínculos escolares e incluindo inscrições em atividades."""
     if educadores_qs is None:
         educadores_qs = Educador.objects.all()
 
@@ -253,17 +272,11 @@ def listar_participantes_detalhados(educadores_qs=None, atividade_selecionada_id
         vinculos = [
             funcao_educador.educador_escola
             for funcao_educador in educador.funcoes.all()
+            if getattr(funcao_educador, "educador_escola", None)
         ]
-        if not vinculos:
-            reg = registro_participante(educador)
-            reg.update(dados_atividades)
-            participantes.append(reg)
-            continue
-
-        for vinculo in vinculos:
-            reg = registro_participante(educador, vinculo)
-            reg.update(dados_atividades)
-            participantes.append(reg)
+        reg = registro_participante(educador, vinculos)
+        reg.update(dados_atividades)
+        participantes.append(reg)
 
     return participantes
 

@@ -5,7 +5,14 @@ from django.utils import timezone
 
 from core.models import (
     Atividade,
+    Cidade,
+    EducadorEscola,
+    Escola,
+    Estado,
     Formacao,
+    Funcao,
+    FuncaoCaracterizacaoTurma,
+    FuncaoEducador,
     Inscricao,
     Nivel,
     ProgramacaoSala,
@@ -266,5 +273,57 @@ class ReportsViewTests(TestCase):
         self.assertContains(response_catalogo, 'id="catalogFilterProgramacao"')
         self.assertEqual(response_catalogo.context["atividades_catalogo"][0]["total_programacoes"], 1)
         self.assertEqual(response_catalogo.context["atividades_catalogo"][0]["programacoes"][0]["id"], prog.id)
+
+    def test_educator_with_multiple_school_assignments_does_not_duplicate_row_and_aggregates_schools(self):
+        staff_user = get_user_model().objects.create_user(
+            username="52998224799",
+            password="SenhaForte2026!",
+            is_staff=True,
+            first_name="Admin",
+        )
+        user_educador = get_user_model().objects.create_user(
+            username="52998224788",
+            password="SenhaForte2026!",
+            first_name="Educador Multi Escolas",
+        )
+        educador = user_educador.educador
+        educador.nome_completo = "Educador Multi Escolas"
+        educador.cpf = "01234567890"
+        educador.save()
+
+        estado, _ = Estado.objects.get_or_create(sigla="PB", defaults={"nome_estado": "Paraíba"})
+        cidade, _ = Cidade.objects.get_or_create(nome_cidade="João Pessoa", estado=estado, defaults={"codigo_ibge": 2507507})
+        escola1 = Escola.objects.create(id_escola=1001, nome="Escola Municipal Alpha", id_municipio=cidade.codigo_ibge, sigla_uf=estado.sigla)
+        escola2 = Escola.objects.create(id_escola=1002, nome="Escola Estadual Beta", id_municipio=cidade.codigo_ibge, sigla_uf=estado.sigla)
+        funcao = Funcao.objects.create(nome="Professor")
+        caract = FuncaoCaracterizacaoTurma.objects.create(nome="EJA Regular")
+
+        ee1 = EducadorEscola.objects.create(
+            escola=escola1,
+            cidade=cidade,
+            funcao=funcao,
+            funcao_caracterizacao_turmas=caract,
+            tempo_atuacao=EducadorEscola.TempoAtuacao.ZERO_A_TRES_ANOS,
+        )
+        ee2 = EducadorEscola.objects.create(
+            escola=escola2,
+            cidade=cidade,
+            funcao=funcao,
+            funcao_caracterizacao_turmas=caract,
+            tempo_atuacao=EducadorEscola.TempoAtuacao.QUATRO_A_SEIS_ANOS,
+        )
+        FuncaoEducador.objects.create(educador=educador, educador_escola=ee1)
+        FuncaoEducador.objects.create(educador=educador, educador_escola=ee2)
+
+        self.client.force_login(staff_user)
+        response = self.client.get(reverse("reports"))
+
+        self.assertEqual(response.status_code, 200)
+        participantes = [p for p in response.context["participantes_detalhados"] if p["nome"] == "Educador Multi Escolas"]
+        self.assertEqual(len(participantes), 1, "O educador não deve ter linhas duplicadas na lista de participantes")
+        self.assertIn("Escola Municipal Alpha", participantes[0]["escola"])
+        self.assertIn("Escola Estadual Beta", participantes[0]["escola"])
+        self.assertEqual(participantes[0]["cpf"], "01234567890")
+
 
 
