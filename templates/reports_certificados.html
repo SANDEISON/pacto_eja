@@ -691,11 +691,26 @@
 
   function formatCPF(cpf) {
     if (!cpf) return '<span class="text-muted">—</span>';
-    const clean = cpf.replace(/\D/g, '');
-    if (clean.length === 11) {
-      return clean.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+    const clean = String(cpf).replace(/\D/g, '');
+    if (clean.length > 0) {
+      const padded = clean.padStart(11, '0');
+      if (padded.length === 11) {
+        return padded.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+      }
     }
     return cpf;
+  }
+
+  function formatCpfCsv(cpf) {
+    if (!cpf) return '';
+    const clean = String(cpf).replace(/\D/g, '');
+    if (clean.length > 0) {
+      const padded = clean.padStart(11, '0');
+      if (padded.length === 11) {
+        return padded.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+      }
+    }
+    return String(cpf);
   }
 
   function getThemeTextColor() {
@@ -1504,7 +1519,7 @@
       const cursosStr = (p.cursos_certificados || []).join(", ");
       csvContent += [
         clean(p.nome),
-        clean(p.cpf),
+        clean(formatCpfCsv(p.cpf)),
         clean(p.email),
         clean(p.telefone),
         clean(p.data_nascimento),

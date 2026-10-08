@@ -177,3 +177,61 @@ class ReportsCertificadosViewTests(TestCase):
         self.assertEqual(res.context["total_solicitantes"], 1)
         self.assertEqual(res.context["curso_selecionado"]["id"], self.curso_alfabetizacao.id)
         self.assertEqual(res.context["participantes_detalhados"][0]["nome"], "Ana Silva")
+
+    def test_educador_com_multiplos_vinculos_agrega_dados_e_nao_duplica_linhas(self):
+        self.client.force_login(self.staff_user)
+
+        # Adicionar segundo vínculo para Ana Silva em outra escola e outra função
+        escola_2, _ = Escola.objects.get_or_create(
+            id_escola=25000002,
+            defaults={
+                "nome": "Escola Estadual Castro Alves",
+                "id_municipio": 2507507,
+                "sigla_uf": "PB",
+            }
+        )
+        funcao_coord, _ = Funcao.objects.get_or_create(codigo="coordenador", defaults={"nome": "Coordenador(a)"})
+        vinculo_2 = EducadorEscola.objects.create(
+            cidade=self.cidade_jp,
+            escola=escola_2,
+            funcao=funcao_coord,
+            funcao_caracterizacao_turmas=self.carac_turma,
+            tempo_atuacao="mais_6_anos",
+        )
+        FuncaoEducador.objects.create(
+            educador=self.educador_1,
+            educador_escola=vinculo_2,
+        )
+
+        # 1. Testar resposta da tela inicial / contexto
+        res = self.client.get(reverse("reports_certificados"))
+        self.assertEqual(res.status_code, 200)
+        participantes = [p for p in res.context["participantes_detalhados"] if p["nome"] == "Ana Silva"]
+        self.assertEqual(len(participantes), 1, "Não deve duplicar linhas para o mesmo educador na tela")
+        p = participantes[0]
+        self.assertIn("Escola Municipal Paulo Freire", p["escola"])
+        self.assertIn("Escola Estadual Castro Alves", p["escola"])
+        self.assertIn("Professor(a)", p["funcao"])
+        self.assertIn("Coordenador(a)", p["funcao"])
+        self.assertIn("4 a 6 anos", p["tempo"])
+        self.assertIn("Mais de 6 anos", p["tempo"])
+
+        # 2. Testar API AJAX de paginação
+        res_api = self.client.get(reverse("reports_certificados_participantes"))
+        self.assertEqual(res_api.status_code, 200)
+        data = res_api.json()
+        participantes_api = [p for p in data["participants"] if p["nome"] == "Ana Silva"]
+        self.assertEqual(len(participantes_api), 1, "Não deve duplicar linhas na API paginada")
+
+        # 3. Testar exportação CSV
+        res_csv = self.client.get(reverse("reports_certificados_export_csv"))
+        self.assertEqual(res_csv.status_code, 200)
+        content = res_csv.streaming_content
+        full_csv = "".join(chunk.decode("utf-8") if isinstance(chunk, bytes) else chunk for chunk in content)
+        linhas_ana = [line for line in full_csv.splitlines() if "Ana Silva" in line]
+        self.assertEqual(len(linhas_ana), 1, "Deve exportar exatamente 1 linha por educador no CSV de certificados")
+        self.assertIn("Escola Municipal Paulo Freire", linhas_ana[0])
+        self.assertIn("Escola Estadual Castro Alves", linhas_ana[0])
+        self.assertIn("Professor(a)", linhas_ana[0])
+        self.assertIn("Coordenador(a)", linhas_ana[0])
+

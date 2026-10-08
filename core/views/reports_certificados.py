@@ -77,6 +77,16 @@ def normalizar_distribuicao(registros, campo_rotulo, rotulos=None, campos_extras
     return distribuicao
 
 
+def formatar_cpf_csv(cpf):
+    """Formata CPF para evitar remoção de zeros à esquerda em planilhas como Excel."""
+    if not cpf:
+        return ""
+    digits = "".join(filter(str.isdigit, str(cpf))).zfill(11)
+    if len(digits) == 11:
+        return f"{digits[:3]}.{digits[3:6]}.{digits[6:9]}-{digits[9:]}"
+    return str(cpf)
+
+
 def montar_registro_participante(educador, vinculo=None, cursos=None):
     """Formata um dicionário plano para renderização na tabela ou exportação CSV."""
     usuario = educador.usuario
@@ -146,59 +156,72 @@ def montar_registro_participante(educador, vinculo=None, cursos=None):
         "sigla_uf_residencia": sigla_res,
     }
 
-    if vinculo:
-        escola_nome = vinculo.escola.nome if getattr(vinculo, "escola", None) else "Não informado"
-        funcao_nome = vinculo.funcao.nome if getattr(vinculo, "funcao", None) else "Não informado"
-        carac_nome = (
-            vinculo.funcao_caracterizacao_turmas.nome
-            if getattr(vinculo, "funcao_caracterizacao_turmas", None)
-            else "Não informado"
-        )
-        tempo_rotulo = ROTULOS_TEMPO_ATUACAO.get(vinculo.tempo_atuacao, vinculo.tempo_atuacao or "Não informado")
-        cidade_at = getattr(vinculo, "cidade", None)
-        if cidade_at:
-            mun_at = cidade_at.nome_cidade or "Não informado"
-            est_at = cidade_at.estado.nome_estado if getattr(cidade_at, "estado", None) else "Não informado"
-            sigla_at = cidade_at.estado.sigla if (getattr(cidade_at, "estado", None) and cidade_at.estado.sigla) else ""
-        else:
-            mun_at = mun_res
-            est_at = est_res
-            sigla_at = sigla_res
-        info.update(
-            escola=escola_nome,
-            funcao=funcao_nome,
-            caracterizacao=carac_nome,
-            tempo=tempo_rotulo,
-            municipio_atuacao=mun_at,
-            estado_atuacao=est_at,
-            sigla_uf_atuacao=sigla_at,
-        )
+    if vinculo is None:
+        lista_vinculos = []
+    elif isinstance(vinculo, (list, tuple)):
+        lista_vinculos = list(vinculo)
     else:
-        info.update(
-            escola="Não informado",
-            funcao="Não informado",
-            caracterizacao="Não informado",
-            tempo="Não informado",
-            municipio_atuacao=mun_res,
-            estado_atuacao=est_res,
-            sigla_uf_atuacao=sigla_res,
-        )
+        lista_vinculos = [vinculo]
+
+    escolas_nomes = []
+    funcoes_nomes = []
+    caracs_nomes = []
+    tempos_nomes = []
+    muns_at = []
+    ests_at = []
+    siglas_at = []
+
+    for v in lista_vinculos:
+        if getattr(v, "escola", None) and getattr(v.escola, "nome", None):
+            nome_esc = v.escola.nome.strip()
+            if nome_esc and nome_esc not in escolas_nomes:
+                escolas_nomes.append(nome_esc)
+        if getattr(v, "funcao", None) and getattr(v.funcao, "nome", None):
+            nome_func = v.funcao.nome.strip()
+            if nome_func and nome_func not in funcoes_nomes:
+                funcoes_nomes.append(nome_func)
+        if getattr(v, "funcao_caracterizacao_turmas", None) and getattr(v.funcao_caracterizacao_turmas, "nome", None):
+            nome_carac = v.funcao_caracterizacao_turmas.nome.strip()
+            if nome_carac and nome_carac not in caracs_nomes:
+                caracs_nomes.append(nome_carac)
+        if getattr(v, "tempo_atuacao", None):
+            rotulo_tempo = ROTULOS_TEMPO_ATUACAO.get(v.tempo_atuacao, v.tempo_atuacao)
+            if rotulo_tempo and rotulo_tempo not in tempos_nomes:
+                tempos_nomes.append(rotulo_tempo)
+        cidade_at = getattr(v, "cidade", None)
+        if cidade_at:
+            nome_cid = (cidade_at.nome_cidade or "").strip()
+            if nome_cid and nome_cid not in muns_at:
+                muns_at.append(nome_cid)
+            if getattr(cidade_at, "estado", None):
+                nome_est = (cidade_at.estado.nome_estado or "").strip()
+                sigla_est = (cidade_at.estado.sigla or "").strip()
+                if nome_est and nome_est not in ests_at:
+                    ests_at.append(nome_est)
+                if sigla_est and sigla_est not in siglas_at:
+                    siglas_at.append(sigla_est)
+
+    info.update(
+        escola=", ".join(escolas_nomes) if escolas_nomes else "Não informado",
+        funcao=", ".join(funcoes_nomes) if funcoes_nomes else "Não informado",
+        caracterizacao=", ".join(caracs_nomes) if caracs_nomes else "Não informado",
+        tempo=", ".join(tempos_nomes) if tempos_nomes else "Não informado",
+        municipio_atuacao=", ".join(muns_at) if muns_at else mun_res,
+        estado_atuacao=", ".join(ests_at) if ests_at else est_res,
+        sigla_uf_atuacao=", ".join(siglas_at) if siglas_at else sigla_res,
+    )
     return info
 
 
 def serializar_participantes(educadores_list):
-    """Converte lista de objetos Educador em lista detalhada de registros."""
+    """Converte lista de objetos Educador em lista detalhada de registros únicos."""
     participantes = []
     for educador in educadores_list:
         cursos = list(educador.cursos_certificados.all())
         vinculos = [
             f.educador_escola for f in educador.funcoes.all() if f.educador_escola
         ]
-        if not vinculos:
-            participantes.append(montar_registro_participante(educador, vinculo=None, cursos=cursos))
-        else:
-            for v in vinculos:
-                participantes.append(montar_registro_participante(educador, vinculo=v, cursos=cursos))
+        participantes.append(montar_registro_participante(educador, vinculo=vinculos, cursos=cursos))
     return participantes
 
 
@@ -605,38 +628,31 @@ def reports_certificados_export_csv(request):
             vinculos = [
                 f.educador_escola for f in educador.funcoes.all() if f.educador_escola
             ]
-            regs = []
-            if not vinculos:
-                regs.append(montar_registro_participante(educador, vinculo=None, cursos=cursos))
-            else:
-                for v in vinculos:
-                    regs.append(montar_registro_participante(educador, vinculo=v, cursos=cursos))
-
-            for p in regs:
-                cursos_str = ", ".join(p.get("cursos_certificados", []))
-                row = [
-                    p.get("nome", ""),
-                    p.get("cpf", ""),
-                    p.get("email", ""),
-                    p.get("telefone", ""),
-                    p.get("data_nascimento", ""),
-                    p.get("idade", ""),
-                    p.get("genero", ""),
-                    p.get("cor", ""),
-                    cursos_str,
-                    p.get("municipio_residencia", ""),
-                    p.get("sigla_uf_residencia", ""),
-                    p.get("cep", ""),
-                    p.get("bairro", ""),
-                    f"{p.get('logradouro', '')} {p.get('numero', '')} {p.get('complemento', '')}".strip(),
-                    p.get("escola", ""),
-                    p.get("municipio_atuacao", ""),
-                    p.get("sigla_uf_atuacao", ""),
-                    p.get("funcao", ""),
-                    p.get("caracterizacao", ""),
-                    p.get("tempo", ""),
-                ]
-                yield writer.writerow(row)
+            p = montar_registro_participante(educador, vinculo=vinculos, cursos=cursos)
+            cursos_str = ", ".join(p.get("cursos_certificados", []))
+            row = [
+                p.get("nome", ""),
+                formatar_cpf_csv(p.get("cpf", "")),
+                p.get("email", ""),
+                p.get("telefone", ""),
+                p.get("data_nascimento", ""),
+                p.get("idade", ""),
+                p.get("genero", ""),
+                p.get("cor", ""),
+                cursos_str,
+                p.get("municipio_residencia", ""),
+                p.get("sigla_uf_residencia", ""),
+                p.get("cep", ""),
+                p.get("bairro", ""),
+                f"{p.get('logradouro', '')} {p.get('numero', '')} {p.get('complemento', '')}".strip(),
+                p.get("escola", ""),
+                p.get("municipio_atuacao", ""),
+                p.get("sigla_uf_atuacao", ""),
+                p.get("funcao", ""),
+                p.get("caracterizacao", ""),
+                p.get("tempo", ""),
+            ]
+            yield writer.writerow(row)
 
     hoje_str = timezone.now().strftime("%Y-%m-%d")
     response = StreamingHttpResponse(row_generator(), content_type="text/csv; charset=utf-8")
