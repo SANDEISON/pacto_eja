@@ -225,6 +225,7 @@ __marimo__/
 
 # Local Scratch, Environment and Exported files
 scratch/
+arquivos_adicionais/
 .env
 .venv_backup/
 *.csv

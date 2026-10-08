@@ -347,7 +347,7 @@
                   <option value="estado_residencia">Estados de Residência</option>
                   <option value="escola">Escolas</option>
                   <option value="funcao">Função na EJA</option>
-                  <option value="caracterizacao">Caracterização / Turmas</option>
+                  <option value="caracterizacao">Atuação na EJA</option>
                   <option value="tempo">Tempo de Atuação</option>
                 </select>
               </div>
@@ -664,7 +664,7 @@
     estado_residencia: { title: "Estados de Residência", data: readJson("state-residencia-data") },
     escola: { title: "Escolas Atendidas", data: readJson("school-data") },
     funcao: { title: "Função na EJA", data: readJson("role-data") },
-    caracterizacao: { title: "Caracterização / Atuação nas Turmas", data: readJson("characterization-data") },
+    caracterizacao: { title: "Atuação na EJA", data: readJson("characterization-data") },
     tempo: { title: "Tempo de Atuação na EJA", data: readJson("experience-time-data") },
     genero: { title: "Distribuição por Gênero", data: readJson("gender-data") },
     cor: { title: "Distribuição por Cor / Raça", data: readJson("race-color-data") },
@@ -1511,7 +1511,7 @@
       return;
     }
 
-    let csvContent = "\uFEFFNome Completo;CPF;E-mail;Telefone;Data de Nascimento;Idade;Gênero;Cor / Raça;Cursos Solicitados;Município Residência;UF Residência;CEP;Bairro;Logradouro;Escola;Município Atuação;UF Atuação;Função na EJA;Caracterização / Turmas;Tempo de Atuação\n";
+    let csvContent = "\uFEFFNome Completo;CPF;E-mail;Telefone;Data de Nascimento;Idade;Gênero;Cor / Raça;Cursos Solicitados;Município Residência;UF Residência;CEP;Bairro;Logradouro;Escola;Função na EJA;Atuação na EJA;Tempo de Atuação;Município Atuação;UF Atuação\n";
 
     const clean = (val) => `"${(val || '').toString().replace(/"/g, '""')}"`;
 
@@ -1533,11 +1533,11 @@
         clean(p.bairro),
         clean(p.logradouro ? `${p.logradouro}, ${p.numero || ''} ${p.complemento || ''}`.trim() : ''),
         clean(p.escola),
-        clean(p.municipio_atuacao),
-        clean(p.sigla_uf_atuacao),
         clean(p.funcao),
         clean(p.caracterizacao),
-        clean(p.tempo)
+        clean(p.tempo),
+        clean(p.municipio_atuacao),
+        clean(p.sigla_uf_atuacao)
       ].join(";") + "\n";
     });
 

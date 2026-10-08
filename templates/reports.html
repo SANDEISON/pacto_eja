@@ -617,17 +617,17 @@
           <thead class="table-light">
             <tr>
               <th class="ps-4" style="width: 50px;">#</th>
-              <th>Nome Completo / Contato</th>
-              <th>Documento (CPF)</th>
-              <th>Município / UF</th>
+              <th>Dados pessoais</th>
+              <th>Endereço residencial</th>
               <th title="Você é representante do Estado pela Undime ou pelo Consed?">Rep. Undime/Consed</th>
               {% if atividade_selecionada %}
-                <th>Modalidade do Inscrito</th>
+                <th>Modalidade de participa&#231;&#227;o</th>
               {% else %}
                 <th>Atividades Inscritas</th>
               {% endif %}
-              <th>Escolaridade</th>
-              <th>Demografia</th>
+              <th>Formação acadêmica</th>
+              <th>Gênero, cor/raça e estado civil</th>
+              <th>Refeições</th>
             </tr>
           </thead>
           <tbody id="tableParticipantsBody">
@@ -781,6 +781,10 @@
   let pageSize = 10;
 
   // Formata CPF para exibição bonita
+  function escapeHTML(value) {
+    return String(value ?? '').replace(/[&<>\"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[char]));
+  }
+
   function formatCPF(cpf) {
     if (!cpf) return '<span class="text-muted">—</span>';
     const clean = String(cpf).replace(/\D/g, '');
@@ -790,7 +794,7 @@
         return padded.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
       }
     }
-    return cpf;
+    return escapeHTML(cpf);
   }
 
   // Formata CPF como texto formatado para CSV (evitando que o Excel remova zeros à esquerda)
@@ -1113,7 +1117,7 @@
                 <span class="badge ${statusBadgeClass} fw-bold px-2 py-1">${act.status_label}</span>
               </div>
 
-              <h5 class="fw-bold text-dark mb-2 mt-1" style="font-size: 1.1rem; line-height: 1.35;">${act.titulo}</h5>
+              <h5 class="fw-bold text-dark mb-2 mt-1" style="font-size: 1.1rem; line-height: 1.35;">${escapeHTML(act.titulo)}</h5>
               <p class="text-muted small mb-3" style="min-height: 48px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
                 ${act.descricao || 'Sem descrição cadastrada.'}
               </p>
@@ -1275,8 +1279,8 @@
     }
     const htmlAtivs = atividades.map(act => `
       <div class="mb-1">
-        <span class="badge bg-primary-subtle text-primary border me-1" title="${act.tipo_label} - ${act.modalidade_label}">
-          <i class="bi bi-journal-check me-1"></i>${act.titulo}
+        <span class="badge bg-primary-subtle text-primary border me-1" title="${escapeHTML(act.tipo_label)} - ${escapeHTML(act.modalidade_label)}">
+          <i class="bi bi-journal-check me-1"></i>${escapeHTML(act.titulo)}
         </span>
         <span class="badge bg-secondary-subtle text-secondary" style="font-size: 0.72rem;">${act.modalidade_label}</span>
       </div>
@@ -1287,8 +1291,8 @@
         <div class="mt-1 pt-1 border-top" style="border-color: rgba(0,0,0,0.06) !important;">
           <small class="text-muted d-block" style="font-size: 0.72rem;"><i class="bi bi-calendar3 me-1"></i>Programações:</small>
           ${programacoes.map(pr => `
-            <span class="badge bg-light text-dark border me-1 mb-1 text-truncate d-inline-block" style="max-width: 200px; font-size: 0.7rem;" title="${pr.label}">
-              <i class="bi bi-clock text-primary me-1"></i>${pr.sala} (${pr.turno})
+            <span class="badge bg-light text-dark border me-1 mb-1 text-truncate d-inline-block" style="max-width: 200px; font-size: 0.7rem;" title="${escapeHTML(pr.label)}">
+              <i class="bi bi-clock text-primary me-1"></i>${escapeHTML(pr.sala)} (${escapeHTML(pr.turno)})
             </span>
           `).join('')}
         </div>
@@ -1338,8 +1342,8 @@
           progsHtml = `
             <div class="mt-1">
               ${p.programacoes.map(pr => `
-                <span class="badge bg-light text-dark border me-1 mb-1 text-truncate d-inline-block" style="max-width: 220px; font-size: 0.72rem;" title="${pr.label}">
-                  <i class="bi bi-clock me-1 text-primary"></i>${pr.sala} (${pr.turno})
+                <span class="badge bg-light text-dark border me-1 mb-1 text-truncate d-inline-block" style="max-width: 220px; font-size: 0.72rem;" title="${escapeHTML(pr.label)}">
+                  <i class="bi bi-clock me-1 text-primary"></i>${escapeHTML(pr.sala)} (${escapeHTML(pr.turno)})
                 </span>
               `).join('')}
             </div>
@@ -1368,29 +1372,37 @@
         repBadge = '<span class="badge bg-light text-muted border">Não informado</span>';
       }
 
+      const refeicoes = selectedActivityId ? (p.refeicoes_inscrito_atual || []) : (p.refeicoes || []);
+      const formacoesHtml = (p.formacoes_academicas || ['N\u00e3o informado'])
+        .map(item => `<span class="badge bg-secondary-subtle text-secondary-emphasis d-block text-start mb-1">${escapeHTML(item)}</span>`)
+        .join('');
+      const refeicoesHtml = refeicoes.length
+        ? refeicoes.map(item => `<span class="badge bg-light text-dark border d-block text-start mb-1">${escapeHTML(item)}</span>`).join('')
+        : '<span class="text-muted">Nenhuma</span>';
+
       tr.innerHTML = `
         <td class="ps-4 fw-bold text-muted">${realIndex}</td>
         <td>
-          <div class="fw-bold text-primary">${p.nome || 'Não informado'}</div>
-          <small class="text-muted">
-            ${p.email ? `<i class="bi bi-envelope me-1"></i>${p.email}` : ''}
-            ${p.email && p.telefone ? ' | ' : ''}
-            ${p.telefone ? `<i class="bi bi-telephone me-1"></i>${p.telefone}` : ''}
-            ${!p.email && !p.telefone ? 'Sem contato cadastrado' : ''}
-          </small>
+          <div class="fw-bold text-primary">${escapeHTML(p.nome || 'N\u00e3o informado')}</div>
+          <small class="text-muted d-block">${escapeHTML(p.email || 'E-mail n\u00e3o informado')}</small>
+          <small class="text-muted d-block">CPF: <code class="fw-semibold text-dark">${formatCPF(p.cpf)}</code></small>
+          <small class="text-muted d-block">Nascimento: ${escapeHTML(p.data_nascimento || 'N\u00e3o informado')}</small>
+          <small class="text-muted d-block">Telefone: ${escapeHTML(p.telefone || 'N\u00e3o informado')}</small>
         </td>
-        <td><code class="fw-semibold text-dark">${formatCPF(p.cpf)}</code></td>
         <td>
-          <span class="fw-semibold">${p.municipio || 'Não informado'}</span>
-          <small class="text-muted d-block">${p.estado || ''}</small>
+          <small class="d-block">${escapeHTML(p.logradouro || 'Logradouro n\u00e3o informado')}${p.numero ? `, ${escapeHTML(p.numero)}` : ''}</small>
+          <small class="text-muted d-block">${escapeHTML(p.bairro || 'Bairro n\u00e3o informado')}${p.complemento ? ` &mdash; ${escapeHTML(p.complemento)}` : ''}${p.cep ? ` &mdash; CEP ${escapeHTML(p.cep)}` : ''}</small>
+          <small class="text-muted d-block">${escapeHTML(p.municipio_residencia || 'N\u00e3o informado')} / ${escapeHTML(p.uf_residencia || 'N\u00e3o informado')}</small>
         </td>
         <td>${repBadge}</td>
         <td>${atividadeCellHtml}</td>
-        <td><span class="badge bg-secondary-subtle text-secondary-emphasis">${p.escolaridade || 'Não informado'}</span></td>
+        <td>${formacoesHtml}</td>
         <td>
-          <small class="d-block text-muted">Gênero: <strong>${p.genero}</strong></small>
-          <small class="d-block text-muted">Cor/Raça: <strong>${p.cor}</strong></small>
+          <small class="d-block text-muted">G\u00eanero: <strong>${escapeHTML(p.genero || 'N\u00e3o informado')}</strong></small>
+          <small class="d-block text-muted">Cor/Ra\u00e7a: <strong>${escapeHTML(p.cor || 'N\u00e3o informado')}</strong></small>
+          <small class="d-block text-muted">Estado civil: <strong>${escapeHTML(p.estado_civil || 'N\u00e3o informado')}</strong></small>
         </td>
+        <td>${refeicoesHtml}</td>
       `;
       tBody.appendChild(tr);
     });
@@ -1647,61 +1659,56 @@
 
     let csvContent = "";
     let fileName = "";
-    const cleanField = (val) => `"${(val || '').toString().replace(/"/g, '""')}"`;
+    const cleanField = (val) => {
+      const text = (val ?? '').toString();
+      const safeText = /^[=+\-@\t\r]/.test(text) ? `'${text}` : text;
+      return `"${safeText.replace(/"/g, '""')}"`;
+    };
     const modFilter = document.getElementById('filterModalidade')?.value;
     const modSuffix = modFilter ? `_${modFilter}` : '';
 
-    if (currentActivity) {
-      csvContent = "\uFEFFNome Completo;CPF;E-mail;Telefone;Município;Estado;Escola;Função;Tempo de Atuação EJA;Rep. Undime / Consed;Atividade;Modalidade do Inscrito;Programações Selecionadas;Data da Inscrição;Escolaridade;Gênero;Cor / Raça\n";
-      dataToExport.forEach(p => {
-        const progsStr = (p.programacoes || []).map(pr => pr.label).join(", ") || "Nenhuma";
-        csvContent += [
-          cleanField(p.nome),
-          cleanField(formatCpfCsv(p.cpf)),
-          cleanField(p.email),
-          cleanField(p.telefone),
-          cleanField(p.municipio),
-          cleanField(p.estado),
-          cleanField(p.escola),
-          cleanField(p.funcao),
-          cleanField(p.tempo),
-          cleanField(p.representante_undime_consed || "Não informado"),
-          cleanField(currentActivity.titulo),
-          cleanField(p.modalidade_inscrito_atual || "Não informado"),
-          cleanField(progsStr),
-          cleanField(p.data_inscricao_atual || ""),
-          cleanField(p.escolaridade),
-          cleanField(p.genero),
-          cleanField(p.cor)
-        ].join(";") + "\n";
+    const csvRows = (p) => {
+      const programas = (p.programacoes || []).map(item => item.label).filter(Boolean);
+      const refeicoes = (selectedActivityId ? (p.refeicoes_inscrito_atual || []) : (p.refeicoes || [])).join(', ') || 'Nenhuma';
+      const formacoes = (p.formacoes_academicas || []).join(', ') || 'N\u00e3o informado';
+      const endereco = [p.logradouro, p.numero, p.complemento, p.bairro].filter(Boolean).join(', ');
+      const dataInscricao = selectedActivityId
+        ? p.data_inscricao_atual
+        : (p.atividades || []).map(item => item.data_inscricao).filter(Boolean).join(', ');
+      const base = [
+        p.nome, p.email, formatCpfCsv(p.cpf), p.data_nascimento, p.telefone,
+        p.genero, p.cor, p.estado_civil, p.cep, endereco,
+        p.uf_residencia, p.municipio_residencia,
+        p.representante_undime_consed, p.escola, p.funcao, p.tempo, formacoes,
+        selectedActivityId ? (currentActivity?.titulo || '') : (p.atividades || []).map(item => item.titulo).join(', '),
+        selectedActivityId ? p.modalidade_inscrito_atual : (p.modalidades_inscricao || []).join(', '),
+        programas[0] || 'Nenhuma', refeicoes, dataInscricao,
+      ];
+      const rows = [base];
+      programas.slice(1).forEach(programa => {
+        const continuedRow = Array(base.length).fill('');
+        continuedRow[19] = programa;
+        rows.push(continuedRow);
       });
-      const cleanTitle = currentActivity.titulo.toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 30);
-      fileName = `inscritos_${cleanTitle}${modSuffix}_${new Date().toISOString().slice(0,10)}.csv`;
-    } else {
-      csvContent = "\uFEFFNome Completo;CPF;E-mail;Telefone;Município;Estado;Escola;Função;Tempo de Atuação EJA;Rep. Undime / Consed;Atividades Inscritas;Programações Selecionadas;Escolaridade;Gênero;Cor / Raça\n";
-      dataToExport.forEach(p => {
-        const atividadesStr = (p.atividades || []).map(a => `${a.titulo} (${a.modalidade_label || a.modalidade})`).join(", ") || (p.atividades_nomes || []).join(", ");
-        const progsStr = (p.programacoes || []).map(pr => pr.label).join(", ") || "Nenhuma";
-        csvContent += [
-          cleanField(p.nome),
-          cleanField(formatCpfCsv(p.cpf)),
-          cleanField(p.email),
-          cleanField(p.telefone),
-          cleanField(p.municipio),
-          cleanField(p.estado),
-          cleanField(p.escola),
-          cleanField(p.funcao),
-          cleanField(p.tempo),
-          cleanField(p.representante_undime_consed || "Não informado"),
-          cleanField(atividadesStr),
-          cleanField(progsStr),
-          cleanField(p.escolaridade),
-          cleanField(p.genero),
-          cleanField(p.cor)
-        ].join(";") + "\n";
+      return rows;
+    };
+    const headers = [
+      'Nome', 'E-mail', 'CPF', 'Data de nascimento', 'Telefone', 'G\u00eanero', 'Cor/ra\u00e7a',
+      'Estado civil', 'CEP', 'Logradouro, n\u00famero e bairro', 'UF', 'Munic\u00edpio',
+      'Representante Undime/Consed', 'Escola', 'Fun\u00e7\u00e3o na EJA', 'Tempo de atua\u00e7\u00e3o',
+      'Forma\u00e7\u00e3o acad\u00eamica', 'Atividade(s)', 'Modalidade de participa\u00e7\u00e3o',
+      'Programa\u00e7\u00f5es/salas', 'Refei\u00e7\u00f5es', 'Data(s) da inscri\u00e7\u00e3o',
+    ];
+    csvContent = '\uFEFF' + headers.map(cleanField).join(';') + '\n';
+    dataToExport.forEach(p => {
+      csvRows(p).forEach(row => {
+        csvContent += row.map(cleanField).join(';') + '\n';
       });
-      fileName = `relatorio_participantes${modSuffix}_pacto_eja_${new Date().toISOString().slice(0,10)}.csv`;
-    }
+    });
+    const namePart = currentActivity
+      ? `inscritos_${currentActivity.titulo.toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 30)}${modSuffix}`
+      : `relatorio_participantes${modSuffix}_pacto_eja`;
+    fileName = `${namePart}_${new Date().toISOString().slice(0,10)}.csv`;
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
