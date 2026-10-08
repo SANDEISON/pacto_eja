@@ -55,6 +55,17 @@ def obter_escolaridade_educador(educador):
     return formacoes_ordenadas[0].nivel.nome
 
 
+def obter_formacoes_academicas(educador):
+    """Retorna todas as formações em rótulos legíveis para a tabela e o CSV."""
+    formacoes = []
+    for formacao in educador.formacoes.all():
+        partes = [formacao.nivel.nome, formacao.nome_curso, formacao.instituicao]
+        if formacao.situacao_id:
+            partes.append(formacao.situacao.nome)
+        formacoes.append(" — ".join(parte for parte in partes if parte))
+    return formacoes or ["Não informado"]
+
+
 def dados_basicos_educador(educador):
     """Reúne os dados pessoais repetidos em cada vínculo do relatório detalhado."""
     usuario = educador.usuario
@@ -66,7 +77,7 @@ def dados_basicos_educador(educador):
     else:
         rep_label = "Não informado"
 
-    return {
+    registro = {
         "nome": (
             educador.nome_completo
             or usuario.get_full_name()
@@ -76,11 +87,28 @@ def dados_basicos_educador(educador):
         "cpf": educador.cpf or "",
         "email": usuario.email or "",
         "telefone": educador.telefone or "",
+        "data_nascimento": educador.data_nascimento.strftime("%d/%m/%Y") if educador.data_nascimento else "Não informado",
         "genero": educador.genero.nome if educador.genero else "Não informado",
         "cor": educador.cor_raca.nome if educador.cor_raca else "Não informado",
         "escolaridade": obter_escolaridade_educador(educador),
+        "formacoes_academicas": obter_formacoes_academicas(educador),
         "representante_undime_consed": rep_label,
     }
+
+    endereco = getattr(educador, "endereco", None)
+    cidade_residencia = endereco.cidade if endereco else None
+    estado_residencia = cidade_residencia.estado if cidade_residencia else None
+    registro.update(
+        estado_civil=educador.estado_civil.nome if educador.estado_civil else "Não informado",
+        cep=endereco.cep if endereco else "",
+        logradouro=endereco.logradouro if endereco else "",
+        numero=endereco.numero if endereco else "",
+        bairro=endereco.bairro if endereco else "",
+        complemento=endereco.complemento if endereco else "",
+        municipio_residencia=cidade_residencia.nome_cidade if cidade_residencia else "Não informado",
+        uf_residencia=estado_residencia.sigla if estado_residencia else "Não informado",
+    )
+    return registro
 
 
 def obter_cidade_educador(educador, vinculo=None):
@@ -168,15 +196,17 @@ def listar_participantes_detalhados(educadores_qs=None, atividade_selecionada_id
         educadores_qs = Educador.objects.all()
 
     educadores = educadores_qs.select_related(
-        "usuario", "genero", "cor_raca", "endereco__cidade__estado"
+        "usuario", "genero", "cor_raca", "estado_civil", "endereco__cidade__estado"
     ).prefetch_related(
         "formacoes__nivel",
+        "formacoes__situacao",
         "funcoes__educador_escola__cidade__estado",
         "funcoes__educador_escola__escola",
         "funcoes__educador_escola__funcao",
         "usuario__inscricoes_atividades__atividade",
         "usuario__inscricoes_atividades__programacoes__sala",
         "usuario__inscricoes_atividades__programacoes__tematica",
+        "usuario__inscricoes_atividades__refeicoes",
     )
     participantes = []
 
@@ -191,9 +221,12 @@ def listar_participantes_detalhados(educadores_qs=None, atividade_selecionada_id
         programacoes_ids = []
         programacoes_labels = []
         programacoes_detalhadas = []
+        refeicoes_labels = []
+        modalidades_labels = []
 
         modalidade_inscrito_atividade_atual = ""
         data_inscricao_atividade_atual = ""
+        refeicoes_inscrito_atividade_atual = []
 
         for insc in inscricoes:
             atividade = insc.atividade
@@ -203,6 +236,7 @@ def listar_participantes_detalhados(educadores_qs=None, atividade_selecionada_id
             atividades_ids.append(atividade.id)
             atividades_tipos.append(atividade.tipo)
             atividades_modalidades.append(insc.modalidade)
+            modalidades_labels.append(insc.get_modalidade_display())
             atividades_status.append(status_insc)
             atividades_status.append(status_ativo)
             atividades_nomes.append(atividade.titulo)
@@ -228,8 +262,12 @@ def listar_participantes_detalhados(educadores_qs=None, atividade_selecionada_id
                     })
                 insc_progs.append(prog_label)
 
+            insc_refeicoes = [str(refeicao) for refeicao in insc.refeicoes.all()]
+            refeicoes_labels.extend(f"{atividade.titulo}: {refeicao}" for refeicao in insc_refeicoes)
+
             if atividade_selecionada_id and atividade.id == atividade_selecionada_id:
                 modalidade_inscrito_atividade_atual = insc.get_modalidade_display()
+                refeicoes_inscrito_atividade_atual = insc_refeicoes
                 data_inscricao_atividade_atual = (
                     insc.inscrito_em.strftime("%d/%m/%Y %H:%M")
                     if insc.inscrito_em
@@ -246,6 +284,7 @@ def listar_participantes_detalhados(educadores_qs=None, atividade_selecionada_id
                 "atividade_modalidade": atividade.modalidade,
                 "atividade_modalidade_label": atividade.get_modalidade_display(),
                 "programacoes": insc_progs,
+                "refeicoes": insc_refeicoes,
                 "data_inscricao": (
                     insc.inscrito_em.strftime("%d/%m/%Y %H:%M")
                     if insc.inscrito_em
@@ -267,6 +306,9 @@ def listar_participantes_detalhados(educadores_qs=None, atividade_selecionada_id
             "programacoes": programacoes_detalhadas,
             "modalidade_inscrito_atual": modalidade_inscrito_atividade_atual,
             "data_inscricao_atual": data_inscricao_atividade_atual,
+            "refeicoes_inscrito_atual": refeicoes_inscrito_atividade_atual,
+            "refeicoes": refeicoes_labels,
+            "modalidades_inscricao": list(dict.fromkeys(modalidades_labels)),
         }
 
         vinculos = [
