@@ -1,4 +1,5 @@
 from .atividade import Atividade
+from .frequencia import ChamadaFrequencia, Frequencia
 from .avaliacao import Avaliacao, CandidaturaAvaliador, ChamadaAvaliadores, DesignacaoAvaliacao
 from .cadastro_pendente import CadastroPendente
 from .cidade import Cidade
@@ -31,6 +32,8 @@ from .coautor import Coautor
 
 __all__ = [
     "Atividade",
+    "ChamadaFrequencia",
+    "Frequencia",
     "Avaliacao",
     "CandidaturaAvaliador",
     "ChamadaAvaliadores",

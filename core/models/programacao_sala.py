@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -25,6 +26,12 @@ class ProgramacaoSala(models.Model):
         on_delete=models.CASCADE,
     )
     data = models.DateField("data")
+    responsavel = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name="responsável pela frequência",
+        on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="programacoes_frequencia",
+        help_text="Usuário autorizado a abrir chamadas e registrar presença nesta sala e turno.",
+    )
     turno = models.CharField("turno", max_length=5, choices=Turno.choices)
     modalidade = models.CharField(
         "modalidade", max_length=10, choices=Modalidade.choices
@@ -72,6 +79,11 @@ class ProgramacaoSala(models.Model):
     def clean(self):
         """Impede que programações presenciais armazenem link de acesso remoto."""
         super().clean()
+        if self.pk and self.chamadafrequencia_set.exists():
+            original = type(self).objects.get(pk=self.pk)
+            for campo in ("sala_id", "data", "turno", "modalidade"):
+                if getattr(original, campo) != getattr(self, campo):
+                    raise ValidationError("Uma programação com chamadas de frequência não pode mudar de sala, data, turno ou modalidade.")
         if self.modalidade != self.Modalidade.ONLINE and self.link:
             raise ValidationError(
                 {"link": "O link só pode ser informado para uma programação on-line."}

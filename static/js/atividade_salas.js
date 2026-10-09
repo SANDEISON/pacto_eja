@@ -95,6 +95,7 @@ document.addEventListener("DOMContentLoaded", () => {
     schedule.dataset.shift = program.turno_value;
     schedule.dataset.modality = program.modalidade_value;
     schedule.dataset.link = program.link || "";
+    schedule.dataset.responsavelId = program.responsavel_id || "";
     schedule.dataset.themeId = String(program.tematica_id);
     schedule.dataset.description = program.descricao || "";
     schedule.dataset.capacity = String(program.capacidade);
@@ -107,6 +108,7 @@ document.addEventListener("DOMContentLoaded", () => {
     [
       ["bi bi-calendar3", program.data],
       ["bi bi-clock", program.turno],
+      ["bi bi-person-check", `Responsável: ${program.responsavel}`],
       ["bi bi-broadcast", program.modalidade],
       ["bi bi-people", `${program.capacidade} vagas`],
     ].forEach(([iconClass, text]) => {
@@ -194,10 +196,12 @@ document.addEventListener("DOMContentLoaded", () => {
       scheduleField("turno").value = schedule.dataset.shift;
       scheduleField("modalidade").value = schedule.dataset.modality;
       scheduleField("link").value = schedule.dataset.link;
+      scheduleField("responsavel").value = schedule.dataset.responsavelId || "";
       scheduleField("tematica").value = schedule.dataset.themeId;
       scheduleField("descricao").value = schedule.dataset.description;
       scheduleField("quantidade_max_participantes").value = schedule.dataset.capacity;
     }
+    scheduleField("responsavel").dispatchEvent(new Event("change", { bubbles: true }));
     scheduleField("modalidade").dispatchEvent(new Event("change"));
     bootstrap.Modal.getOrCreateInstance(scheduleModal).show();
   }

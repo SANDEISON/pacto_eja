@@ -9,6 +9,7 @@ from django.urls import reverse
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
 from ..forms import SalaProgramacaoFormSet
+from ..forms.user_name_choice_field import UserNameChoiceField
 from ..models import (
     Cidade,
     CorRaca,
@@ -163,6 +164,7 @@ CATALOGS = {
             "turno",
             "modalidade",
             "link",
+            "responsavel",
             "tematica",
             "descricao",
             "quantidade_max_participantes",
@@ -182,10 +184,11 @@ CATALOGS = {
             ("Turno", "get_turno_display"),
             ("Modalidade", "get_modalidade_display"),
             ("Link", "link"),
+            ("Responsável pela frequência", "responsavel"),
             ("Temática", "tematica"),
             ("Vagas", "quantidade_max_participantes"),
         ),
-        "select_related": ("sala", "tematica", "tematica__mediador"),
+        "select_related": ("sala", "responsavel", "tematica", "tematica__mediador"),
         "list_url_name": "room_schedule_list",
     },
     "tematicas-salas": {
@@ -317,6 +320,19 @@ class CatalogFormMixin(CatalogMixin):
     def get_form(self, form_class=None):
         """Ajusta widgets e protege o identificador imutável de escolas."""
         form = super().get_form(form_class)
+        if self.model is ProgramacaoSala:
+            original = form.fields["responsavel"]
+            form.fields["responsavel"] = UserNameChoiceField(
+                queryset=original.queryset.order_by("first_name", "last_name", "pk"),
+                label=original.label,
+                required=original.required,
+                help_text=original.help_text,
+                empty_label="Selecione um responsável",
+                widget=forms.Select(attrs={
+                    "data-searchable-user-select": "",
+                    "data-search-placeholder": "Buscar responsável pelo nome",
+                }),
+            )
         if self.model is TematicaSala:
             campo_original = form.fields["mediador"]
             form.fields["mediador"] = SearchableUserChoiceField(

@@ -286,7 +286,30 @@ Para acompanhar falhas:
 sudo journalctl -u pacto-eja -f
 ```
 
-### Atualizações
+### Frequência por sala
+
+O menu **Frequência** reúne as salas atribuídas ao usuário e as suas inscrições.
+Em **Programações das salas** ou na edição das salas do evento, configure o campo
+**Responsável pela frequência** para cada sala, data e turno. O responsável pode
+operar suas chamadas mesmo sem acesso aos outros cadastros administrativos;
+usuários com a permissão `core.add_frequencia` podem operar todas as salas.
+
+Na data da programação, abra uma chamada e defina sua validade (1 a 720 minutos).
+No presencial, leia o QR Code do comprovante, selecione a sala e confirme a presença,
+ou use a lista nominal. A câmera integrada depende do suporte do navegador e de
+HTTPS; a câmera do celular também pode abrir diretamente o endereço do QR Code.
+No on-line, divulgue o código da chamada na transmissão do YouTube; cada participante
+autenticado informa o código em **Minha participação → Confirmar presença on-line**.
+Renovar a chamada invalida o código anterior. O acesso ao vídeo não registra presença.
+
+Inscrições existentes recebem o QR Code ao baixar novamente o comprovante, sem
+alteração do cadastro. O QR identifica uma inscrição e exige confirmação do responsável.
+PDFs já baixados antes da atualização precisam ser emitidos novamente. As frequências
+são únicas por inscrição e programação, registram horário, método e autor da confirmação
+e preservam os vínculos necessários para futura certificação. Esta versão registra
+comparecimento; ainda não calcula tempo de permanência ou emite certificados.
+
+### Atualizações do servidor
 
 Após atualizar o código, instale eventuais dependências, aplique migrações, colete os estáticos e reinicie:
 

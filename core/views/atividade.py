@@ -41,6 +41,7 @@ from ..models import (
 )
 from ..validators import somente_digitos
 from ..services.comprovante_inscricao import gerar_comprovante_inscricao
+from ..services.frequencia import url_validacao
 from .management_permission_mixin import ManagementPermissionMixin
 from .searchable_list_mixin import SearchableListMixin
 
@@ -259,6 +260,8 @@ def _serializar_programacao_atividade(atividade, programacao):
         "modalidade": programacao.get_modalidade_display(),
         "modalidade_value": programacao.modalidade,
         "link": programacao.link,
+        "responsavel_id": programacao.responsavel_id,
+        "responsavel": (programacao.responsavel.get_full_name().strip() or programacao.responsavel.email or "Sem nome cadastrado") if programacao.responsavel else "Não definido",
         "tematica": str(programacao.tematica),
         "tematica_id": programacao.tematica_id,
         "descricao": programacao.descricao,
@@ -369,6 +372,8 @@ def excluir_programacao_sala_atividade(request, pk, programacao_pk):
         ProgramacaoSala, pk=programacao_pk, atividades=atividade
     )
     sala_id = programacao.sala_id
+    if programacao.chamadafrequencia_set.filter(atividade=atividade).exists():
+        return JsonResponse({"errors": ["Esta programação possui chamadas de frequência e não pode ser removida do evento."]}, status=400)
     with transaction.atomic():
         atividade.programacoes.remove(programacao)
         if not programacao.atividades.exists():
@@ -759,6 +764,9 @@ def cancelar_inscricao_atividade(request, pk):
         return redirect("dashboard")
 
     if request.method == "POST":
+        if inscricao.frequencias.exists():
+            messages.error(request, "Esta inscrição já possui frequência registrada e não pode ser cancelada.")
+            return redirect("dashboard")
         inscricao.delete()
         messages.success(request, "Sua inscrição foi cancelada com sucesso.")
         return redirect("dashboard")
@@ -778,7 +786,7 @@ def comprovante_inscricao(request, pk):
         atividade_id=pk,
         usuario=request.user,
     )
-    arquivo = gerar_comprovante_inscricao(inscricao)
+    arquivo = gerar_comprovante_inscricao(inscricao, request.build_absolute_uri(url_validacao(inscricao)))
     return FileResponse(
         arquivo,
         as_attachment=True,

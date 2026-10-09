@@ -2,9 +2,14 @@ from django.urls import path
 from django.views.generic import RedirectView
 
 from . import views
+from .views import frequencia as frequencia_views
 
 
 urlpatterns = [
+    path("frequencia/", frequencia_views.frequencia_index, name="frequencia_index"),
+    path("frequencia/validar/<str:token>/", frequencia_views.frequencia_validar, name="frequencia_validar"),
+    path("frequencia/<int:pk>/salas/<int:programacao_pk>/", frequencia_views.frequencia_sala, name="frequencia_sala"),
+    path("frequencia/<int:pk>/online/<int:programacao_pk>/", frequencia_views.frequencia_online, name="frequencia_online"),
     path("cadastro-educadores/", views.cadastro_educador, name="cadastro_educador"),
     path("cadastro-educadores/confirmacao-enviada/", views.cadastro_educador_confirmacao_enviada, name="cadastro_educador_confirmacao_enviada"),
     path("cadastro-educadores/confirmar-email/", views.cadastro_educador_confirmar_email, name="cadastro_educador_confirmar_email"),
