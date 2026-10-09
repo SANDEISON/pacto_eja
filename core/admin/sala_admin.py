@@ -18,6 +18,7 @@ class ProgramacaoSalaAdmin(admin.ModelAdmin):
         "turno",
         "modalidade",
         "link",
+        "responsavel",
         "tematica",
         "quantidade_max_participantes",
     )
