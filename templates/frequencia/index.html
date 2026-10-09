@@ -5,10 +5,10 @@
 {% include "management/_messages.html" %}
 <section class="management-card p-4 mb-4"><h2>Chamadas das salas</h2>
 <p>O responsável abre a chamada na data da programação. Selecione a sala e o turno antes de registrar a presença.</p>
-{% for atividade, programacao in pares %}<div class="border-bottom py-3"><strong>{{ atividade.titulo }}</strong><p>{{ programacao }}<br>Responsável: {{ programacao.responsavel.get_full_name|default:programacao.responsavel|default:"Não definido — configure na programação da sala" }}</p><a class="btn btn-primary" href="{% url 'frequencia_sala' atividade.pk programacao.pk %}">Gerenciar chamada</a></div>{% empty %}<p>Nenhuma sala atribuída a você.</p>{% endfor %}
+{% for atividade, programacao in pares %}<div class="border-bottom py-3"><strong>{{ atividade.titulo }}</strong><p>{{ programacao }}{% include "frequencia/_vagas_programacao.html" %}Responsável: {{ programacao.responsavel.get_full_name|default:programacao.responsavel|default:"Não definido — configure na programação da sala" }}</p><a class="btn btn-primary" href="{% url 'frequencia_sala' atividade.pk programacao.pk %}">Gerenciar chamada</a></div>{% empty %}<p>Nenhuma sala atribuída a você.</p>{% endfor %}
 </section>
 <section class="management-card p-4"><h2>Minha participação</h2>
 {% for inscricao in inscricoes %}<div class="border-bottom py-3"><h3>{{ inscricao.atividade.titulo }}</h3><a href="{% url 'inscricao_comprovante' inscricao.atividade_id %}">Baixar comprovante com QR Code</a>
-<ul>{% for programacao in inscricao.programacoes.all %}<li>{{ programacao }} {% if programacao.modalidade == 'online' %}<a href="{% url 'frequencia_online' inscricao.atividade_id programacao.pk %}">Confirmar presença on-line</a>{% endif %}</li>{% endfor %}</ul>
+<ul>{% for programacao in inscricao.programacoes.all %}<li>{{ programacao }}{% include "frequencia/_vagas_programacao.html" %}{% if programacao.modalidade == 'online' %}<a href="{% url 'frequencia_online' inscricao.atividade_id programacao.pk %}">Confirmar presença on-line</a>{% endif %}</li>{% endfor %}</ul>
 <strong>Presenças confirmadas:</strong><ul>{% for frequencia in inscricao.frequencias.all %}<li>{{ frequencia.programacao }} — {{ frequencia.registrada_em|date:"d/m/Y H:i" }}</li>{% empty %}<li>Nenhuma presença confirmada.</li>{% endfor %}</ul></div>{% empty %}<p>Você ainda não tem inscrições.</p>{% endfor %}
 </section>{% endblock %}

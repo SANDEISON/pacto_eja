@@ -29,6 +29,40 @@ class FrequenciaTests(TestCase):
     def sala_url(self, programacao=None):
         return reverse("frequencia_sala", args=[self.atividade.pk, (programacao or self.presencial).pk])
 
+    def test_index_exibe_capacidade_e_saldo_para_responsavel_e_participante(self):
+        self.client.force_login(self.responsavel)
+        response = self.client.get(reverse("frequencia_index"))
+        self.assertContains(response, "<strong>Vagas:</strong> 50 · <strong>Vagas disponíveis:</strong> 49")
+        self.assertContains(response, "<strong>Vagas:</strong> 50 · <strong>Vagas disponíveis:</strong> 50")
+        for _atividade, programacao in response.context["pares"]:
+            with self.assertNumQueries(0):
+                self.assertIn(programacao.vagas_disponiveis, (49, 50))
+        self.client.force_login(self.participante)
+        response = self.client.get(reverse("frequencia_index"))
+        self.assertContains(response, "<strong>Vagas:</strong> 50 · <strong>Vagas disponíveis:</strong> 49")
+
+    def test_saldo_por_programacao_inclui_eventos_compartilhados(self):
+        outra = Atividade.objects.get(pk=self.atividade.pk)
+        outra.pk = None
+        outra.save()
+        outra.programacoes.add(self.presencial)
+        segunda = Inscricao.objects.create(atividade=outra, usuario=self.outro)
+        segunda.programacoes.add(self.presencial)
+        outro_turno = ProgramacaoSala.objects.create(
+            sala=self.presencial.sala, tematica=self.presencial.tematica,
+            data=self.presencial.data, turno="tarde", modalidade="presencial",
+            responsavel=self.responsavel, quantidade_max_participantes=12,
+        )
+        self.atividade.programacoes.add(outro_turno)
+        self.client.force_login(self.responsavel)
+        response = self.client.get(reverse("frequencia_index"))
+        self.assertContains(response, "<strong>Vagas:</strong> 50 · <strong>Vagas disponíveis:</strong> 48", count=2)
+        self.assertContains(response, "<strong>Vagas:</strong> 12 · <strong>Vagas disponíveis:</strong> 12")
+        self.presencial.quantidade_max_participantes = 1
+        self.presencial.save(update_fields=("quantidade_max_participantes",))
+        response = self.client.get(reverse("frequencia_index"))
+        self.assertContains(response, "<strong>Vagas:</strong> 1 · <strong>Vagas disponíveis:</strong> 0", count=2)
+
     def test_qr_exige_responsavel_e_post_e_nao_duplica(self):
         self.client.force_login(self.outro)
         self.assertEqual(self.client.get(url_validacao(self.inscricao)).status_code, 403)

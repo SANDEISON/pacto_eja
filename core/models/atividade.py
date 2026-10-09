@@ -184,10 +184,7 @@ class Atividade(models.Model):
 
     @staticmethod
     def _vagas_programacao(programacao):
-        ocupacao = getattr(programacao, "_total_inscritos", None)
-        if ocupacao is None:
-            ocupacao = programacao.inscricoes.count()
-        return max(programacao.quantidade_max_participantes - ocupacao, 0)
+        return programacao.vagas_disponiveis
 
     def _somar_vagas(self, modalidade, *, restantes=False):
         if not self.pk:

@@ -95,3 +95,11 @@ class ProgramacaoSala(models.Model):
             f"{self.sala} — {self.get_turno_display()} de {self.data:%d/%m/%Y} "
             f"({self.get_modalidade_display()})"
         )
+
+    @property
+    def vagas_disponiveis(self):
+        """Lugares livres desta programação, considerando todas as inscrições."""
+        ocupacao = getattr(self, "_total_inscritos", None)
+        if ocupacao is None:
+            ocupacao = self.inscricoes.count()
+        return max(self.quantidade_max_participantes - ocupacao, 0)

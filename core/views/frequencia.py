@@ -6,7 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.core import signing
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Count, Prefetch, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -16,11 +16,14 @@ from ..services.frequencia import pode_operar, registrar
 
 @login_required
 def frequencia_index(request):
-    programacoes = ProgramacaoSala.objects.select_related("sala", "responsavel").prefetch_related("atividades").filter(atividades__isnull=False).distinct()
+    programacoes = ProgramacaoSala.objects.select_related("sala", "responsavel").prefetch_related("atividades").filter(atividades__isnull=False).annotate(_total_inscritos=Count("inscricoes", distinct=True)).distinct()
     if not request.user.has_perm("core.add_frequencia"):
         programacoes = programacoes.filter(responsavel=request.user)
     pares = [(atividade, p) for p in programacoes for atividade in p.atividades.all()]
-    inscricoes = Inscricao.objects.filter(usuario=request.user).select_related("atividade").prefetch_related("programacoes__sala", "frequencias__programacao__sala")
+    inscricoes = Inscricao.objects.filter(usuario=request.user).select_related("atividade").prefetch_related(
+        Prefetch("programacoes", queryset=ProgramacaoSala.objects.select_related("sala").annotate(_total_inscritos=Count("inscricoes", distinct=True))),
+        "frequencias__programacao__sala",
+    )
     return render(request, "frequencia/index.html", {"pares": pares, "inscricoes": inscricoes})
 
 
