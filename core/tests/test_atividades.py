@@ -1,11 +1,14 @@
 from datetime import timedelta
+from concurrent.futures import ThreadPoolExecutor
 from tempfile import TemporaryDirectory
+from threading import Barrier
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase, override_settings
+from django.db import close_old_connections
+from django.test import Client, TestCase, TransactionTestCase, override_settings, skipUnlessDBFeature
 from django.urls import reverse
 from django.utils import timezone
 
@@ -1749,3 +1752,218 @@ class AtividadeManagementTests(TestCase):
         self.assertTrue(
             atividade.programacoes.filter(pk=programacao_existente.pk).exists()
         )
+
+
+class InscricaoCapacidadeSalaTests(TestCase):
+    personal_data = AtividadeFlowTests.personal_data
+    create_programacao = AtividadeFlowTests.create_programacao
+
+    def setUp(self):
+        AtividadeFlowTests.setUp(self)
+        self.manha = self.create_programacao("presencial", "Sala com uma vaga")
+        self.manha.quantidade_max_participantes = 1
+        self.manha.save(update_fields=("quantidade_max_participantes",))
+        self.tarde = self.create_programacao(
+            "presencial", "Sala da tarde", turno=ProgramacaoSala.Turno.TARDE
+        )
+        self.atividade.programacoes.add(self.manha, self.tarde)
+        self.url = reverse("atividade_inscricao", args=[self.atividade.pk])
+
+    def ocupar_sala(self, atividade=None, usuario=None):
+        inscricao = Inscricao.objects.create(
+            atividade=atividade or self.atividade,
+            usuario=usuario or self.coauthor_user,
+            modalidade="presencial",
+        )
+        inscricao.programacoes.add(self.manha, self.tarde)
+        return inscricao
+
+    def enviar_inscricao(self, acao="inscrever", manha=None):
+        return self.client.post(
+            self.url,
+            self.personal_data()
+            | {
+                "acao": acao,
+                "dados-programacoes": [str((manha or self.manha).pk), str(self.tarde.pk)],
+            },
+        )
+
+    def test_full_room_disabled_and_direct_post_rejected(self):
+        self.ocupar_sala()
+        page = self.client.get(self.url)
+        widget = page.context["dados_form"]["programacoes"]
+        option = next(
+            option
+            for _group, options, _index in widget.field.widget.optgroups(
+                widget.html_name, [], {}
+            )
+            for option in options
+            if str(option["value"]) == str(self.manha.pk)
+        )
+        self.assertTrue(option["attrs"]["disabled"])
+        self.assertEqual(option["attrs"]["data-lotada"], "true")
+        self.assertContains(page, "Sem vagas")
+        response = self.enviar_inscricao()
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("sem vagas", response.context["dados_form"].errors["programacoes"][0])
+        self.assertFalse(Inscricao.objects.filter(usuario=self.user).exists())
+        self.assertEqual(self.manha.inscricoes.count(), 1)
+
+    def test_last_available_place_accepted_then_room_becomes_full(self):
+        response = self.enviar_inscricao()
+        self.assertRedirects(response, reverse("dashboard"))
+        self.assertEqual(self.manha.inscricoes.count(), 1)
+        self.client.force_login(self.coauthor_user)
+        response = self.enviar_inscricao()
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("sem vagas", response.context["dados_form"].errors["programacoes"][0])
+        self.assertEqual(self.manha.inscricoes.count(), 1)
+
+    def verificar_programacao_independente(self, *, data=None, turno="manha", modalidade="presencial"):
+        self.ocupar_sala()
+        self.atividade.modalidade = Atividade.ModalidadeParticipacao.AMBAS
+        self.atividade.save(update_fields=("modalidade",))
+        programacao = ProgramacaoSala.objects.create(
+            sala=self.manha.sala,
+            data=data or self.manha.data,
+            turno=turno,
+            modalidade=modalidade,
+            tematica=self.manha.tematica,
+            quantidade_max_participantes=1,
+        )
+        complemento = self.create_programacao(
+            modalidade,
+            "Sala complementar",
+            turno="tarde" if turno == "manha" else "manha",
+            data=programacao.data,
+        )
+        self.atividade.programacoes.add(programacao, complemento)
+        page = self.client.get(self.url)
+        widget = page.context["dados_form"]["programacoes"]
+        options = {
+            str(option["value"]): option
+            for _group, group_options, _index in widget.field.widget.optgroups(
+                widget.html_name, [], {}
+            )
+            for option in group_options
+        }
+        self.assertEqual(options[str(self.manha.pk)]["attrs"]["data-lotada"], "true")
+        self.assertEqual(options[str(programacao.pk)]["attrs"]["data-lotada"], "false")
+        self.assertFalse(options[str(programacao.pk)]["attrs"].get("disabled", False))
+        response = self.client.post(
+            self.url,
+            self.personal_data()
+            | {
+                "acao": "inscrever",
+                "dados-modalidade_inscricao": modalidade,
+                "dados-programacoes": [str(programacao.pk), str(complemento.pk)],
+            },
+        )
+        self.assertRedirects(response, reverse("dashboard"))
+        self.assertEqual(self.manha.inscricoes.count(), 1)
+        self.assertEqual(programacao.inscricoes.count(), 1)
+        self.assertTrue(programacao.inscricoes.filter(usuario=self.user).exists())
+
+    def test_full_program_does_not_block_same_room_on_another_date(self):
+        self.verificar_programacao_independente(data=self.manha.data + timedelta(days=1))
+
+    def test_full_program_does_not_block_same_room_in_another_shift(self):
+        self.verificar_programacao_independente(turno="tarde")
+
+    def test_full_program_does_not_block_same_room_in_another_modality(self):
+        self.verificar_programacao_independente(modalidade="online")
+
+    def test_existing_participant_can_keep_full_room(self):
+        inscricao = self.ocupar_sala(usuario=self.user)
+        page = self.client.get(self.url)
+        self.assertNotContains(page, 'data-lotada="true"')
+        response = self.enviar_inscricao(acao="atualizar")
+        self.assertRedirects(response, reverse("dashboard"))
+        self.assertTrue(inscricao.programacoes.filter(pk=self.manha.pk).exists())
+        self.assertEqual(self.manha.inscricoes.count(), 1)
+
+    def test_switch_to_full_room_rejected_preserves_original_selection(self):
+        self.ocupar_sala()
+        alternativa = self.create_programacao("presencial", "Sala alternativa")
+        self.atividade.programacoes.add(alternativa)
+        inscricao = Inscricao.objects.create(atividade=self.atividade, usuario=self.user)
+        inscricao.programacoes.add(alternativa, self.tarde)
+        response = self.enviar_inscricao(acao="atualizar")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("sem vagas", response.context["dados_form"].errors["programacoes"][0])
+        self.assertTrue(inscricao.programacoes.filter(pk=alternativa.pk).exists())
+        self.assertFalse(inscricao.programacoes.filter(pk=self.manha.pk).exists())
+
+    def test_shared_program_counts_participants_from_other_events(self):
+        outra = Atividade.objects.get(pk=self.atividade.pk)
+        outra.pk = None
+        outra.titulo = "Outro evento"
+        outra.save()
+        outra.programacoes.add(self.manha, self.tarde)
+        self.ocupar_sala(atividade=outra)
+        response = self.enviar_inscricao()
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("sem vagas", response.context["dados_form"].errors["programacoes"][0])
+        self.assertFalse(Inscricao.objects.filter(atividade=self.atividade).exists())
+
+    def test_cancellation_releases_room_place(self):
+        self.ocupar_sala()
+        self.client.force_login(self.coauthor_user)
+        response = self.client.post(
+            reverse("atividade_inscricao_cancelar", args=[self.atividade.pk])
+        )
+        self.assertRedirects(response, reverse("dashboard"))
+        self.assertEqual(self.manha.inscricoes.count(), 0)
+        self.client.force_login(self.user)
+        self.assertRedirects(self.enviar_inscricao(), reverse("dashboard"))
+        self.assertEqual(self.manha.inscricoes.count(), 1)
+
+
+class InscricaoCapacidadeConcorrenteTests(TransactionTestCase):
+    personal_data = AtividadeFlowTests.personal_data
+    create_programacao = AtividadeFlowTests.create_programacao
+    setUp = InscricaoCapacidadeSalaTests.setUp
+
+    @skipUnlessDBFeature("has_select_for_update")
+    def test_shared_room_last_place_protected_between_simultaneous_events(self):
+        from core.views.atividade import _carregar_atividade
+
+        outra = Atividade.objects.get(pk=self.atividade.pk)
+        outra.pk = None
+        outra.titulo = "Evento concorrente"
+        outra.save()
+        outra.programacoes.add(self.manha, self.tarde)
+        barreira = Barrier(2)
+
+        def carregar_em_paralelo(*args, **kwargs):
+            atividade = _carregar_atividade(*args, **kwargs)
+            barreira.wait(timeout=10)
+            return atividade
+
+        def inscrever(usuario, atividade_id, cpf):
+            close_old_connections()
+            try:
+                client = Client()
+                client.force_login(usuario)
+                dados = self.personal_data() | {
+                    "acao": "inscrever",
+                    "usuario-email": usuario.email,
+                    "dados-cpf": cpf,
+                    "dados-programacoes": [str(self.manha.pk), str(self.tarde.pk)],
+                }
+                return client.post(
+                    reverse("atividade_inscricao", args=[atividade_id]), dados
+                )
+            finally:
+                close_old_connections()
+
+        with patch("core.views.atividade._carregar_atividade", side_effect=carregar_em_paralelo):
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                primeira = executor.submit(inscrever, self.user, self.atividade.pk, "52998224725")
+                segunda = executor.submit(inscrever, self.coauthor_user, outra.pk, "11144477735")
+                respostas = [primeira.result(timeout=30), segunda.result(timeout=30)]
+        self.assertEqual(sorted(response.status_code for response in respostas), [200, 302])
+        rejeitada = next(response for response in respostas if response.status_code == 200)
+        self.assertContains(rejeitada, "está sem vagas. Escolha outra sala.")
+        self.assertEqual(self.manha.inscricoes.count(), 1)
+        self.assertEqual(Inscricao.objects.count(), 1)

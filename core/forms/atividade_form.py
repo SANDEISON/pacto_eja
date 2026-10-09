@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth import get_user_model
-from django.db.models import Case, IntegerField, Value, When
+from django.db.models import Case, Count, IntegerField, Value, When
 from django.utils.html import format_html
 from django.utils import timezone
 
@@ -23,6 +23,8 @@ from .bootstrap_form_mixin import BootstrapFormMixin
 class ProgramacaoSalaCheckboxSelectMultiple(forms.CheckboxSelectMultiple):
     """Expõe os dados de cada programação para a filtragem no navegador."""
 
+    programacoes_atuais = frozenset()
+
     def create_option(self, name, value, *args, **kwargs):
         """Adiciona os metadados usados para agrupar e validar as opções."""
         option = super().create_option(name, value, *args, **kwargs)
@@ -35,6 +37,14 @@ class ProgramacaoSalaCheckboxSelectMultiple(forms.CheckboxSelectMultiple):
             option["attrs"]["data-turno"] = programacao.turno
             option["attrs"]["data-turno-label"] = programacao.get_turno_display()
             option["attrs"]["data-descricao"] = programacao.descricao
+            lotada = (
+                programacao._ocupacao >= programacao.quantidade_max_participantes
+                and programacao.pk not in self.programacoes_atuais
+            )
+            option["attrs"]["data-lotada"] = "true" if lotada else "false"
+            if lotada:
+                option["attrs"]["disabled"] = True
+                option["attrs"]["title"] = "Esta sala está sem vagas."
         return option
 
 
@@ -52,6 +62,7 @@ class ProgramacaoSalaMultipleChoiceField(forms.ModelMultipleChoiceField):
             '<span class="program-card-meta">'
             '<span><i class="bi bi-calendar3" aria-hidden="true"></i>{}</span>'
             '<span><i class="bi bi-clock" aria-hidden="true"></i>{}</span>'
+            '<span><i class="bi bi-people" aria-hidden="true"></i>{}</span>'
             '</span>'
             '</span>',
             programacao.sala,
@@ -59,6 +70,11 @@ class ProgramacaoSalaMultipleChoiceField(forms.ModelMultipleChoiceField):
             programacao.get_modalidade_display(),
             programacao.data.strftime("%d/%m/%Y"),
             programacao.get_turno_display(),
+            (
+                "Sem vagas"
+                if programacao._ocupacao >= programacao.quantidade_max_participantes
+                else f"{programacao.quantidade_max_participantes - programacao._ocupacao} vaga(s) disponível(is)"
+            ),
         )
 
 
@@ -597,6 +613,11 @@ class DadosPessoaisInscricaoForm(BootstrapFormMixin, forms.ModelForm):
         atividade = kwargs.pop("atividade")
         inscricao = kwargs.pop("inscricao", None)
         super().__init__(*args, **kwargs)
+        self._inscricao_id = inscricao.pk if inscricao else None
+        self._programacoes_atuais = (
+            set(inscricao.programacoes.values_list("pk", flat=True)) if inscricao else set()
+        )
+        self.fields["programacoes"].widget.programacoes_atuais = self._programacoes_atuais
         modalidades_atividade = tuple(atividade.modalidades_disponiveis)
         self._modalidades_atividade = {valor for valor, _rotulo in modalidades_atividade}
         self.fields["modalidade_inscricao"].choices = (
@@ -616,7 +637,8 @@ class DadosPessoaisInscricaoForm(BootstrapFormMixin, forms.ModelForm):
         programacoes = atividade.programacoes.select_related(
             "sala", "tematica"
         ).filter(modalidade__in=modalidades_disponiveis).annotate(
-            _ordem_turno=ordem_turnos
+            _ordem_turno=ordem_turnos,
+            _ocupacao=Count("inscricoes", distinct=True),
         ).order_by("data", "_ordem_turno", "sala__nome", "modalidade")
         self.fields["programacoes"].queryset = programacoes
         tem_programacoes = programacoes.exists()
@@ -672,6 +694,17 @@ class DadosPessoaisInscricaoForm(BootstrapFormMixin, forms.ModelForm):
         refeicoes = cleaned_data.get("refeicoes")
         modalidade = cleaned_data.get("modalidade_inscricao")
         if programacoes:
+            # Reconta ao validar: o formulário pode ter sido aberto antes da última vaga.
+            for programacao in programacoes:
+                if programacao.pk in self._programacoes_atuais:
+                    continue
+                ocupacao = programacao.inscricoes.exclude(pk=self._inscricao_id).count()
+                if ocupacao >= programacao.quantidade_max_participantes:
+                    self.add_error(
+                        "programacoes",
+                        f"A sala {programacao.sala} ({programacao.get_turno_display()} "
+                        f"de {programacao.data:%d/%m/%Y}) está sem vagas. Escolha outra sala.",
+                    )
             horarios = set()
             tem_conflito = False
             for programacao in programacoes:

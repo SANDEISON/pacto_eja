@@ -204,6 +204,7 @@
     const occupied = new Set();
     let hasConflict = false;
     programsSection?.querySelectorAll('[name="dados-programacoes"]:checked').forEach((field) => {
+      if (field.dataset.lotada === "true") return;
       const slot = `${field.dataset.data}-${field.dataset.turno}`;
       if (occupied.has(slot)) hasConflict = true;
       occupied.add(slot);
@@ -216,12 +217,16 @@
     const { occupied, hasConflict } = selectedProgramConflicts();
     programsSection.querySelectorAll('[name="dados-programacoes"]').forEach((field) => {
       const slot = `${field.dataset.data}-${field.dataset.turno}`;
-      const blocked = !field.checked && occupied.has(slot);
+      const lotada = field.dataset.lotada === "true";
+      const blocked = lotada || (!field.checked && occupied.has(slot));
+      if (lotada) field.checked = false;
       field.disabled = blocked;
       const option = programOptionWrapper(field);
       option?.classList.toggle("program-option-conflict", blocked);
       if (blocked) {
-        field.title = "Já existe uma sala selecionada nesta data e turno.";
+        field.title = lotada
+          ? "Esta sala está sem vagas."
+          : "Já existe uma sala selecionada nesta data e turno.";
       } else {
         field.removeAttribute("title");
       }

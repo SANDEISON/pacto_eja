@@ -654,6 +654,14 @@ def _salvar_trabalho(inscricao, formularios):
 def inscricao_atividade(request, pk):
     """Exibe e processa a inscrição simples ou acompanhada de um trabalho."""
     atividade = _carregar_atividade(pk, bloquear=request.method == "POST")
+    if request.method == "POST":
+        # Uma programação pode ser compartilhada por eventos. Bloqueia as salas
+        # em ordem estável até a inscrição ser gravada, protegendo a última vaga.
+        list(
+            ProgramacaoSala.objects.filter(atividades=atividade)
+            .order_by("pk")
+            .select_for_update()
+        )
     educador, _ = Educador.objects.get_or_create(usuario=request.user)
     endereco = Endereco.objects.filter(educador=educador).first() or Endereco(educador=educador)
     inscricao = Inscricao.objects.filter(atividade=atividade, usuario=request.user).first()
