@@ -6,7 +6,13 @@ from ..models import Inscricao
 @admin.register(Inscricao)
 class InscricaoAdmin(admin.ModelAdmin):
     list_display = ("usuario", "atividade", "modalidade", "inscrito_em")
-    list_filter = ("modalidade", "atividade", "programacoes__sala", "inscrito_em")
+    list_filter = (
+        "modalidade",
+        "atividade",
+        "programacoes__sala",
+        "programacoes",
+        "inscrito_em",
+    )
     search_fields = (
         "usuario__username",
         "usuario__first_name",
