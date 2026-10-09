@@ -102,7 +102,7 @@ Para carregar esses dados no servidor, atualize o código e execute
 sintéticos (`9000000000 + código IBGE do município`); os demais dados opcionais
 da escola ficam em branco.
 
-- `Atividade` concentra período, modalidade, vagas e configuração da submissão;
+- `Atividade` concentra período, modalidade e configuração da submissão. Os atributos somente de leitura `vagas` (presenciais) e `vagas_online` somam as capacidades das programações vinculadas; `vagas_restantes` e `vagas_online_restantes` somam os lugares livres em cada programação. Vincular, editar ou remover programações atualiza esses valores automaticamente, sem campos de preenchimento manual;
 - `ProgramacaoSala` associa sala, temática, turno e modalidade; uma atividade oferece uma ou mais programações;
 - `Inscricao` liga usuário e atividade e registra modalidade, programações e refeições escolhidas;
 - `Trabalho` pertence a uma inscrição e reúne arquivo, autoria, metadados e aceite dos termos;

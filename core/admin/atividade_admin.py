@@ -12,10 +12,11 @@ class AtividadeAdmin(admin.ModelAdmin):
         "data_inicio",
         "inscricoes_fim",
         "vagas",
+        "vagas_online",
         "ativo",
     )
     list_filter = ("ativo", "tipo", "modalidade", "permite_submissao")
     search_fields = ("titulo", "descricao", "endereco", "local", "link")
     date_hierarchy = "data_inicio"
     filter_horizontal = ("programacoes",)
-    readonly_fields = ("criado_em", "atualizado_em")
+    readonly_fields = ("vagas", "vagas_online", "criado_em", "atualizado_em")

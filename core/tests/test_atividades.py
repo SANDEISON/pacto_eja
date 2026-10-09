@@ -1618,6 +1618,10 @@ class AtividadeManagementTests(TestCase):
             sala.programacoes.order_by("pk"),
         )
         self.assertEqual(len(response.json()["programacoes"]), 2)
+        self.assertEqual(response.json()["vagas"], 30)
+        self.assertEqual(response.json()["vagas_online"], 50)
+        self.assertNotContains(page, 'name="vagas"')
+        self.assertContains(page, "data-activity-capacity-online")
 
         updated_page = self.client.get(reverse("atividade_update", args=[atividade.pk]))
         self.assertContains(updated_page, "Sala de práticas")
@@ -1718,6 +1722,8 @@ class AtividadeManagementTests(TestCase):
         self.assertContains(page, "Editar")
         self.assertContains(page, "Excluir")
         self.assertEqual(add_response.status_code, 201)
+        self.assertEqual(add_response.json()["vagas"], 25)
+        self.assertEqual(add_response.json()["vagas_online"], 40)
         nova_programacao = ProgramacaoSala.objects.get(
             pk=add_response.json()["programacao"]["id"]
         )
@@ -1736,6 +1742,7 @@ class AtividadeManagementTests(TestCase):
             },
         )
         self.assertEqual(edit_response.status_code, 200)
+        self.assertEqual(edit_response.json()["vagas_online"], 55)
         nova_programacao.refresh_from_db()
         self.assertEqual(nova_programacao.turno, ProgramacaoSala.Turno.NOITE)
         self.assertEqual(nova_programacao.quantidade_max_participantes, 55)
@@ -1747,6 +1754,8 @@ class AtividadeManagementTests(TestCase):
             )
         )
         self.assertEqual(delete_response.status_code, 200)
+        self.assertEqual(delete_response.json()["vagas"], 25)
+        self.assertEqual(delete_response.json()["vagas_online"], 0)
         self.assertFalse(delete_response.json()["room_empty"])
         self.assertFalse(ProgramacaoSala.objects.filter(pk=nova_programacao.pk).exists())
         self.assertTrue(

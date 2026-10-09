@@ -10,7 +10,6 @@
     <div class="sidebar-wrapper">
         <nav class="mt-2" aria-label="{% trans 'Main navigation' %}">
             <ul class="nav sidebar-menu flex-column {{ adminlte.classes_sidebar_nav }}" data-lte-toggle="treeview" data-accordion="false" role="menu" id="navigation">
-                {% if user.is_authenticated %}<li class="nav-item"><a class="nav-link" href="{% url 'frequencia_index' %}"><i class="nav-icon bi bi-person-check"></i><p>Frequência</p></a></li>{% endif %}
                 {% for item in adminlte_menu_sidebar %}{% include "adminlte/partials/menu-item.html" with item=item %}{% endfor %}
             </ul>
             {% if adminlte.sidebar_docs_url %}

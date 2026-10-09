@@ -84,7 +84,7 @@ class AtividadeForm(BootstrapFormMixin, forms.ModelForm):
         model = Atividade
         fields = (
             "tipo", "modalidade", "titulo", "descricao", "endereco", "local", "link", "data_inicio", "data_fim",
-            "inscricoes_inicio", "inscricoes_fim", "vagas", "permite_submissao",
+            "inscricoes_inicio", "inscricoes_fim", "permite_submissao",
             "modelo_submissao", "submissoes_fim", "ativo",
         )
         widgets = {

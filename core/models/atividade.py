@@ -38,7 +38,6 @@ class Atividade(models.Model):
     data_fim = models.DateTimeField("término")
     inscricoes_inicio = models.DateTimeField("início das inscrições", null=True, blank=True)
     inscricoes_fim = models.DateTimeField("fim das inscrições")
-    vagas = models.PositiveIntegerField("número de vagas", null=True, blank=True)
     programacoes = models.ManyToManyField(
         "ProgramacaoSala",
         verbose_name="programações disponíveis",
@@ -135,9 +134,20 @@ class Atividade(models.Model):
 
     @property
     def inscricoes_abertas(self):
-        """Indica se o período está aberto e ainda existem vagas."""
-        return self.periodo_inscricoes_aberto and (
-            self.vagas is None or self.inscricoes.count() < self.vagas
+        """Consulta a disponibilidade das programações nas modalidades aceitas."""
+        if not self.periodo_inscricoes_aberto:
+            return False
+        programacoes = list(self.programacoes.all())
+        # Atividades sem salas (por exemplo, cursos) mantêm a inscrição por período.
+        if not programacoes:
+            return True
+        turnos_livres = {}
+        for programacao in programacoes:
+            if self._vagas_programacao(programacao) > 0:
+                turnos_livres.setdefault(programacao.modalidade, set()).add(programacao.turno)
+        return any(
+            {"manha", "tarde"}.issubset(turnos_livres.get(modalidade, set()))
+            for modalidade, _ in self.modalidades_disponiveis
         )
 
     @property
@@ -154,7 +164,36 @@ class Atividade(models.Model):
 
     @property
     def vagas_restantes(self):
-        """Retorna o saldo de vagas ou ``None`` quando não há limite."""
-        if self.vagas is None:
-            return None
-        return max(self.vagas - self.inscricoes.count(), 0)
+        """Soma os lugares presenciais livres em cada programação."""
+        return self._somar_vagas(self.ModalidadeParticipacao.PRESENCIAL, restantes=True)
+
+    @property
+    def vagas(self):
+        """Capacidade presencial calculada, sem preenchimento manual."""
+        return self._somar_vagas(self.ModalidadeParticipacao.PRESENCIAL)
+
+    @property
+    def vagas_online(self):
+        """Capacidade on-line calculada a partir das programações vinculadas."""
+        return self._somar_vagas(self.ModalidadeParticipacao.ONLINE)
+
+    @property
+    def vagas_online_restantes(self):
+        """Soma os lugares on-line livres em cada programação."""
+        return self._somar_vagas(self.ModalidadeParticipacao.ONLINE, restantes=True)
+
+    @staticmethod
+    def _vagas_programacao(programacao):
+        ocupacao = getattr(programacao, "_total_inscritos", None)
+        if ocupacao is None:
+            ocupacao = programacao.inscricoes.count()
+        return max(programacao.quantidade_max_participantes - ocupacao, 0)
+
+    def _somar_vagas(self, modalidade, *, restantes=False):
+        if not self.pk:
+            return 0
+        return sum(
+            self._vagas_programacao(programacao) if restantes else programacao.quantidade_max_participantes
+            for programacao in self.programacoes.all()
+            if programacao.modalidade == modalidade
+        )

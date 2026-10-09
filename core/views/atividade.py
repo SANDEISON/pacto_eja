@@ -226,6 +226,8 @@ def adicionar_sala_atividade(request, pk):
     return JsonResponse(
         {
             "message": "Sala e programações adicionadas e vinculadas com sucesso.",
+            "vagas": atividade.vagas,
+            "vagas_online": atividade.vagas_online,
             "sala": _serializar_sala_atividade(atividade, sala),
             "programacoes": [
                 _serializar_programacao_atividade(atividade, programacao)
@@ -282,6 +284,8 @@ def _programacao_atividade_json(atividade, programacao, status=200):
     return JsonResponse(
         {
             "message": "Programação salva e vinculada com sucesso.",
+            "vagas": atividade.vagas,
+            "vagas_online": atividade.vagas_online,
             "sala": _serializar_sala_atividade(atividade, programacao.sala),
             "programacao": _serializar_programacao_atividade(
                 atividade, programacao
@@ -382,6 +386,8 @@ def excluir_programacao_sala_atividade(request, pk, programacao_pk):
     return JsonResponse(
         {
             "message": "Programação excluída da atividade.",
+            "vagas": atividade.vagas,
+            "vagas_online": atividade.vagas_online,
             "programacao_id": programacao_pk,
             "sala_id": sala_id,
             "room_empty": sala_sem_programacoes,

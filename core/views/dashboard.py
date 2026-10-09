@@ -1,9 +1,9 @@
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
+from django.db.models import Count, Prefetch, Q
 from django.shortcuts import render
 from django.utils import timezone
 
-from ..models import Atividade, RascunhoInscricao
+from ..models import Atividade, ProgramacaoSala, RascunhoInscricao
 
 
 @login_required
@@ -20,7 +20,10 @@ def dashboard(request):
             )
             | Q(inscricoes__usuario=request.user)
         )
-        .prefetch_related("inscricoes")
+        .prefetch_related(
+            "inscricoes",
+            Prefetch("programacoes", queryset=ProgramacaoSala.objects.annotate(_total_inscritos=Count("inscricoes", distinct=True))),
+        )
         .distinct()
         .order_by("data_inicio")
     )

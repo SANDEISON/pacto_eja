@@ -338,13 +338,15 @@ class ReportsView(TemplateView):
             "inscricoes",
             "programacoes__sala",
             "programacoes__tematica",
+            "programacoes__inscricoes",
         ).order_by("titulo")
         atividades_catalogo = []
         for a in atividades:
             insc_count = a.inscricoes.count()
-            vagas_totais = a.vagas or 0
+            vagas_totais = a.vagas + a.vagas_online
+            vagas_ocupadas = vagas_totais - a.vagas_restantes - a.vagas_online_restantes
             taxa_ocupacao = (
-                round((insc_count / vagas_totais * 100), 1)
+                round((vagas_ocupadas / vagas_totais * 100), 1)
                 if vagas_totais > 0
                 else 0
             )
@@ -399,8 +401,10 @@ class ReportsView(TemplateView):
                     else ""
                 ),
                 "vagas": a.vagas,
+                "vagas_online": a.vagas_online,
                 "total_inscritos": insc_count,
                 "vagas_restantes": a.vagas_restantes,
+                "vagas_online_restantes": a.vagas_online_restantes,
                 "taxa_ocupacao": taxa_ocupacao,
                 "ativo": a.ativo,
                 "inscricoes_abertas": a.inscricoes_abertas,
