@@ -445,6 +445,18 @@ class AtividadeFlowTests(TestCase):
         self.assertRedirects(response, reverse("dashboard"))
         inscricao = Inscricao.objects.get(atividade=self.atividade, usuario=self.user)
         self.assertEqual(inscricao.modalidade, Inscricao.Modalidade.ONLINE)
+        self.assertIsNone(inscricao.alterado_em)
+        self.client.post(url, self.personal_data() | {
+            "acao": "inscrever", "dados-modalidade_inscricao": "online",
+        })
+        inscricao.refresh_from_db()
+        self.assertIsNone(inscricao.alterado_em)
+        response_alterada = self.client.post(url, self.personal_data() | {
+            "acao": "inscrever", "dados-modalidade_inscricao": "presencial",
+        })
+        self.assertRedirects(response_alterada, reverse("dashboard"))
+        inscricao.refresh_from_db()
+        self.assertIsNotNone(inscricao.alterado_em)
 
     def test_registration_shows_programs_by_modality_and_saves_multiple_choices(self):
         self.atividade.modalidade = Atividade.ModalidadeParticipacao.AMBAS

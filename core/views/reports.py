@@ -1,5 +1,6 @@
 from django.contrib.auth.decorators import user_passes_test
 from django.db.models import Count, F
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView
 
@@ -226,6 +227,7 @@ def listar_participantes_detalhados(educadores_qs=None, atividade_selecionada_id
 
         modalidade_inscrito_atividade_atual = ""
         data_inscricao_atividade_atual = ""
+        data_alteracao_atividade_atual = ""
         refeicoes_inscrito_atividade_atual = []
 
         for insc in inscricoes:
@@ -269,9 +271,13 @@ def listar_participantes_detalhados(educadores_qs=None, atividade_selecionada_id
                 modalidade_inscrito_atividade_atual = insc.get_modalidade_display()
                 refeicoes_inscrito_atividade_atual = insc_refeicoes
                 data_inscricao_atividade_atual = (
-                    insc.inscrito_em.strftime("%d/%m/%Y %H:%M")
+                    timezone.localtime(insc.inscrito_em).strftime("%d/%m/%Y %H:%M")
                     if insc.inscrito_em
                     else ""
+                )
+                data_alteracao_atividade_atual = (
+                    timezone.localtime(insc.alterado_em).strftime("%d/%m/%Y %H:%M")
+                    if insc.alterado_em else ""
                 )
 
             atividades_info.append({
@@ -306,6 +312,7 @@ def listar_participantes_detalhados(educadores_qs=None, atividade_selecionada_id
             "programacoes": programacoes_detalhadas,
             "modalidade_inscrito_atual": modalidade_inscrito_atividade_atual,
             "data_inscricao_atual": data_inscricao_atividade_atual,
+            "data_alteracao_atual": data_alteracao_atividade_atual,
             "refeicoes_inscrito_atual": refeicoes_inscrito_atividade_atual,
             "refeicoes": refeicoes_labels,
             "modalidades_inscricao": list(dict.fromkeys(modalidades_labels)),

@@ -51,6 +51,7 @@ class Inscricao(models.Model):
         blank=True,
     )
     inscrito_em = models.DateTimeField(auto_now_add=True)
+    alterado_em = models.DateTimeField("última alteração da inscrição", null=True, blank=True)
 
     class Meta:
         db_table = "core_inscricao"

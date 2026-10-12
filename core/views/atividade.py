@@ -625,13 +625,22 @@ def _salvar_inscricao(atividade, formularios):
         else ()
     )
     campos_alterados = []
+    programacoes = list(formularios.dados_pessoais.cleaned_data["programacoes"])
+    refeicoes = list(refeicoes)
+    selecoes_alteradas = (
+        set(inscricao.refeicoes.values_list("pk", flat=True)) != {r.pk for r in refeicoes}
+        or set(inscricao.programacoes.values_list("pk", flat=True)) != {p.pk for p in programacoes}
+    )
     if inscricao.modalidade != modalidade:
         inscricao.modalidade = modalidade
         campos_alterados.append("modalidade")
+    if not foi_criada and (campos_alterados or selecoes_alteradas):
+        inscricao.alterado_em = timezone.now()
+        campos_alterados.append("alterado_em")
     if campos_alterados:
         inscricao.save(update_fields=campos_alterados)
     inscricao.refeicoes.set(refeicoes)
-    inscricao.programacoes.set(formularios.dados_pessoais.cleaned_data["programacoes"])
+    inscricao.programacoes.set(programacoes)
     return inscricao, foi_criada
 
 
