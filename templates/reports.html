@@ -276,6 +276,7 @@
             <span class="text-break"><i class="bi bi-geo-alt-fill me-1 text-danger"></i><strong>Link Local do evento:</strong> {% if atividade_selecionada.local %}<a href="{{ atividade_selecionada.local_url }}" target="_blank" rel="noopener noreferrer">{{ atividade_selecionada.local }}</a>{% else %}Não informado{% endif %}</span>
             <span class="text-break"><i class="bi bi-camera-video me-1 text-primary"></i><strong>Link do evento on-line:</strong> {% if atividade_selecionada.link %}<a href="{{ atividade_selecionada.link }}" target="_blank" rel="noopener noreferrer">{{ atividade_selecionada.link }}</a>{% else %}Não informado{% endif %}</span>
           </div>
+          {% comment "Distribuição de vagas ocultada no painel da atividade." %}
           <div class="table-responsive mt-3">
             <table class="table table-sm small align-middle mb-1">
               <caption class="caption-top fw-semibold text-body">Distribuição de vagas</caption>
@@ -288,6 +289,7 @@
             </table>
             <small class="text-muted">As vagas são somadas por programação. Um inscrito pode ocupar vagas em vários dias ou turnos.</small>
           </div>
+          {% endcomment %}
         </div>
         <div class="d-flex gap-2 align-items-center flex-shrink-0">
           <a href="{% url 'reports' %}" class="btn btn-outline-primary btn-sm fw-semibold">
@@ -1176,6 +1178,7 @@
                 </div>
                 <div class="pt-2 mt-2 border-top">
                   <span><i class="bi bi-people-fill me-1 text-primary"></i><strong>${act.total_inscritos}</strong> inscritos</span>
+                  {% comment "Distribuição de vagas ocultada nos cards do catálogo." %}
                   <div class="table-responsive mt-2">
                     <table class="table table-sm align-middle mb-1">
                       <caption class="caption-top fw-semibold text-body">Distribuição de vagas</caption>
@@ -1188,6 +1191,7 @@
                     </table>
                   </div>
                   <small class="text-muted d-block">Vagas somadas por programação. Um inscrito pode ocupar vagas em vários dias ou turnos.</small>
+                  {% endcomment %}
                 </div>
               </div>
             </div>
