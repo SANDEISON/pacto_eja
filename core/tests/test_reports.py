@@ -291,7 +291,7 @@ class ReportsViewTests(TestCase):
         inscricao.save(update_fields=("alterado_em",))
         response_alterada = self.client.get(reverse("reports") + f"?atividade={atividade.id}")
         self.assertEqual(response_alterada.context["participantes_detalhados"][0]["data_alteracao_atual"], timezone.localtime(inscricao.alterado_em).strftime("%d/%m/%Y %H:%M"))
-        self.assertNotContains(response, 'id="filterProgramacao"')
+        self.assertContains(response, 'id="filterProgramacao"')
         # Tela inicial (Catálogo de Atividades)
         response_catalogo = self.client.get(reverse("reports"))
         self.assertEqual(response_catalogo.status_code, 200)

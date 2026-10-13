@@ -601,13 +601,19 @@
         </div>
 
         <div class="row g-2 mb-2">
-          <div class="col-12 col-md-6">
+          <div class="col-12 col-lg-4">
             <label for="filterDataAtividade" class="form-label mb-1 small fw-semibold text-muted">Datas disponíveis por atividade:</label>
             <select id="filterDataAtividade" class="form-select form-select-sm">
               <option value="">Todas as datas</option>
             </select>
           </div>
-          <div class="col-12 col-md-6">
+          <div class="col-12 col-lg-4">
+            <label for="filterProgramacao" class="form-label mb-1 small fw-semibold text-muted">Programação:</label>
+            <select id="filterProgramacao" class="form-select form-select-sm">
+              <option value="">Todas as programações</option>
+            </select>
+          </div>
+          <div class="col-12 col-lg-4">
             <label for="filterRefeicao" class="form-label mb-1 small fw-semibold text-muted">Escolha das refeições:</label>
             <select id="filterRefeicao" class="form-select form-select-sm" disabled aria-describedby="filterRefeicaoHelp">
               <option value="">Todas as refeições</option>
@@ -1262,6 +1268,27 @@
     });
   }
 
+  function updateProgramacaoFilter() {
+    const select = document.getElementById('filterProgramacao');
+    if (!select) return;
+    const previousValue = select.value;
+    const dateValue = document.getElementById('filterDataAtividade')?.value || '';
+    const [dateActivityId, selectedDate] = dateValue.split('|');
+    const activityId = selectedActivityId || dateActivityId;
+    const options = new Map();
+    activitiesCatalog.filter(a => !activityId || String(a.id) === activityId).forEach(a => {
+      (a.programacoes || []).forEach(prog => {
+        const date = (prog.data || '').split('/').reverse().join('-');
+        if (!selectedDate || date === selectedDate) {
+          options.set(String(prog.id), selectedActivityId ? prog.label : `${a.titulo} — ${prog.label}`);
+        }
+      });
+    });
+    select.replaceChildren(new Option(options.size ? 'Todas as programações' : 'Nenhuma programação disponível', ''));
+    options.forEach((label, id) => select.appendChild(new Option(label, id)));
+    if (options.has(previousValue)) select.value = previousValue;
+  }
+
   function updateMealFilterAvailability() {
     const mealSelect = document.getElementById('filterRefeicao');
     if (!mealSelect) return;
@@ -1283,9 +1310,11 @@
 
   function applyParticipantFilters() {
     currentPage = 1;
+    updateProgramacaoFilter();
     updateMealFilterAvailability();
     const dateValue = document.getElementById('filterDataAtividade')?.value || '';
     const mealValue = document.getElementById('filterRefeicao')?.value || '';
+    const programacaoValue = document.getElementById('filterProgramacao')?.value || '';
 
     const filterEstadoEl = document.getElementById('filterEstado');
     const filterMunicipioEl = document.getElementById('filterMunicipio');
@@ -1302,6 +1331,7 @@
     const searchTerm = searchInputEl ? searchInputEl.value.toLowerCase().trim() : '';
 
     currentFilteredParticipants = participantsData.filter(p => {
+      if (programacaoValue && !(p.programacoes_ids || []).some(id => String(id) === programacaoValue)) return false;
       if (dateValue) {
         const [activityId, date] = dateValue.split('|');
         if (!(p.atividades || []).some(a => String(a.id) === activityId && (a.datas || []).includes(date))) return false;
@@ -1931,7 +1961,7 @@
   if (btnResetCatalogFilters) btnResetCatalogFilters.addEventListener('click', resetCatalogFilters);
 
   // Event Listeners de Filtros da Tabela de Participantes
-  ['filterDataAtividade', 'filterRefeicao'].forEach(id => {
+  ['filterDataAtividade', 'filterProgramacao', 'filterRefeicao'].forEach(id => {
     document.getElementById(id)?.addEventListener('change', applyParticipantFilters);
   });
   const filterEstado = document.getElementById('filterEstado');
@@ -1971,6 +2001,7 @@
       if (document.getElementById('filterGenero')) document.getElementById('filterGenero').value = '';
       if (document.getElementById('filterDataAtividade')) document.getElementById('filterDataAtividade').value = '';
       if (document.getElementById('filterRefeicao')) document.getElementById('filterRefeicao').value = '';
+      if (document.getElementById('filterProgramacao')) document.getElementById('filterProgramacao').value = '';
       if (document.getElementById('participantSearchInput')) document.getElementById('participantSearchInput').value = '';
       applyParticipantFilters();
     });
