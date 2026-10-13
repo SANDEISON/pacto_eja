@@ -273,9 +273,20 @@
           <p class="text-muted small m-0">{{ atividade_selecionada.descricao|truncatewords:30 }}</p>
           <div class="d-flex flex-wrap gap-3 small text-secondary mt-2">
             <span><i class="bi bi-calendar3 me-1 text-primary"></i><strong>Período:</strong> {{ atividade_selecionada.data_inicio }} a {{ atividade_selecionada.data_fim }}</span>
-            <span><i class="bi bi-geo-alt-fill me-1 text-danger"></i><strong>Local/Link:</strong> {{ atividade_selecionada.local_ou_link }}</span>
-            <span><i class="bi bi-ticket-perforated me-1 text-success"></i><strong>Vagas presenciais:</strong> {{ atividade_selecionada.vagas }} ({{ atividade_selecionada.vagas_restantes }} restantes)</span>
-            <span><i class="bi bi-camera-video me-1 text-success"></i><strong>Vagas on-line:</strong> {{ atividade_selecionada.vagas_online }} ({{ atividade_selecionada.vagas_online_restantes }} restantes)</span>
+            <span class="text-break"><i class="bi bi-geo-alt-fill me-1 text-danger"></i><strong>Link Local do evento:</strong> {% if atividade_selecionada.local %}<a href="{{ atividade_selecionada.local_url }}" target="_blank" rel="noopener noreferrer">{{ atividade_selecionada.local }}</a>{% else %}Não informado{% endif %}</span>
+            <span class="text-break"><i class="bi bi-camera-video me-1 text-primary"></i><strong>Link do evento on-line:</strong> {% if atividade_selecionada.link %}<a href="{{ atividade_selecionada.link }}" target="_blank" rel="noopener noreferrer">{{ atividade_selecionada.link }}</a>{% else %}Não informado{% endif %}</span>
+          </div>
+          <div class="table-responsive mt-3">
+            <table class="table table-sm small align-middle mb-1">
+              <caption class="caption-top fw-semibold text-body">Distribuição de vagas</caption>
+              <thead><tr><th scope="col">Modalidade</th><th scope="col" class="text-end">Total de vagas</th><th scope="col" class="text-end">Preenchidas</th><th scope="col" class="text-end">Disponíveis</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">Presencial</th><td class="text-end">{{ atividade_selecionada.vagas }}</td><td class="text-end">{{ atividade_selecionada.vagas_presenciais_preenchidas }}</td><td class="text-end text-success fw-semibold">{{ atividade_selecionada.vagas_restantes }}</td></tr>
+                <tr><th scope="row">On-line</th><td class="text-end">{{ atividade_selecionada.vagas_online }}</td><td class="text-end">{{ atividade_selecionada.vagas_online_preenchidas }}</td><td class="text-end text-success fw-semibold">{{ atividade_selecionada.vagas_online_restantes }}</td></tr>
+                <tr class="table-light fw-bold"><th scope="row">Total</th><td class="text-end">{{ atividade_selecionada.vagas_totais }}</td><td class="text-end">{{ atividade_selecionada.vagas_preenchidas }}</td><td class="text-end text-success">{{ atividade_selecionada.vagas_disponiveis }}</td></tr>
+              </tbody>
+            </table>
+            <small class="text-muted">As vagas são somadas por programação. Um inscrito pode ocupar vagas em vários dias ou turnos.</small>
           </div>
         </div>
         <div class="d-flex gap-2 align-items-center flex-shrink-0">
@@ -589,6 +600,21 @@
           </div>
         </div>
 
+        <div class="row g-2 mb-2">
+          <div class="col-12 col-md-6">
+            <label for="filterDataAtividade" class="form-label mb-1 small fw-semibold text-muted">Datas disponíveis por atividade:</label>
+            <select id="filterDataAtividade" class="form-select form-select-sm">
+              <option value="">Todas as datas</option>
+            </select>
+          </div>
+          <div class="col-12 col-md-6">
+            <label for="filterRefeicao" class="form-label mb-1 small fw-semibold text-muted">Escolha das refeições:</label>
+            <select id="filterRefeicao" class="form-select form-select-sm" disabled aria-describedby="filterRefeicaoHelp">
+              <option value="">Todas as refeições</option>
+            </select>
+            <small id="filterRefeicaoHelp" class="text-muted">Disponível para atividade presencial ou modalidade presencial em atividade mista.</small>
+          </div>
+        </div>
         <div class="row g-2 align-items-center">
           <div class="col-12 col-md-8">
             <div class="input-group input-group-sm">
@@ -784,6 +810,12 @@
   // Formata CPF para exibição bonita
   function escapeHTML(value) {
     return String(value ?? '').replace(/[&<>\"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[char]));
+  }
+
+  function renderEventLink(url, label) {
+    if (!label) return 'Não informado';
+    if (!/^https?:\/\//i.test(url || '')) return escapeHTML(label);
+    return `<a href="${escapeHTML(url)}" target="_blank" rel="noopener noreferrer">${escapeHTML(label)}</a>`;
   }
 
   function formatCPF(cpf) {
@@ -1095,7 +1127,7 @@
 
     filtered.forEach(act => {
       const col = document.createElement('div');
-      col.className = 'col-12 col-md-6 col-xl-4';
+      col.className = 'col-12 col-lg-6';
       
       let statusBadgeClass = 'bg-secondary';
       if (act.status_slug === 'abertas') statusBadgeClass = 'bg-success';
@@ -1127,15 +1159,29 @@
                 <div class="mb-1 text-truncate">
                   <i class="bi bi-calendar3 me-2 text-primary"></i><strong>Período:</strong> ${act.data_inicio || 'A definir'} ${act.data_fim ? 'a ' + act.data_fim : ''}
                 </div>
-                <div class="mb-1 text-truncate">
-                  <i class="bi bi-geo-alt-fill me-2 text-danger"></i><strong>Local/Link:</strong> ${act.local_ou_link || 'Não informado'}
+                <div class="mb-1 text-break">
+                  <i class="bi bi-geo-alt-fill me-2 text-danger"></i><strong>Link Local do evento:</strong> ${renderEventLink(act.local_url, act.local)}
+                </div>
+                <div class="mb-1 text-break">
+                  <i class="bi bi-camera-video me-2 text-primary"></i><strong>Link do evento on-line:</strong> ${renderEventLink(act.link, act.link)}
                 </div>
                 <div class="mb-1 text-truncate">
                   <i class="bi bi-calendar-event me-2 text-primary"></i><strong>Programações:</strong> ${progsBadgeHtml}
                 </div>
-                <div class="d-flex justify-content-between align-items-center pt-2 mt-2 border-top">
+                <div class="pt-2 mt-2 border-top">
                   <span><i class="bi bi-people-fill me-1 text-primary"></i><strong>${act.total_inscritos}</strong> inscritos</span>
-                  <span><i class="bi bi-ticket-perforated me-1 text-success"></i>${act.vagas} presenciais · ${act.vagas_online} on-line</span>
+                  <div class="table-responsive mt-2">
+                    <table class="table table-sm align-middle mb-1">
+                      <caption class="caption-top fw-semibold text-body">Distribuição de vagas</caption>
+                      <thead><tr><th scope="col">Modalidade</th><th scope="col" class="text-end">Total de vagas</th><th scope="col" class="text-end">Preenchidas</th><th scope="col" class="text-end">Disponíveis</th></tr></thead>
+                      <tbody>
+                        <tr><th scope="row">Presencial</th><td class="text-end">${act.vagas.toLocaleString('pt-BR')}</td><td class="text-end">${act.vagas_presenciais_preenchidas.toLocaleString('pt-BR')}</td><td class="text-end text-success fw-semibold">${act.vagas_restantes.toLocaleString('pt-BR')}</td></tr>
+                        <tr><th scope="row">On-line</th><td class="text-end">${act.vagas_online.toLocaleString('pt-BR')}</td><td class="text-end">${act.vagas_online_preenchidas.toLocaleString('pt-BR')}</td><td class="text-end text-success fw-semibold">${act.vagas_online_restantes.toLocaleString('pt-BR')}</td></tr>
+                        <tr class="table-light fw-bold"><th scope="row">Total</th><td class="text-end">${act.vagas_totais.toLocaleString('pt-BR')}</td><td class="text-end">${act.vagas_preenchidas.toLocaleString('pt-BR')}</td><td class="text-end text-success">${act.vagas_disponiveis.toLocaleString('pt-BR')}</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <small class="text-muted d-block">Vagas somadas por programação. Um inscrito pode ocupar vagas em vários dias ou turnos.</small>
                 </div>
               </div>
             </div>
@@ -1200,8 +1246,46 @@
   };
 
   // Aplica os filtros na lista de participantes
+  function populateActivityFilters() {
+    const dateSelect = document.getElementById('filterDataAtividade');
+    const mealSelect = document.getElementById('filterRefeicao');
+    if (!dateSelect || !mealSelect) return;
+    const activity = activitiesCatalog.find(a => String(a.id) === selectedActivityId);
+    const catalog = activity ? [activity] : activitiesCatalog;
+    catalog.forEach(a => {
+      (a.datas || []).forEach(date => {
+        const option = document.createElement('option');
+        option.value = `${a.id}|${date}`;
+        option.textContent = `${date.split('-').reverse().join('/')}${activity ? '' : ' — ' + a.titulo}`;
+        dateSelect.appendChild(option);
+      });
+    });
+  }
+
+  function updateMealFilterAvailability() {
+    const mealSelect = document.getElementById('filterRefeicao');
+    if (!mealSelect) return;
+    const activity = activitiesCatalog.find(a => String(a.id) === selectedActivityId);
+    const modality = document.getElementById('filterModalidade')?.value || '';
+    const dateValue = document.getElementById('filterDataAtividade')?.value || '';
+    const selectedDate = dateValue ? dateValue.split('|')[1] : '';
+    const previousMeal = mealSelect.value;
+    const availableMeals = (activity?.refeicoes || []).filter(meal => !selectedDate || meal.data === selectedDate);
+    mealSelect.replaceChildren(new Option(availableMeals.length ? 'Todas as refeições' : 'Nenhuma refeição cadastrada', ''));
+    availableMeals.forEach(meal => {
+      mealSelect.appendChild(new Option(meal.label, String(meal.id)));
+    });
+    if (availableMeals.some(meal => String(meal.id) === previousMeal)) mealSelect.value = previousMeal;
+    mealSelect.disabled = !(activity && modality !== 'online' &&
+      (activity.modalidade === 'presencial' || (activity.modalidade === 'ambas' && modality === 'presencial')));
+    if (mealSelect.disabled) mealSelect.value = '';
+  }
+
   function applyParticipantFilters() {
     currentPage = 1;
+    updateMealFilterAvailability();
+    const dateValue = document.getElementById('filterDataAtividade')?.value || '';
+    const mealValue = document.getElementById('filterRefeicao')?.value || '';
 
     const filterEstadoEl = document.getElementById('filterEstado');
     const filterMunicipioEl = document.getElementById('filterMunicipio');
@@ -1218,6 +1302,12 @@
     const searchTerm = searchInputEl ? searchInputEl.value.toLowerCase().trim() : '';
 
     currentFilteredParticipants = participantsData.filter(p => {
+      if (dateValue) {
+        const [activityId, date] = dateValue.split('|');
+        if (!(p.atividades || []).some(a => String(a.id) === activityId && (a.datas || []).includes(date))) return false;
+      }
+      if (mealValue && !(p.atividades || []).some(a => String(a.id) === selectedActivityId &&
+        a.modalidade === 'presencial' && (a.refeicoes_ids || []).some(id => String(id) === mealValue))) return false;
       if (estado && p.estado !== estado && p.sigla_uf !== estado) return false;
       if (municipio && p.municipio !== municipio) return false;
       if (representante && p.representante_undime_consed !== representante) return false;
@@ -1841,6 +1931,9 @@
   if (btnResetCatalogFilters) btnResetCatalogFilters.addEventListener('click', resetCatalogFilters);
 
   // Event Listeners de Filtros da Tabela de Participantes
+  ['filterDataAtividade', 'filterRefeicao'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', applyParticipantFilters);
+  });
   const filterEstado = document.getElementById('filterEstado');
   if (filterEstado) filterEstado.addEventListener('change', applyParticipantFilters);
 
@@ -1876,6 +1969,8 @@
       if (document.getElementById('filterModalidade')) document.getElementById('filterModalidade').value = '';
       if (document.getElementById('filterRepresentante')) document.getElementById('filterRepresentante').value = '';
       if (document.getElementById('filterGenero')) document.getElementById('filterGenero').value = '';
+      if (document.getElementById('filterDataAtividade')) document.getElementById('filterDataAtividade').value = '';
+      if (document.getElementById('filterRefeicao')) document.getElementById('filterRefeicao').value = '';
       if (document.getElementById('participantSearchInput')) document.getElementById('participantSearchInput').value = '';
       applyParticipantFilters();
     });
@@ -1931,6 +2026,7 @@
     // 2. Se o dashboard analítico estiver ativo no DOM, inicializa tabelas e gráficos
     if (document.getElementById('tableParticipants')) {
       populateFilterDropdowns();
+      populateActivityFilters();
       applyParticipantFilters();
     }
     if (document.getElementById('mainChart')) {

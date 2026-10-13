@@ -14,6 +14,15 @@ ROTULOS_TEMPO_ATUACAO = {
 }
 
 
+def datas_disponiveis_atividade(atividade):
+    datas = sorted({p.data for p in atividade.programacoes.all()})
+    if not datas:
+        inicio = timezone.localtime(atividade.data_inicio).date()
+        fim = timezone.localtime(atividade.data_fim).date()
+        datas = [inicio + timezone.timedelta(days=i) for i in range((fim - inicio).days + 1)]
+    return [data.isoformat() for data in datas]
+
+
 def usuario_e_staff(usuario):
     """Restringe os relatórios a usuários autenticados da equipe."""
     return usuario.is_authenticated and usuario.is_staff
@@ -205,6 +214,7 @@ def listar_participantes_detalhados(educadores_qs=None, atividade_selecionada_id
         "funcoes__educador_escola__escola",
         "funcoes__educador_escola__funcao",
         "usuario__inscricoes_atividades__atividade",
+        "usuario__inscricoes_atividades__atividade__programacoes",
         "usuario__inscricoes_atividades__programacoes__sala",
         "usuario__inscricoes_atividades__programacoes__tematica",
         "usuario__inscricoes_atividades__refeicoes",
@@ -291,6 +301,12 @@ def listar_participantes_detalhados(educadores_qs=None, atividade_selecionada_id
                 "atividade_modalidade_label": atividade.get_modalidade_display(),
                 "programacoes": insc_progs,
                 "refeicoes": insc_refeicoes,
+                "refeicoes_ids": [r.id for r in insc.refeicoes.all()],
+                "datas": (
+                    sorted({p.data.isoformat() for p in insc.programacoes.all()})
+                    if atividade.programacoes.all()
+                    else datas_disponiveis_atividade(atividade)
+                ),
                 "data_inscricao": (
                     insc.inscrito_em.strftime("%d/%m/%Y %H:%M")
                     if insc.inscrito_em
@@ -343,6 +359,7 @@ class ReportsView(TemplateView):
         # 1. Catálogo completo de atividades para a central/modal de seleção
         atividades = Atividade.objects.prefetch_related(
             "inscricoes",
+            "refeicoes",
             "programacoes__sala",
             "programacoes__tematica",
             "programacoes__inscricoes",
@@ -390,6 +407,7 @@ class ReportsView(TemplateView):
                 "modalidade": a.modalidade,
                 "modalidade_label": a.get_modalidade_display(),
                 "local": a.local or "",
+                "local_url": a.local_url if a.local else "",
                 "link": a.link or "",
                 "local_ou_link": a.local or a.link or "Não informado",
                 "data_inicio": (
@@ -412,12 +430,19 @@ class ReportsView(TemplateView):
                 "total_inscritos": insc_count,
                 "vagas_restantes": a.vagas_restantes,
                 "vagas_online_restantes": a.vagas_online_restantes,
+                "vagas_totais": vagas_totais,
+                "vagas_disponiveis": a.vagas_restantes + a.vagas_online_restantes,
+                "vagas_preenchidas": vagas_ocupadas,
+                "vagas_presenciais_preenchidas": a.vagas - a.vagas_restantes,
+                "vagas_online_preenchidas": a.vagas_online - a.vagas_online_restantes,
                 "taxa_ocupacao": taxa_ocupacao,
                 "ativo": a.ativo,
                 "inscricoes_abertas": a.inscricoes_abertas,
                 "status_slug": status_insc if a.ativo else "inativa",
                 "status_label": status_label,
                 "programacoes": progs_disponiveis,
+                "datas": datas_disponiveis_atividade(a),
+                "refeicoes": [{"id": r.id, "label": str(r), "data": r.data.isoformat()} for r in a.refeicoes.all()],
                 "programacoes_ids": progs_ids,
                 "total_programacoes": len(progs_disponiveis),
             })

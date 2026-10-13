@@ -16,6 +16,7 @@ from core.models import (
     Inscricao,
     Nivel,
     ProgramacaoSala,
+    Refeicao,
     Sala,
     Situacao,
     TematicaSala,
@@ -250,6 +251,10 @@ class ReportsViewTests(TestCase):
             modalidade=Inscricao.Modalidade.PRESENCIAL,
         )
         inscricao.programacoes.add(prog)
+        refeicao = Refeicao.objects.create(
+            atividade=atividade, tipo="almoco", data=prog.data, horario="12:00",
+        )
+        inscricao.refeicoes.add(refeicao)
 
         self.client.force_login(staff_user)
         response = self.client.get(reverse("reports") + f"?atividade={atividade.id}")
@@ -266,6 +271,19 @@ class ReportsViewTests(TestCase):
         self.assertIn(prog.id, participantes[0]["programacoes_ids"])
         self.assertEqual(len(participantes[0]["programacoes"]), 1)
         self.assertEqual(participantes[0]["programacoes"][0]["id"], prog.id)
+        self.assertEqual(participantes[0]["atividades"][0]["datas"], [prog.data.isoformat()])
+        self.assertEqual(participantes[0]["atividades"][0]["refeicoes_ids"], [refeicao.id])
+        self.assertEqual(response.context["atividade_selecionada"]["datas"], [prog.data.isoformat()])
+        self.assertEqual(response.context["atividade_selecionada"]["refeicoes"][0]["id"], refeicao.id)
+        vagas = response.context["atividade_selecionada"]
+        self.assertEqual(vagas["vagas_totais"], 50)
+        self.assertEqual(vagas["vagas_preenchidas"], 1)
+        self.assertEqual(vagas["vagas_disponiveis"], 49)
+        self.assertEqual(vagas["vagas_presenciais_preenchidas"], 1)
+        self.assertEqual(vagas["vagas_online_preenchidas"], 0)
+        self.assertContains(response, "Distribuição de vagas")
+        self.assertContains(response, 'id="filterDataAtividade"')
+        self.assertContains(response, 'id="filterRefeicao"')
         self.assertEqual(participantes[0]["data_inscricao_atual"], timezone.localtime(inscricao.inscrito_em).strftime("%d/%m/%Y %H:%M"))
         self.assertEqual(participantes[0]["data_alteracao_atual"], "")
         self.assertContains(response, "Inscrito em:")
