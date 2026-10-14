@@ -144,6 +144,12 @@ class ReportsViewTests(TestCase):
         self.assertIn("atividade_dados", response.context)
         self.assertEqual(len(response.context["atividades_catalogo"]), 1)
         self.assertEqual(response.context["atividades_catalogo"][0]["titulo"], "Oficina EJA 2026")
+        catalogo = response.context["atividades_catalogo"][0]
+        for campo in ("data_inicio", "data_fim", "inscricoes_fim"):
+            self.assertEqual(
+                catalogo[campo],
+                timezone.localtime(getattr(atividade, campo)).strftime("%d/%m/%Y %H:%M"),
+            )
 
         participantes = response.context["participantes_detalhados"]
         self.assertEqual(len(participantes), 1)

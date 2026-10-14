@@ -411,17 +411,17 @@ class ReportsView(TemplateView):
                 "link": a.link or "",
                 "local_ou_link": a.local or a.link or "Não informado",
                 "data_inicio": (
-                    a.data_inicio.strftime("%d/%m/%Y %H:%M")
+                    timezone.localtime(a.data_inicio).strftime("%d/%m/%Y %H:%M")
                     if a.data_inicio
                     else ""
                 ),
                 "data_fim": (
-                    a.data_fim.strftime("%d/%m/%Y %H:%M")
+                    timezone.localtime(a.data_fim).strftime("%d/%m/%Y %H:%M")
                     if a.data_fim
                     else ""
                 ),
                 "inscricoes_fim": (
-                    a.inscricoes_fim.strftime("%d/%m/%Y %H:%M")
+                    timezone.localtime(a.inscricoes_fim).strftime("%d/%m/%Y %H:%M")
                     if a.inscricoes_fim
                     else ""
                 ),
