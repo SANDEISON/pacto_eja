@@ -270,6 +270,12 @@
             <span class="badge {% if atividade_selecionada.status_slug == 'abertas' %}bg-success{% elif atividade_selecionada.status_slug == 'encerradas' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">{{ atividade_selecionada.status_label }}</span>
             <span class="badge bg-white text-primary border fw-bold"><i class="bi bi-people-fill me-1"></i>{{ atividade_selecionada.total_inscritos }} Inscrito(s)</span>
           </div>
+          <div class="small mb-3" aria-label="Vagas da atividade">
+            <div><strong>Total de Vagas presenciais:</strong> {{ atividade_selecionada.vagas }}</div>
+            <div><strong>Vagas presenciais restantes:</strong> {{ atividade_selecionada.vagas_restantes }}</div>
+            <div><strong>Total de Vagas on-line:</strong> {{ atividade_selecionada.vagas_online }}</div>
+            <div><strong>Vagas on-line restantes:</strong> {{ atividade_selecionada.vagas_online_restantes }}</div>
+          </div>
           <p class="text-muted small m-0">{{ atividade_selecionada.descricao|truncatewords:30 }}</p>
           <div class="d-flex flex-wrap gap-3 small text-secondary mt-2">
             <span><i class="bi bi-calendar3 me-1 text-primary"></i><strong>Período:</strong> {{ atividade_selecionada.data_inicio }} a {{ atividade_selecionada.data_fim }}</span>
@@ -1178,6 +1184,12 @@
                 </div>
                 <div class="pt-2 mt-2 border-top">
                   <span><i class="bi bi-people-fill me-1 text-primary"></i><strong>${act.total_inscritos}</strong> inscritos</span>
+                  <div class="mt-2" aria-label="Vagas da atividade">
+                    <div><strong>Total de Vagas presenciais:</strong> ${act.vagas.toLocaleString('pt-BR')}</div>
+                    <div><strong>Vagas presenciais restantes:</strong> ${act.vagas_restantes.toLocaleString('pt-BR')}</div>
+                    <div><strong>Total de Vagas on-line:</strong> ${act.vagas_online.toLocaleString('pt-BR')}</div>
+                    <div><strong>Vagas on-line restantes:</strong> ${act.vagas_online_restantes.toLocaleString('pt-BR')}</div>
+                  </div>
                   {% comment "Distribuição de vagas ocultada nos cards do catálogo." %}
                   <div class="table-responsive mt-2">
                     <table class="table table-sm align-middle mb-1">

@@ -19,4 +19,4 @@ class AtividadeAdmin(admin.ModelAdmin):
     search_fields = ("titulo", "descricao", "endereco", "local", "link")
     date_hierarchy = "data_inicio"
     filter_horizontal = ("programacoes",)
-    readonly_fields = ("vagas", "vagas_online", "criado_em", "atualizado_em")
+    readonly_fields = ("criado_em", "atualizado_em")

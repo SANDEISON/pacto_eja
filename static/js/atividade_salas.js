@@ -20,13 +20,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const scheduleTitle = scheduleForm?.querySelector("#activity-schedule-modal-title");
   const scheduleRoom = scheduleForm?.querySelector("[data-activity-schedule-room]");
 
-  function updateCapacity(data) {
-    const presencial = document.querySelector("[data-activity-capacity-presencial]");
-    const online = document.querySelector("[data-activity-capacity-online]");
-    if (presencial) presencial.textContent = String(data.vagas);
-    if (online) online.textContent = String(data.vagas_online);
-  }
-
   function configureLink(container) {
     const modality = container.querySelector('[name$="-modalidade"]');
     const link = container.querySelector('[name$="-link"]');
@@ -237,7 +230,6 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
       appendLinkedRoom(responseData.sala, responseData.programacoes);
-      updateCapacity(responseData);
       successMessage.textContent = responseData.message;
       successMessage.hidden = false;
       bootstrap.Modal.getOrCreateInstance(roomModal).hide();
@@ -278,7 +270,6 @@ document.addEventListener("DOMContentLoaded", () => {
       schedule.remove();
       if (responseData.room_empty) roomCard.remove();
       else setScheduleCount(roomCard);
-      updateCapacity(responseData);
       if (!linkedRooms.querySelector("[data-activity-linked-room]") && linkedEmpty) linkedEmpty.hidden = false;
       successMessage.textContent = responseData.message;
       successMessage.hidden = false;
@@ -300,7 +291,6 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
       appendLinkedRoom(responseData.sala, [responseData.programacao]);
-      updateCapacity(responseData);
       successMessage.textContent = responseData.message;
       successMessage.hidden = false;
       bootstrap.Modal.getOrCreateInstance(scheduleModal).hide();

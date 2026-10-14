@@ -29,6 +29,8 @@ class Atividade(models.Model):
         choices=ModalidadeParticipacao.choices,
         default=ModalidadeParticipacao.PRESENCIAL,
     )
+    vagas = models.PositiveIntegerField("vagas presenciais", default=0, help_text="Limite de inscrições presenciais no evento. Zero significa sem vagas.")
+    vagas_online = models.PositiveIntegerField("vagas on-line", default=0, help_text="Limite de inscrições on-line no evento. Zero significa sem vagas.")
     titulo = models.CharField("título", max_length=180)
     descricao = models.TextField("descrição")
     endereco = models.CharField("endereço", max_length=255, blank=True)
@@ -137,8 +139,11 @@ class Atividade(models.Model):
         """Consulta a disponibilidade das programações nas modalidades aceitas."""
         if not self.periodo_inscricoes_aberto:
             return False
+        modalidades_livres = {m for m, _ in self.modalidades_disponiveis if self.vagas_por_modalidade(m) > 0}
+        if not modalidades_livres:
+            return False
         programacoes = list(self.programacoes.all())
-        # Atividades sem salas (por exemplo, cursos) mantêm a inscrição por período.
+        # Atividades sem salas respeitam o período e a capacidade da modalidade.
         if not programacoes:
             return True
         turnos_livres = {}
@@ -147,7 +152,7 @@ class Atividade(models.Model):
                 turnos_livres.setdefault(programacao.modalidade, set()).add(programacao.turno)
         return any(
             {"manha", "tarde"}.issubset(turnos_livres.get(modalidade, set()))
-            for modalidade, _ in self.modalidades_disponiveis
+            for modalidade in modalidades_livres
         )
 
     @property
@@ -164,33 +169,27 @@ class Atividade(models.Model):
 
     @property
     def vagas_restantes(self):
-        """Soma os lugares presenciais livres em cada programação."""
-        return self._somar_vagas(self.ModalidadeParticipacao.PRESENCIAL, restantes=True)
-
-    @property
-    def vagas(self):
-        """Capacidade presencial calculada, sem preenchimento manual."""
-        return self._somar_vagas(self.ModalidadeParticipacao.PRESENCIAL)
-
-    @property
-    def vagas_online(self):
-        """Capacidade on-line calculada a partir das programações vinculadas."""
-        return self._somar_vagas(self.ModalidadeParticipacao.ONLINE)
+        return self.vagas_por_modalidade(self.ModalidadeParticipacao.PRESENCIAL)
 
     @property
     def vagas_online_restantes(self):
-        """Soma os lugares on-line livres em cada programação."""
-        return self._somar_vagas(self.ModalidadeParticipacao.ONLINE, restantes=True)
+        return self.vagas_por_modalidade(self.ModalidadeParticipacao.ONLINE)
+
+    def vagas_por_modalidade(self, modalidade, excluir_inscricao=None):
+        """Desconta cada inscrição uma única vez, independentemente das salas."""
+        capacidade = self.vagas_online if modalidade == self.ModalidadeParticipacao.ONLINE else self.vagas
+        if not self.pk:
+            return capacidade
+        inscricoes_carregadas = getattr(self, "_prefetched_objects_cache", {}).get("inscricoes")
+        if inscricoes_carregadas is not None:
+            ocupacao = sum(
+                1 for inscricao in inscricoes_carregadas
+                if inscricao.modalidade == modalidade and inscricao.pk != excluir_inscricao
+            )
+        else:
+            ocupacao = self.inscricoes.filter(modalidade=modalidade).exclude(pk=excluir_inscricao).count()
+        return max(0, capacidade - ocupacao)
 
     @staticmethod
     def _vagas_programacao(programacao):
         return programacao.vagas_disponiveis
-
-    def _somar_vagas(self, modalidade, *, restantes=False):
-        if not self.pk:
-            return 0
-        return sum(
-            self._vagas_programacao(programacao) if restantes else programacao.quantidade_max_participantes
-            for programacao in self.programacoes.all()
-            if programacao.modalidade == modalidade
-        )

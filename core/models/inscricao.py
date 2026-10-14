@@ -72,3 +72,7 @@ class Inscricao(models.Model):
             raise ValidationError(
                 {"modalidade": "Esta modalidade não está disponível para a atividade."}
             )
+        if self.atividade_id and self.atividade.vagas_por_modalidade(self.modalidade, self.pk) <= 0:
+            raise ValidationError(
+                {"modalidade": "A quantidade de vagas para esta modalidade foi atingida."}
+            )

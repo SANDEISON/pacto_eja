@@ -95,7 +95,19 @@
     return false;
   }
 
+  function modalityIsFull(modality = modalitySelect?.value) {
+    return Boolean(modality) && (modalitySelect?.dataset.modalidadesLotadas || "").split(",").includes(modality);
+  }
+
+  function updateModalityAvailability() {
+    const full = modalityIsFull();
+    const message = form.querySelector("[data-registration-modality-full]");
+    if (message) message.hidden = !full;
+    return full;
+  }
+
   function modalityIsValid() {
+    if (updateModalityAvailability()) return false;
     if (modalitySelect && !modalitySelect.checkValidity()) {
       modalitySelect.reportValidity();
       modalitySelect.focus();
@@ -110,9 +122,11 @@
       programsSection?.querySelector('[name="dados-programacoes"]:checked[data-modalidade="presencial"]'),
     );
     const isInPerson = modalitySelect?.value === "presencial" || hasInPersonProgram;
+    const blocked = !isInPerson || modalityIsFull("presencial");
     mealsSection.hidden = !isInPerson;
     mealsSection.querySelectorAll('[name="dados-refeicoes"]').forEach((field) => {
-      if (!isInPerson) field.checked = false;
+      field.disabled = blocked;
+      if (blocked) field.checked = false;
     });
   }
 
@@ -218,15 +232,18 @@
     programsSection.querySelectorAll('[name="dados-programacoes"]').forEach((field) => {
       const slot = `${field.dataset.data}-${field.dataset.turno}`;
       const lotada = field.dataset.lotada === "true";
-      const blocked = lotada || (!field.checked && occupied.has(slot));
-      if (lotada) field.checked = false;
+      const modalidadeLotada = modalityIsFull(field.dataset.modalidade);
+      const blocked = modalidadeLotada || lotada || (!field.checked && occupied.has(slot));
+      if (lotada || modalidadeLotada) field.checked = false;
       field.disabled = blocked;
       const option = programOptionWrapper(field);
       option?.classList.toggle("program-option-conflict", blocked);
       if (blocked) {
-        field.title = lotada
-          ? "Esta sala está sem vagas."
-          : "Já existe uma sala selecionada nesta data e turno.";
+        field.title = modalidadeLotada
+          ? "A quantidade de vagas para esta modalidade foi atingida."
+          : lotada
+            ? "Esta sala está sem vagas."
+            : "Já existe uma sala selecionada nesta data e turno.";
       } else {
         field.removeAttribute("title");
       }
@@ -276,6 +293,7 @@
   }
 
   function updateProgramAvailability() {
+    updateModalityAvailability();
     if (!programsSection) return;
     const modality = modalitySelect?.value || "";
     programsSection.hidden = !modality;
@@ -648,7 +666,6 @@
     else showStep("pessoal");
   });
   addressStateSelect?.addEventListener("change", loadAddressCities);
-  modalitySelect?.addEventListener("change", updateMealAvailability);
   modalitySelect?.addEventListener("change", () => {
     programsSection?.querySelectorAll('[name="dados-programacoes"]:checked').forEach((field) => {
       if (field.dataset.modalidade !== modalitySelect.value) field.checked = false;

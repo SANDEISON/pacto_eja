@@ -56,6 +56,8 @@ class AtividadeFlowTests(TestCase):
         agora = timezone.now()
         self.atividade = Atividade.objects.create(
             tipo=Atividade.Tipo.EVENTO,
+            vagas=100,
+            vagas_online=100,
             titulo="Seminário de Educação de Jovens e Adultos",
             descricao="Encontro para troca de experiências.",
             local="Auditório central",
@@ -1496,6 +1498,8 @@ class AtividadeManagementTests(TestCase):
         return Atividade.objects.create(
             tipo=Atividade.Tipo.EVENTO,
             modalidade=modalidade,
+            vagas=100,
+            vagas_online=100,
             titulo="Encontro de formação",
             descricao="Atividade para formação de educadores.",
             local="Centro de formação",
@@ -1551,6 +1555,7 @@ class AtividadeManagementTests(TestCase):
                 "inscricoes_inicio": "",
                 "inscricoes_fim": (inicio - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M"),
                 "vagas": "100",
+                "vagas_online": "0",
                 "modelo_submissao": Atividade.ModeloSubmissao.ACADEMICO,
                 "submissoes_fim": "",
                 "ativo": "on",
@@ -1630,10 +1635,10 @@ class AtividadeManagementTests(TestCase):
             sala.programacoes.order_by("pk"),
         )
         self.assertEqual(len(response.json()["programacoes"]), 2)
-        self.assertEqual(response.json()["vagas"], 30)
-        self.assertEqual(response.json()["vagas_online"], 50)
-        self.assertNotContains(page, 'name="vagas"')
-        self.assertContains(page, "data-activity-capacity-online")
+        self.assertEqual(response.json()["vagas"], 100)
+        self.assertEqual(response.json()["vagas_online"], 100)
+        self.assertContains(page, 'name="vagas"')
+        self.assertContains(page, 'name="vagas_online"')
 
         updated_page = self.client.get(reverse("atividade_update", args=[atividade.pk]))
         self.assertContains(updated_page, "Sala de práticas")
@@ -1653,7 +1658,8 @@ class AtividadeManagementTests(TestCase):
                 "data_fim": timezone.localtime(atividade.data_fim).strftime("%Y-%m-%dT%H:%M"),
                 "inscricoes_inicio": "",
                 "inscricoes_fim": timezone.localtime(atividade.inscricoes_fim).strftime("%Y-%m-%dT%H:%M"),
-                "vagas": "",
+                "vagas": "100",
+                "vagas_online": "100",
                 "modelo_submissao": atividade.modelo_submissao,
                 "submissoes_fim": "",
                 "ativo": "on",
@@ -1734,8 +1740,8 @@ class AtividadeManagementTests(TestCase):
         self.assertContains(page, "Editar")
         self.assertContains(page, "Excluir")
         self.assertEqual(add_response.status_code, 201)
-        self.assertEqual(add_response.json()["vagas"], 25)
-        self.assertEqual(add_response.json()["vagas_online"], 40)
+        self.assertEqual(add_response.json()["vagas"], 100)
+        self.assertEqual(add_response.json()["vagas_online"], 100)
         nova_programacao = ProgramacaoSala.objects.get(
             pk=add_response.json()["programacao"]["id"]
         )
@@ -1754,7 +1760,7 @@ class AtividadeManagementTests(TestCase):
             },
         )
         self.assertEqual(edit_response.status_code, 200)
-        self.assertEqual(edit_response.json()["vagas_online"], 55)
+        self.assertEqual(edit_response.json()["vagas_online"], 100)
         nova_programacao.refresh_from_db()
         self.assertEqual(nova_programacao.turno, ProgramacaoSala.Turno.NOITE)
         self.assertEqual(nova_programacao.quantidade_max_participantes, 55)
@@ -1766,8 +1772,8 @@ class AtividadeManagementTests(TestCase):
             )
         )
         self.assertEqual(delete_response.status_code, 200)
-        self.assertEqual(delete_response.json()["vagas"], 25)
-        self.assertEqual(delete_response.json()["vagas_online"], 0)
+        self.assertEqual(delete_response.json()["vagas"], 100)
+        self.assertEqual(delete_response.json()["vagas_online"], 100)
         self.assertFalse(delete_response.json()["room_empty"])
         self.assertFalse(ProgramacaoSala.objects.filter(pk=nova_programacao.pk).exists())
         self.assertTrue(
@@ -1941,6 +1947,7 @@ class InscricaoCapacidadeSalaTests(TestCase):
 
 
 class InscricaoCapacidadeConcorrenteTests(TransactionTestCase):
+    serialized_rollback = True
     personal_data = AtividadeFlowTests.personal_data
     create_programacao = AtividadeFlowTests.create_programacao
     setUp = InscricaoCapacidadeSalaTests.setUp
@@ -1988,3 +1995,37 @@ class InscricaoCapacidadeConcorrenteTests(TransactionTestCase):
         self.assertContains(rejeitada, "está sem vagas. Escolha outra sala.")
         self.assertEqual(self.manha.inscricoes.count(), 1)
         self.assertEqual(Inscricao.objects.count(), 1)
+
+    @skipUnlessDBFeature("has_select_for_update")
+    def test_event_last_place_protected_with_available_rooms(self):
+        self.atividade.vagas = 1
+        self.atividade.save(update_fields=("vagas",))
+        for programacao in (self.manha, self.tarde):
+            programacao.quantidade_max_participantes = 50
+            programacao.save(update_fields=("quantidade_max_participantes",))
+        barreira = Barrier(2)
+
+        def inscrever(usuario, cpf):
+            close_old_connections()
+            try:
+                client = Client()
+                client.force_login(usuario)
+                dados = self.personal_data() | {
+                    "acao": "inscrever", "usuario-email": usuario.email,
+                    "dados-cpf": cpf,
+                    "dados-programacoes": [str(self.manha.pk), str(self.tarde.pk)],
+                }
+                barreira.wait(timeout=10)
+                return client.post(reverse("atividade_inscricao", args=[self.atividade.pk]), dados)
+            finally:
+                close_old_connections()
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            primeira = executor.submit(inscrever, self.user, "52998224725")
+            segunda = executor.submit(inscrever, self.coauthor_user, "11144477735")
+            respostas = [primeira.result(timeout=30), segunda.result(timeout=30)]
+        self.assertEqual(sorted(response.status_code for response in respostas), [200, 302])
+        self.assertEqual(self.atividade.inscricoes.count(), 1)
+        self.assertGreater(self.manha.vagas_disponiveis, 0)
+        rejeitada = next(response for response in respostas if response.status_code == 200)
+        self.assertContains(rejeitada, "A quantidade de vagas para esta modalidade foi atingida.")

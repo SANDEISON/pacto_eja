@@ -119,6 +119,8 @@ class ReportsViewTests(TestCase):
 
         agora = timezone.now()
         atividade = Atividade.objects.create(
+            vagas=50,
+            vagas_online=0,
             titulo="Oficina EJA 2026",
             descricao="Treinamento pedagógico",
             tipo=Atividade.Tipo.CURSO,
@@ -174,6 +176,8 @@ class ReportsViewTests(TestCase):
         user_nao_inscrito.educador.save()
 
         atividade = Atividade.objects.create(
+            vagas=50,
+            vagas_online=0,
             titulo="Seminário EJA Exclusivo",
             descricao="Foco EJA",
             tipo=Atividade.Tipo.EVENTO,
@@ -234,6 +238,8 @@ class ReportsViewTests(TestCase):
         )
 
         atividade = Atividade.objects.create(
+            vagas=50,
+            vagas_online=0,
             titulo="Congresso EJA 2026",
             descricao="Congresso",
             tipo=Atividade.Tipo.EVENTO,

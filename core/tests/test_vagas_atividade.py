@@ -3,7 +3,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from core.admin.atividade_admin import AtividadeAdmin
-from core.forms import AtividadeForm
+from core.forms import AtividadeForm, DadosPessoaisInscricaoForm
 from core.models import Atividade, Inscricao
 from core.tests import test_atividades
 
@@ -14,137 +14,96 @@ class VagasAtividadeTests(TestCase):
 
     def setUp(self):
         test_atividades.AtividadeFlowTests.setUp(self)
-        self.atividade.modalidade = Atividade.ModalidadeParticipacao.AMBAS
-        self.atividade.save(update_fields=("modalidade",))
-        self.presencial_manha = self.programacao("presencial", "manha", 10)
-        self.presencial_tarde = self.programacao("presencial", "tarde", 20)
-        self.online_manha = self.programacao("online", "manha", 7)
-        self.online_tarde = self.programacao("online", "tarde", 8)
-        self.atividade.programacoes.add(
-            self.presencial_manha, self.presencial_tarde, self.online_manha, self.online_tarde
-        )
+        self.atividade.modalidade = "ambas"
+        self.atividade.vagas = 1
+        self.atividade.vagas_online = 10
+        self.atividade.save()
+        self.manha = self.create_programacao("presencial", "Manhã", turno="manha")
+        self.tarde = self.create_programacao("presencial", "Tarde", turno="tarde")
+        self.online_manha = self.create_programacao("online", "Online manhã", turno="manha")
+        self.online_tarde = self.create_programacao("online", "Online tarde", turno="tarde")
+        self.atividade.programacoes.add(self.manha, self.tarde, self.online_manha, self.online_tarde)
 
-    def programacao(self, modalidade, turno, capacidade):
-        programacao = self.create_programacao(modalidade, f"Sala {modalidade} {turno}", turno=turno)
-        programacao.quantidade_max_participantes = capacidade
-        programacao.save(update_fields=("quantidade_max_participantes",))
-        return programacao
-
-    def test_totals_separated_by_modality_and_read_only(self):
-        self.assertEqual(self.atividade.vagas, 30)
-        self.assertEqual(self.atividade.vagas_online, 15)
-        self.assertEqual(self.atividade.vagas_restantes, 30)
-        self.assertEqual(self.atividade.vagas_online_restantes, 15)
-        with self.assertRaises(AttributeError):
-            self.atividade.vagas = 999
-        with self.assertRaises(AttributeError):
-            self.atividade.vagas_online = 999
-
-    def test_totals_update_when_linking_editing_unlinking_and_deleting(self):
-        nova = self.create_programacao("presencial", "Nova sala")
-        self.atividade.programacoes.add(nova)
-        self.assertEqual(self.atividade.vagas, 80)
-        nova.quantidade_max_participantes = 12
-        nova.save(update_fields=("quantidade_max_participantes",))
-        self.assertEqual(self.atividade.vagas, 42)
-        nova.modalidade = "online"
-        nova.save(update_fields=("modalidade",))
-        self.assertEqual(self.atividade.vagas, 30)
-        self.assertEqual(self.atividade.vagas_online, 27)
-        self.atividade.programacoes.remove(nova)
-        self.assertEqual(self.atividade.vagas_online, 15)
-        self.presencial_manha.delete()
-        self.assertEqual(self.atividade.vagas, 20)
-        self.atividade.programacoes.clear()
-        self.assertEqual(self.atividade.vagas, 0)
-        self.assertEqual(self.atividade.vagas_online, 0)
-
-    def test_reverse_links_and_room_deletion_update_totals(self):
-        self.presencial_manha.atividades.remove(self.atividade)
-        self.assertEqual(self.atividade.vagas, 20)
-        self.presencial_manha.atividades.add(self.atividade)
-        self.assertEqual(self.atividade.vagas, 30)
-        self.presencial_manha.sala.delete()
-        self.assertEqual(self.atividade.vagas, 20)
-
-    def test_remaining_places_discount_each_selected_program(self):
+    def lotar_presencial(self):
         inscricao = Inscricao.objects.create(atividade=self.atividade, usuario=self.coauthor_user)
-        inscricao.programacoes.add(self.presencial_manha, self.presencial_tarde)
-        self.assertEqual(self.atividade.vagas_restantes, 28)
-        self.assertEqual(self.atividade.vagas_online_restantes, 15)
-        inscricao.programacoes.set((self.online_manha, self.online_tarde))
-        self.assertEqual(self.atividade.vagas_restantes, 30)
-        self.assertEqual(self.atividade.vagas_online_restantes, 13)
-        inscricao.delete()
-        self.assertEqual(self.atividade.vagas_online_restantes, 15)
+        inscricao.programacoes.add(self.manha, self.tarde)
+        return inscricao
 
-    def test_shared_program_remaining_places_include_other_events(self):
-        outra = Atividade.objects.get(pk=self.atividade.pk)
-        outra.pk = None
-        outra.save()
-        outra.programacoes.add(self.online_manha, self.online_tarde)
-        inscricao = Inscricao.objects.create(atividade=outra, usuario=self.coauthor_user, modalidade="online")
-        inscricao.programacoes.add(self.online_manha, self.online_tarde)
-        self.assertEqual(self.atividade.vagas_online_restantes, 13)
-        self.assertEqual(self.atividade.vagas_restantes, 30)
-
-    def test_full_presential_programs_do_not_close_online_registration(self):
-        self.presencial_manha.quantidade_max_participantes = 1
-        self.presencial_tarde.quantidade_max_participantes = 1
-        self.presencial_manha.save()
-        self.presencial_tarde.save()
-        inscricao = Inscricao.objects.create(atividade=self.atividade, usuario=self.coauthor_user)
-        inscricao.programacoes.add(self.presencial_manha, self.presencial_tarde)
+    def test_one_place_per_registration_and_independent_room_capacity(self):
+        inscricao = self.lotar_presencial()
         self.assertEqual(self.atividade.vagas_restantes, 0)
+        self.assertEqual(self.atividade.vagas_online_restantes, 10)
+        self.assertGreater(self.manha.vagas_disponiveis, 0)
         self.assertTrue(self.atividade.inscricoes_abertas)
-        response = self.client.post(
-            reverse("atividade_inscricao", args=[self.atividade.pk]),
-            self.personal_data() | {
-                "acao": "inscrever",
-                "dados-modalidade_inscricao": "online",
-                "dados-programacoes": [str(self.online_manha.pk), str(self.online_tarde.pk)],
-            },
-        )
+        self.atividade.programacoes.clear()
+        self.assertEqual(self.atividade.vagas, 1)
+        inscricao.delete()
+        self.assertEqual(self.atividade.vagas_restantes, 1)
+
+    def test_full_modality_rejects_post_even_with_free_rooms(self):
+        self.lotar_presencial()
+        response = self.client.post(reverse("atividade_inscricao", args=[self.atividade.pk]), self.personal_data() | {
+            "acao": "inscrever", "dados-programacoes": [self.manha.pk, self.tarde.pk],
+        })
+        self.assertContains(response, "A quantidade de vagas para esta modalidade foi atingida.")
+        self.assertFalse(Inscricao.objects.filter(usuario=self.user).exists())
+        self.assertContains(response, 'data-modalidades-lotadas="presencial"')
+
+    def test_other_modality_accepts_registration(self):
+        self.lotar_presencial()
+        response = self.client.post(reverse("atividade_inscricao", args=[self.atividade.pk]), self.personal_data() | {
+            "acao": "inscrever", "dados-modalidade_inscricao": "online",
+            "dados-programacoes": [self.online_manha.pk, self.online_tarde.pk],
+        })
         self.assertRedirects(response, reverse("dashboard"))
-        self.assertEqual(self.atividade.vagas_online_restantes, 13)
+        self.assertEqual(self.atividade.vagas_online_restantes, 9)
 
-    def test_availability_requires_free_morning_and_afternoon_in_same_modality(self):
-        inscricao = Inscricao.objects.create(atividade=self.atividade, usuario=self.coauthor_user)
-        for programacao in (self.presencial_manha, self.online_tarde):
-            programacao.quantidade_max_participantes = 1
-            programacao.save()
-            inscricao.programacoes.add(programacao)
+    def test_existing_registration_keeps_own_place(self):
+        inscricao = self.lotar_presencial()
+        form = DadosPessoaisInscricaoForm(atividade=self.atividade, inscricao=inscricao)
+        self.assertNotIn("presencial", form.modalidades_lotadas)
+        self.atividade.vagas_online = 0
+        self.atividade.save()
+        form = DadosPessoaisInscricaoForm(atividade=self.atividade, inscricao=inscricao)
+        self.assertIn("online", form.modalidades_lotadas)
         self.assertFalse(self.atividade.inscricoes_abertas)
-        self.assertGreater(self.atividade.vagas_restantes, 0)
-        self.assertGreater(self.atividade.vagas_online_restantes, 0)
 
-    def test_over_capacity_does_not_subtract_places_from_other_programs(self):
-        self.presencial_manha.quantidade_max_participantes = 1
-        self.presencial_manha.save()
-        for usuario in (self.user, self.coauthor_user):
-            inscricao = Inscricao.objects.create(atividade=self.atividade, usuario=usuario)
-            inscricao.programacoes.add(self.presencial_manha)
-        self.assertEqual(self.atividade.vagas_restantes, 20)
-
-    def test_dashboard_displays_presential_then_online_remaining_places(self):
-        inscricao = Inscricao.objects.create(atividade=self.atividade, usuario=self.coauthor_user)
-        inscricao.programacoes.add(self.presencial_manha, self.presencial_tarde)
+    def test_manual_fields_and_dashboard(self):
+        form = AtividadeForm(instance=self.atividade)
+        self.assertIn("vagas", form.fields)
+        self.assertIn("vagas_online", form.fields)
+        self.assertNotIn("vagas", AtividadeAdmin(Atividade, admin.site).readonly_fields)
+        self.lotar_presencial()
         response = self.client.get(reverse("dashboard"))
-        self.assertContains(response, "<strong>Vagas presenciais restantes:</strong> 28", html=False)
-        self.assertContains(response, "<strong>Vagas on-line restantes:</strong> 15", html=False)
-        html = response.content.decode()
-        self.assertLess(html.index("Vagas presenciais restantes:"), html.index("Vagas on-line restantes:"))
+        self.assertContains(response, "<strong>Vagas presenciais restantes:</strong> 0")
         atividade = response.context["atividades_disponiveis"][0]
         with self.assertNumQueries(0):
-            self.assertEqual(atividade.vagas_restantes, 28)
-            self.assertEqual(atividade.vagas_online_restantes, 15)
+            self.assertEqual(atividade.vagas_online_restantes, 10)
 
-    def test_activity_form_and_admin_prevent_manual_capacity(self):
-        form = AtividadeForm(instance=self.atividade)
-        self.assertNotIn("vagas", form.fields)
-        self.assertNotIn("vagas_online", form.fields)
-        atividade_admin = AtividadeAdmin(Atividade, admin.site)
-        self.assertIn("vagas", atividade_admin.readonly_fields)
-        self.assertIn("vagas_online", atividade_admin.readonly_fields)
-        self.assertEqual(Atividade().vagas, 0)
-        self.assertEqual(Atividade().vagas_online, 0)
+    def test_registration_page_marks_full_modality_before_submission(self):
+        self.lotar_presencial()
+        response = self.client.get(reverse("atividade_inscricao", args=[self.atividade.pk]))
+        self.assertContains(response, 'data-modalidades-lotadas="presencial"')
+        self.assertContains(response, '/static/js/atividade_inscricao.js?v=20261014-2')
+        from html.parser import HTMLParser
+
+        class ProgramInputs(HTMLParser):
+            fields = None
+
+            def __init__(self):
+                super().__init__()
+                self.fields = []
+
+            def handle_starttag(self, tag, attrs):
+                attrs = dict(attrs)
+                if tag == "input" and attrs.get("name") == "dados-programacoes":
+                    self.fields.append(attrs)
+
+        parser = ProgramInputs()
+        parser.feed(response.content.decode())
+        presencial = [f for f in parser.fields if f.get("data-modalidade") == "presencial"]
+        online = [f for f in parser.fields if f.get("data-modalidade") == "online"]
+        self.assertTrue(presencial)
+        self.assertTrue(online)
+        self.assertTrue(all("disabled" in f for f in presencial))
+        self.assertTrue(all("disabled" not in f for f in online))

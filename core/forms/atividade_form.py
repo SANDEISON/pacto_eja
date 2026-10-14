@@ -24,6 +24,7 @@ class ProgramacaoSalaCheckboxSelectMultiple(forms.CheckboxSelectMultiple):
     """Expõe os dados de cada programação para a filtragem no navegador."""
 
     programacoes_atuais = frozenset()
+    modalidades_lotadas = frozenset()
 
     def create_option(self, name, value, *args, **kwargs):
         """Adiciona os metadados usados para agrupar e validar as opções."""
@@ -42,9 +43,13 @@ class ProgramacaoSalaCheckboxSelectMultiple(forms.CheckboxSelectMultiple):
                 and programacao.pk not in self.programacoes_atuais
             )
             option["attrs"]["data-lotada"] = "true" if lotada else "false"
-            if lotada:
+            if lotada or programacao.modalidade in self.modalidades_lotadas:
                 option["attrs"]["disabled"] = True
-                option["attrs"]["title"] = "Esta sala está sem vagas."
+                option["attrs"]["title"] = (
+                    "A quantidade de vagas para esta modalidade foi atingida."
+                    if programacao.modalidade in self.modalidades_lotadas
+                    else "Esta sala está sem vagas."
+                )
         return option
 
 
@@ -83,7 +88,7 @@ class AtividadeForm(BootstrapFormMixin, forms.ModelForm):
     class Meta:
         model = Atividade
         fields = (
-            "tipo", "modalidade", "titulo", "descricao", "endereco", "local", "link", "data_inicio", "data_fim",
+            "tipo", "modalidade", "vagas", "vagas_online", "titulo", "descricao", "endereco", "local", "link", "data_inicio", "data_fim",
             "inscricoes_inicio", "inscricoes_fim", "permite_submissao",
             "modelo_submissao", "submissoes_fim", "ativo",
         )
@@ -613,11 +618,18 @@ class DadosPessoaisInscricaoForm(BootstrapFormMixin, forms.ModelForm):
         atividade = kwargs.pop("atividade")
         inscricao = kwargs.pop("inscricao", None)
         super().__init__(*args, **kwargs)
+        self._atividade = atividade
         self._inscricao_id = inscricao.pk if inscricao else None
+        self.modalidades_lotadas = [
+            m for m, _ in atividade.modalidades_disponiveis
+            if atividade.vagas_por_modalidade(m, self._inscricao_id) <= 0
+        ]
+        self.fields["modalidade_inscricao"].widget.attrs["data-modalidades-lotadas"] = ",".join(self.modalidades_lotadas)
         self._programacoes_atuais = (
             set(inscricao.programacoes.values_list("pk", flat=True)) if inscricao else set()
         )
         self.fields["programacoes"].widget.programacoes_atuais = self._programacoes_atuais
+        self.fields["programacoes"].widget.modalidades_lotadas = self.modalidades_lotadas
         modalidades_atividade = tuple(atividade.modalidades_disponiveis)
         self._modalidades_atividade = {valor for valor, _rotulo in modalidades_atividade}
         self.fields["modalidade_inscricao"].choices = (
@@ -655,6 +667,8 @@ class DadosPessoaisInscricaoForm(BootstrapFormMixin, forms.ModelForm):
             self.fields["refeicoes"].queryset = atividade.refeicoes.order_by(
                 "data", "horario", "tipo"
             )
+        if Inscricao.Modalidade.PRESENCIAL in self.modalidades_lotadas:
+            self.fields["refeicoes"].widget.attrs["disabled"] = True
         if inscricao:
             self.fields["modalidade_inscricao"].initial = inscricao.modalidade
             self.fields["programacoes"].initial = inscricao.programacoes.all()
@@ -685,6 +699,8 @@ class DadosPessoaisInscricaoForm(BootstrapFormMixin, forms.ModelForm):
             return modalidade
         if modalidade not in self._modalidades_atividade:
             raise forms.ValidationError("Esta modalidade não está disponível para a atividade.")
+        if self._atividade.vagas_por_modalidade(modalidade, self._inscricao_id) <= 0:
+            raise forms.ValidationError("A quantidade de vagas para esta modalidade foi atingida.")
         return modalidade
 
     def clean(self):
