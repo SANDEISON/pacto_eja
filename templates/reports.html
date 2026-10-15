@@ -7,6 +7,15 @@
 {% block page_css %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
 <style>
+  #tableParticipants .formacao-academica {
+    min-width: 180px;
+    max-width: 260px;
+  }
+  #tableParticipants .formacao-academica .badge {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.5;
+  }
   .report-header-banner {
     background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 50%, #084298 100%);
     color: #ffffff;
@@ -592,11 +601,21 @@
           </div>
 
           <div class="col-12 col-sm-6 col-lg">
-            <label for="filterRepresentante" class="form-label mb-1 small fw-semibold text-muted">🏛️ Rep. Undime/Consed:</label>
+            <label for="filterRepresentante" class="form-label mb-1 small fw-semibold text-muted">🏛️ Rep. Undime/Consed (autodeclaração):</label>
             <select id="filterRepresentante" class="form-select form-select-sm">
               <option value="">Todos</option>
               <option value="Sim">Sim</option>
               <option value="Não">Não</option>
+            </select>
+          </div>
+
+          <div class="col-12 col-sm-6 col-lg">
+            <label for="filterConfirmacaoUndime" class="form-label mb-1 small fw-semibold text-muted">Undime (decisão administrativa):</label>
+            <select id="filterConfirmacaoUndime" class="form-select form-select-sm">
+              <option value="">Todas as decisões</option>
+              <option value="sim">Sim — vínculo aprovado</option>
+              <option value="nao">Não — vínculo não aprovado</option>
+              <option value="pendente">Sem avaliação administrativa</option>
             </select>
           </div>
 
@@ -715,6 +734,30 @@
     </div>
   </div>
 
+<div class="modal fade" id="confirmacaoUndimeModal" tabindex="-1" aria-labelledby="confirmacaoUndimeTitulo" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <form method="post" class="modal-content">
+      {% csrf_token %}
+      <input type="hidden" name="educador_id" id="confirmacaoUndimeEducador">
+      <div class="modal-header">
+        <h5 class="modal-title" id="confirmacaoUndimeTitulo">Confirmar vínculo com a Undime</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <p class="fw-semibold" id="confirmacaoUndimeNome"></p>
+        <p>Este educador é da Undime?</p>
+        <div id="confirmacaoUndimeStatus" role="status" aria-live="polite" class="small mb-2"></div>
+        <p class="small text-muted mb-0">A decisão será registrada com seu usuário, data e hora.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" name="undime_confirmada" value="nao" class="btn btn-outline-danger">Não, não é da Undime</button>
+        <button type="submit" name="undime_confirmada" value="sim" class="btn btn-success">Sim, é da Undime</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 {% endif %}
 
 </div>
@@ -739,6 +782,48 @@
   // Dataset de Participantes Detalhados
   const readJsonData = (elementId) => JSON.parse(document.getElementById(elementId).textContent);
   const participantsData = readJsonData("participants-data");
+  document.getElementById('confirmacaoUndimeModal')?.addEventListener('show.bs.modal', event => {
+    document.getElementById('confirmacaoUndimeStatus').textContent = '';
+    const id = event.relatedTarget.dataset.educadorId;
+    const participante = participantsData.find(p => String(p.educador_id) === id);
+    document.getElementById('confirmacaoUndimeEducador').value = id;
+    document.getElementById('confirmacaoUndimeNome').textContent = participante?.nome || '';
+  });
+  const undimeForm = document.querySelector('#confirmacaoUndimeModal form');
+  undimeForm?.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (undimeForm.dataset.saving === 'true' || !event.submitter) return;
+    const data = new FormData(undimeForm);
+    data.set('undime_confirmada', event.submitter.value);
+    const buttons = undimeForm.querySelectorAll('button');
+    const status = document.getElementById('confirmacaoUndimeStatus');
+    undimeForm.dataset.saving = 'true';
+    buttons.forEach(button => button.disabled = true);
+    status.className = 'small mb-2 text-muted';
+    status.textContent = 'Salvando avaliação…';
+    try {
+      const response = await fetch(window.location.href, {
+        method: 'POST',
+        body: data,
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin',
+      });
+      if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) {
+        throw new Error('Não foi possível confirmar o salvamento. Tente novamente. Se necessário, atualize a página.');
+      }
+      const registro = await response.json();
+      participantsData.filter(p => p.educador_id === registro.educador_id)
+        .forEach(p => Object.assign(p, registro));
+      applyParticipantFilters();
+      bootstrap.Modal.getInstance(document.getElementById('confirmacaoUndimeModal'))?.hide();
+    } catch (error) {
+      status.className = 'small mb-2 text-danger';
+      status.textContent = error.message || 'Falha ao salvar. Tente novamente.';
+    } finally {
+      undimeForm.dataset.saving = 'false';
+      buttons.forEach(button => button.disabled = false);
+    }
+  });
   const activitiesCatalog = readJsonData("activities-catalog-data");
   const programacoesCatalog = readJsonData("programacoes-catalog-data");
   const selectedActivityId = "{% if atividade_selecionada %}{{ atividade_selecionada.id }}{% else %}{% endif %}";
@@ -1343,6 +1428,7 @@
     const municipio = filterMunicipioEl ? filterMunicipioEl.value : '';
     const modalidade = filterModalidadeEl ? filterModalidadeEl.value : '';
     const representante = filterRepEl ? filterRepEl.value : '';
+    const confirmacaoUndime = document.getElementById('filterConfirmacaoUndime')?.value || '';
     const genero = filterGeneroEl ? filterGeneroEl.value : '';
     const searchTerm = searchInputEl ? searchInputEl.value.toLowerCase().trim() : '';
 
@@ -1357,6 +1443,9 @@
       if (estado && p.estado !== estado && p.sigla_uf !== estado) return false;
       if (municipio && p.municipio !== municipio) return false;
       if (representante && p.representante_undime_consed !== representante) return false;
+      if (confirmacaoUndime === 'sim' && p.undime_confirmada !== true) return false;
+      if (confirmacaoUndime === 'nao' && p.undime_confirmada !== false) return false;
+      if (confirmacaoUndime === 'pendente' && p.undime_confirmada != null) return false;
       if (genero && p.genero !== genero) return false;
 
       if (modalidade) {
@@ -1504,6 +1593,12 @@
       let repBadge = '';
       if (p.representante_undime_consed === 'Sim') {
         repBadge = '<span class="badge bg-success-subtle text-success-emphasis border border-success-subtle"><i class="bi bi-check-circle-fill me-1"></i>Sim</span>';
+        if (p.undime_confirmado_em) {
+          repBadge += `<small class="d-block ${p.undime_confirmada === true ? 'text-success' : 'text-danger'} mt-2">Decisão administrativa — Undime: ${p.undime_confirmada === true ? 'Sim' : 'Não'} — registrado por ${escapeHTML(p.undime_confirmado_por)} em ${escapeHTML(p.undime_confirmado_em)}</small>`;
+        } else {
+          repBadge += '<small class="d-block text-muted mt-2">Decisão administrativa: pendente</small>';
+          repBadge += `<button type="button" class="btn btn-sm btn-outline-success mt-2" data-bs-toggle="modal" data-bs-target="#confirmacaoUndimeModal" data-educador-id="${p.educador_id}">Avaliar vínculo com a Undime</button>`;
+        }
       } else if (p.representante_undime_consed === 'Não') {
         repBadge = '<span class="badge bg-light text-secondary border">Não</span>';
       } else {
@@ -1512,7 +1607,7 @@
 
       const refeicoes = selectedActivityId ? (p.refeicoes_inscrito_atual || []) : (p.refeicoes || []);
       const formacoesHtml = (p.formacoes_academicas || ['N\u00e3o informado'])
-        .map(item => `<span class="badge bg-secondary-subtle text-secondary-emphasis d-block text-start mb-1">${escapeHTML(item)}</span>`)
+        .map(item => `<span class="badge bg-secondary-subtle text-secondary-emphasis d-block text-start mb-1">${item.split(' — ').map(parte => `<span class="d-block">${escapeHTML(parte)}</span>`).join('')}</span>`)
         .join('');
       const refeicoesHtml = refeicoes.length
         ? refeicoes.map(item => `<span class="badge bg-light text-dark border d-block text-start mb-1">${escapeHTML(item)}</span>`).join('')
@@ -1532,9 +1627,9 @@
           <small class="text-muted d-block">${escapeHTML(p.bairro || 'Bairro n\u00e3o informado')}${p.complemento ? ` &mdash; ${escapeHTML(p.complemento)}` : ''}${p.cep ? ` &mdash; CEP ${escapeHTML(p.cep)}` : ''}</small>
           <small class="text-muted d-block">${escapeHTML(p.municipio_residencia || 'N\u00e3o informado')} / ${escapeHTML(p.uf_residencia || 'N\u00e3o informado')}</small>
         </td>
-        <td>${repBadge}</td>
+        <td><small class="d-block text-muted mb-1">Autodeclaração Undime/Consed:</small>${repBadge}</td>
         <td>${atividadeCellHtml}</td>
-        <td>${formacoesHtml}</td>
+        <td class="formacao-academica">${formacoesHtml}</td>
         <td>
           <small class="d-block text-muted">G\u00eanero: <strong>${escapeHTML(p.genero || 'N\u00e3o informado')}</strong></small>
           <small class="d-block text-muted">Cor/Ra\u00e7a: <strong>${escapeHTML(p.cor || 'N\u00e3o informado')}</strong></small>
@@ -1989,6 +2084,7 @@
   const filterModalidade = document.getElementById('filterModalidade');
   if (filterModalidade) filterModalidade.addEventListener('change', applyParticipantFilters);
 
+  document.getElementById('filterConfirmacaoUndime')?.addEventListener('change', applyParticipantFilters);
   const filterRepresentante = document.getElementById('filterRepresentante');
   if (filterRepresentante) filterRepresentante.addEventListener('change', applyParticipantFilters);
 
@@ -2013,6 +2109,7 @@
       if (document.getElementById('filterEstado')) document.getElementById('filterEstado').value = '';
       if (document.getElementById('filterMunicipio')) document.getElementById('filterMunicipio').value = '';
       if (document.getElementById('filterModalidade')) document.getElementById('filterModalidade').value = '';
+      if (document.getElementById('filterConfirmacaoUndime')) document.getElementById('filterConfirmacaoUndime').value = '';
       if (document.getElementById('filterRepresentante')) document.getElementById('filterRepresentante').value = '';
       if (document.getElementById('filterGenero')) document.getElementById('filterGenero').value = '';
       if (document.getElementById('filterDataAtividade')) document.getElementById('filterDataAtividade').value = '';

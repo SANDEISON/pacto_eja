@@ -1,3 +1,6 @@
+from django.contrib import messages
+from django.http import HttpResponseBadRequest, JsonResponse
+from django.shortcuts import get_object_or_404, redirect
 from django.contrib.auth.decorators import user_passes_test
 from django.db.models import Count, F
 from django.utils import timezone
@@ -88,6 +91,16 @@ def dados_basicos_educador(educador):
         rep_label = "Não informado"
 
     registro = {
+        "educador_id": educador.pk,
+        "undime_confirmada": educador.undime_confirmada,
+        "undime_confirmado_por": (
+            educador.undime_confirmado_por.get_full_name()
+            or educador.undime_confirmado_por.get_username()
+        ) if educador.undime_confirmado_por_id else "",
+        "undime_confirmado_em": (
+            timezone.localtime(educador.undime_confirmado_em).strftime("%d/%m/%Y %H:%M:%S")
+            if educador.undime_confirmado_em else ""
+        ),
         "nome": (
             educador.nome_completo
             or usuario.get_full_name()
@@ -206,7 +219,7 @@ def listar_participantes_detalhados(educadores_qs=None, atividade_selecionada_id
         educadores_qs = Educador.objects.all()
 
     educadores = educadores_qs.select_related(
-        "usuario", "genero", "cor_raca", "estado_civil", "endereco__cidade__estado"
+        "usuario", "undime_confirmado_por", "genero", "cor_raca", "estado_civil", "endereco__cidade__estado"
     ).prefetch_related(
         "formacoes__nivel",
         "formacoes__situacao",
@@ -351,6 +364,42 @@ class ReportsView(TemplateView):
     """Apresenta indicadores agregados e a relação detalhada de participantes."""
 
     template_name = "reports.html"
+
+    def post(self, request, *args, **kwargs):
+        try:
+            educador_id = int(request.POST.get("educador_id", ""))
+        except (ValueError, TypeError):
+            return HttpResponseBadRequest("Educador inválido.")
+        decisao = request.POST.get("undime_confirmada")
+        if decisao not in ("sim", "nao"):
+            return HttpResponseBadRequest("Informe se o educador é ou não da Undime.")
+        educador = get_object_or_404(Educador, pk=educador_id)
+        if educador.representante_estado_undime_consed is not True:
+            return HttpResponseBadRequest("A confirmação exige a resposta Sim.")
+        atualizado = Educador.objects.filter(
+            pk=educador.pk,
+            representante_estado_undime_consed=True,
+            undime_confirmado_em__isnull=True,
+        ).update(undime_confirmada=decisao == "sim", undime_confirmado_por=request.user, undime_confirmado_em=timezone.now())
+        if request.headers.get("Accept") == "application/json":
+            educador = Educador.objects.select_related("undime_confirmado_por").get(pk=educador.pk)
+            responsavel = educador.undime_confirmado_por
+            return JsonResponse({
+                "educador_id": educador.pk,
+                "undime_confirmada": educador.undime_confirmada,
+                "undime_confirmado_por": (
+                    responsavel.get_full_name() or responsavel.get_username()
+                ) if responsavel else "",
+                "undime_confirmado_em": (
+                    timezone.localtime(educador.undime_confirmado_em).strftime("%d/%m/%Y %H:%M:%S")
+                    if educador.undime_confirmado_em else ""
+                ),
+            })
+        if atualizado:
+            messages.success(request, "Decisão sobre o vínculo com a Undime registrada com sucesso.")
+        else:
+            messages.info(request, "Este educador já possui uma confirmação.")
+        return redirect(request.get_full_path())
 
     def get_context_data(self, **kwargs):
         """Executa as agregações e entrega estruturas prontas para tabelas e gráficos."""

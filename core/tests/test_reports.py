@@ -365,3 +365,92 @@ class ReportsViewTests(TestCase):
 
 
 
+
+
+class ConfirmacaoUndimeTests(TestCase):
+    def setUp(self):
+        self.admin = get_user_model().objects.create_user(username="admin-undime", is_staff=True)
+        self.usuario = get_user_model().objects.create_user(username="representante-undime")
+        self.educador = self.usuario.educador
+        self.educador.representante_estado_undime_consed = True
+        self.educador.save()
+        self.url = reverse("reports") + "?atividade=1"
+
+    def test_confirma_e_preserva_primeiro_responsavel_e_horario(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(self.url, {"educador_id": self.educador.pk, "undime_confirmada": "sim"})
+        self.assertRedirects(response, self.url, fetch_redirect_response=False)
+        self.educador.refresh_from_db()
+        self.assertEqual(self.educador.undime_confirmado_por, self.admin)
+        self.assertIs(self.educador.undime_confirmada, True)
+        horario = self.educador.undime_confirmado_em
+        self.assertIsNotNone(horario)
+        outro = get_user_model().objects.create_user(username="outro-admin", is_staff=True)
+        self.client.force_login(outro)
+        self.client.post(self.url, {"educador_id": self.educador.pk, "undime_confirmada": "sim"})
+        self.educador.refresh_from_db()
+        self.assertEqual(self.educador.undime_confirmado_por, self.admin)
+        self.assertEqual(self.educador.undime_confirmado_em, horario)
+        from core.views.reports import dados_basicos_educador
+        dados = dados_basicos_educador(self.educador)
+        self.assertEqual(dados["undime_confirmado_por"], self.admin.username)
+        self.assertTrue(dados["undime_confirmado_em"])
+
+    def test_usuario_comum_nao_confirma(self):
+        self.client.force_login(self.usuario)
+        response = self.client.post(self.url, {"educador_id": self.educador.pk, "undime_confirmada": "sim"})
+        self.assertEqual(response.status_code, 302)
+        self.educador.refresh_from_db()
+        self.assertIsNone(self.educador.undime_confirmado_em)
+
+    def test_exige_resposta_sim(self):
+        self.client.force_login(self.admin)
+        for resposta in (False, None):
+            self.educador.representante_estado_undime_consed = resposta
+            self.educador.save()
+            response = self.client.post(self.url, {"educador_id": self.educador.pk, "undime_confirmada": "sim"})
+            self.assertEqual(response.status_code, 400)
+        self.educador.refresh_from_db()
+        self.assertIsNone(self.educador.undime_confirmado_em)
+
+    def test_exige_csrf(self):
+        from django.test import Client
+        client = Client(enforce_csrf_checks=True)
+        client.force_login(self.admin)
+        response = client.post(self.url, {"educador_id": self.educador.pk, "undime_confirmada": "sim"})
+        self.assertEqual(response.status_code, 403)
+
+    def test_registra_decisao_negativa(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(self.url, {"educador_id": self.educador.pk, "undime_confirmada": "nao"})
+        self.assertEqual(response.status_code, 302)
+        self.educador.refresh_from_db()
+        self.assertIs(self.educador.undime_confirmada, False)
+        self.assertEqual(self.educador.undime_confirmado_por, self.admin)
+        self.assertIsNotNone(self.educador.undime_confirmado_em)
+        self.assertIs(self.educador.representante_estado_undime_consed, True)
+
+    def test_exige_decisao_valida(self):
+        self.client.force_login(self.admin)
+        for decisao in (None, "", "invalida"):
+            data = {"educador_id": self.educador.pk}
+            if decisao is not None:
+                data["undime_confirmada"] = decisao
+            self.assertEqual(self.client.post(self.url, data).status_code, 400)
+        self.educador.refresh_from_db()
+        self.assertIsNone(self.educador.undime_confirmado_em)
+
+    def test_salvamento_json_nao_recarrega_relatorio(self):
+        from unittest.mock import patch
+        self.client.force_login(self.admin)
+        with patch("core.views.reports.ReportsView.get_context_data", side_effect=AssertionError("Relatório não deve ser recalculado")):
+            response = self.client.post(
+                self.url,
+                {"educador_id": self.educador.pk, "undime_confirmada": "nao"},
+                HTTP_ACCEPT="application/json",
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertIs(response.json()["undime_confirmada"], False)
+        self.assertEqual(response.json()["undime_confirmado_por"], self.admin.username)
+        self.assertTrue(response.json()["undime_confirmado_em"])
+        self.assertEqual(response.json()["educador_id"], self.educador.pk)

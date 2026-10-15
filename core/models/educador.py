@@ -56,6 +56,22 @@ class Educador(models.Model):
         blank=True,
     )
 
+    undime_confirmada = models.BooleanField(
+        "É da Undime (decisão administrativa)", null=True, blank=True, editable=False,
+    )
+    undime_confirmado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="confirmacoes_undime",
+        null=True,
+        blank=True,
+        editable=False,
+        verbose_name="Undime confirmado por",
+    )
+    undime_confirmado_em = models.DateTimeField(
+        "Undime confirmado em", null=True, blank=True, editable=False,
+    )
+
     class Meta:
         db_table = "core_educador"
         verbose_name = "educador"
