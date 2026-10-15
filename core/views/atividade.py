@@ -4,10 +4,11 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth import get_user_model
+from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
 from django.db.models import Count, Q
 from django.db.models.deletion import ProtectedError
-from django.http import FileResponse, Http404, JsonResponse
+from django.http import FileResponse, Http404, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
@@ -44,6 +45,7 @@ from ..services.comprovante_inscricao import gerar_comprovante_inscricao
 from ..services.frequencia import url_validacao
 from .management_permission_mixin import ManagementPermissionMixin
 from .searchable_list_mixin import SearchableListMixin
+from .inscricao_relatorios import InscricaoRelatoriosMixin
 
 
 class AtividadeListView(ManagementPermissionMixin, SearchableListMixin, ListView):
@@ -395,7 +397,7 @@ def excluir_programacao_sala_atividade(request, pk, programacao_pk):
     )
 
 
-class InscricaoListView(ManagementPermissionMixin, SearchableListMixin, ListView):
+class InscricaoListView(ManagementPermissionMixin, InscricaoRelatoriosMixin, SearchableListMixin, ListView):
     """Lista participantes e trabalhos de uma atividade específica."""
     model = Inscricao
     permission_required = "core.view_inscricao"
@@ -411,13 +413,75 @@ class InscricaoListView(ManagementPermissionMixin, SearchableListMixin, ListView
         self.atividade = get_object_or_404(Atividade, pk=kwargs["pk"])
         return super().dispatch(request, *args, **kwargs)
 
+    def post(self, request, *args, **kwargs):
+        """Registra as decisões administrativas sobre os inscritos nesta atividade."""
+        if not request.user.is_staff:
+            raise PermissionDenied
+        if request.POST.get("acao") == "definir_apresentacao":
+            if not request.user.has_perm("core.change_inscricao"):
+                raise PermissionDenied
+            try:
+                inscricao_id = int(request.POST.get("inscricao_id", ""))
+            except (ValueError, TypeError):
+                return HttpResponseBadRequest("Inscrição inválida.")
+            decisao = request.POST.get("vai_apresentar_trabalho")
+            if decisao not in ("sim", "nao"):
+                return HttpResponseBadRequest("Informe uma indicação válida de apresentação.")
+            inscricao = get_object_or_404(Inscricao, pk=inscricao_id, atividade=self.atividade)
+            vai_apresentar = decisao == "sim"
+            Inscricao.objects.filter(pk=inscricao.pk).exclude(
+                vai_apresentar_trabalho=vai_apresentar,
+            ).update(
+                vai_apresentar_trabalho=vai_apresentar,
+                apresentacao_indicada_por=request.user,
+                apresentacao_indicada_em=timezone.now(),
+            )
+            if request.headers.get("Accept") == "application/json":
+                return JsonResponse({"inscricao_id": inscricao.pk, "vai_apresentar_trabalho": vai_apresentar})
+            messages.success(request, "Indicação de apresentação de trabalho atualizada.")
+            return redirect(request.get_full_path())
+        try:
+            educador_id = int(request.POST.get("educador_id", ""))
+        except (ValueError, TypeError):
+            return HttpResponseBadRequest("Educador inválido.")
+        decisao = request.POST.get("undime_confirmada")
+        if decisao not in ("sim", "nao"):
+            return HttpResponseBadRequest("Informe se o educador é ou não da Undime.")
+        educador = get_object_or_404(Educador, pk=educador_id, usuario__inscricoes_atividades__atividade=self.atividade)
+        if educador.representante_estado_undime_consed is not True:
+            return HttpResponseBadRequest("A confirmação exige a resposta Sim.")
+        atualizado = Educador.objects.filter(
+            pk=educador.pk,
+            representante_estado_undime_consed=True,
+            undime_confirmado_em__isnull=True,
+        ).update(undime_confirmada=decisao == "sim", undime_confirmado_por=request.user, undime_confirmado_em=timezone.now())
+        if request.headers.get("Accept") == "application/json":
+            educador = Educador.objects.select_related("undime_confirmado_por").get(pk=educador.pk)
+            responsavel = educador.undime_confirmado_por
+            return JsonResponse({
+                "educador_id": educador.pk,
+                "undime_confirmada": educador.undime_confirmada,
+                "undime_confirmado_por": (
+                    responsavel.get_full_name() or responsavel.get_username()
+                ) if responsavel else "",
+                "undime_confirmado_em": (
+                    timezone.localtime(educador.undime_confirmado_em).strftime("%d/%m/%Y %H:%M:%S")
+                    if educador.undime_confirmado_em else ""
+                ),
+            })
+        if atualizado:
+            messages.success(request, "Decisão sobre o vínculo com a Undime registrada com sucesso.")
+        else:
+            messages.info(request, "Este educador já possui uma confirmação.")
+        return redirect(request.get_full_path())
+
     def get_queryset(self):
         """Busca inscrições com os relacionamentos usados pela tabela já carregados."""
-        return (
-            super().get_queryset()
+        return self.filtrar_inscricoes(
+            Inscricao.objects.all()
             .filter(atividade=self.atividade)
-            .select_related("usuario", "usuario__educador", "trabalho")
-            .prefetch_related("trabalho__coautores", "refeicoes")
+            .select_related("usuario", "usuario__educador__undime_confirmado_por")
+            .prefetch_related("refeicoes")
         )
 
     def get_context_data(self, **kwargs):

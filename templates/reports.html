@@ -620,6 +620,15 @@
           </div>
 
           <div class="col-12 col-sm-6 col-lg">
+            <label for="filterApresentacao" class="form-label mb-1 small fw-semibold text-muted">Apresentação de trabalho:</label>
+            <select id="filterApresentacao" class="form-select form-select-sm">
+              <option value="">Todos</option>
+              <option value="sim">Sim</option>
+              <option value="nao">Não</option>
+            </select>
+          </div>
+
+          <div class="col-12 col-sm-6 col-lg">
             <label for="filterGenero" class="form-label mb-1 small fw-semibold text-muted">👤 Gênero:</label>
             <select id="filterGenero" class="form-select form-select-sm">
               <option value="">Todos os Gêneros</option>
@@ -688,6 +697,7 @@
               <th>Formação acadêmica</th>
               <th>Gênero, cor/raça e estado civil</th>
               <th>Refeições</th>
+              <th>Apresentação de trabalho</th>
             </tr>
           </thead>
           <tbody id="tableParticipantsBody">
@@ -734,29 +744,6 @@
     </div>
   </div>
 
-<div class="modal fade" id="confirmacaoUndimeModal" tabindex="-1" aria-labelledby="confirmacaoUndimeTitulo" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <form method="post" class="modal-content">
-      {% csrf_token %}
-      <input type="hidden" name="educador_id" id="confirmacaoUndimeEducador">
-      <div class="modal-header">
-        <h5 class="modal-title" id="confirmacaoUndimeTitulo">Confirmar vínculo com a Undime</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-      </div>
-      <div class="modal-body">
-        <p class="fw-semibold" id="confirmacaoUndimeNome"></p>
-        <p>Este educador é da Undime?</p>
-        <div id="confirmacaoUndimeStatus" role="status" aria-live="polite" class="small mb-2"></div>
-        <p class="small text-muted mb-0">A decisão será registrada com seu usuário, data e hora.</p>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button type="submit" name="undime_confirmada" value="nao" class="btn btn-outline-danger">Não, não é da Undime</button>
-        <button type="submit" name="undime_confirmada" value="sim" class="btn btn-success">Sim, é da Undime</button>
-      </div>
-    </form>
-  </div>
-</div>
 
 {% endif %}
 
@@ -782,48 +769,6 @@
   // Dataset de Participantes Detalhados
   const readJsonData = (elementId) => JSON.parse(document.getElementById(elementId).textContent);
   const participantsData = readJsonData("participants-data");
-  document.getElementById('confirmacaoUndimeModal')?.addEventListener('show.bs.modal', event => {
-    document.getElementById('confirmacaoUndimeStatus').textContent = '';
-    const id = event.relatedTarget.dataset.educadorId;
-    const participante = participantsData.find(p => String(p.educador_id) === id);
-    document.getElementById('confirmacaoUndimeEducador').value = id;
-    document.getElementById('confirmacaoUndimeNome').textContent = participante?.nome || '';
-  });
-  const undimeForm = document.querySelector('#confirmacaoUndimeModal form');
-  undimeForm?.addEventListener('submit', async event => {
-    event.preventDefault();
-    if (undimeForm.dataset.saving === 'true' || !event.submitter) return;
-    const data = new FormData(undimeForm);
-    data.set('undime_confirmada', event.submitter.value);
-    const buttons = undimeForm.querySelectorAll('button');
-    const status = document.getElementById('confirmacaoUndimeStatus');
-    undimeForm.dataset.saving = 'true';
-    buttons.forEach(button => button.disabled = true);
-    status.className = 'small mb-2 text-muted';
-    status.textContent = 'Salvando avaliação…';
-    try {
-      const response = await fetch(window.location.href, {
-        method: 'POST',
-        body: data,
-        headers: { 'Accept': 'application/json' },
-        credentials: 'same-origin',
-      });
-      if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) {
-        throw new Error('Não foi possível confirmar o salvamento. Tente novamente. Se necessário, atualize a página.');
-      }
-      const registro = await response.json();
-      participantsData.filter(p => p.educador_id === registro.educador_id)
-        .forEach(p => Object.assign(p, registro));
-      applyParticipantFilters();
-      bootstrap.Modal.getInstance(document.getElementById('confirmacaoUndimeModal'))?.hide();
-    } catch (error) {
-      status.className = 'small mb-2 text-danger';
-      status.textContent = error.message || 'Falha ao salvar. Tente novamente.';
-    } finally {
-      undimeForm.dataset.saving = 'false';
-      buttons.forEach(button => button.disabled = false);
-    }
-  });
   const activitiesCatalog = readJsonData("activities-catalog-data");
   const programacoesCatalog = readJsonData("programacoes-catalog-data");
   const selectedActivityId = "{% if atividade_selecionada %}{{ atividade_selecionada.id }}{% else %}{% endif %}";
@@ -1352,6 +1297,18 @@
     renderActivitiesCatalog();
   };
 
+  function apresentacoesDoParticipante(participante) {
+    return (participante.atividades || []).filter(atividade =>
+      !selectedActivityId || String(atividade.id) === String(selectedActivityId));
+  }
+
+  function textoApresentacao(participante) {
+    return apresentacoesDoParticipante(participante).map(atividade => {
+      const valor = atividade.vai_apresentar_trabalho ? 'Sim' : 'Não';
+      return selectedActivityId ? valor : `${atividade.titulo}: ${valor}`;
+    }).join(', ') || '—';
+  }
+
   // Aplica os filtros na lista de participantes
   function populateActivityFilters() {
     const dateSelect = document.getElementById('filterDataAtividade');
@@ -1429,10 +1386,12 @@
     const modalidade = filterModalidadeEl ? filterModalidadeEl.value : '';
     const representante = filterRepEl ? filterRepEl.value : '';
     const confirmacaoUndime = document.getElementById('filterConfirmacaoUndime')?.value || '';
+    const apresentacao = document.getElementById('filterApresentacao')?.value || '';
     const genero = filterGeneroEl ? filterGeneroEl.value : '';
     const searchTerm = searchInputEl ? searchInputEl.value.toLowerCase().trim() : '';
 
     currentFilteredParticipants = participantsData.filter(p => {
+      if (apresentacao && !apresentacoesDoParticipante(p).some(a => a.vai_apresentar_trabalho === (apresentacao === 'sim'))) return false;
       if (programacaoValue && !(p.programacoes_ids || []).some(id => String(id) === programacaoValue)) return false;
       if (dateValue) {
         const [activityId, date] = dateValue.split('|');
@@ -1550,7 +1509,7 @@
 
     if (totalItems === 0) {
       paginationInfo.innerText = 'Exibindo 0 registros';
-      tBody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted"><i class="bi bi-inbox fs-3 d-block mb-1"></i>Nenhum participante encontrado com os filtros selecionados.</td></tr>';
+      tBody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted"><i class="bi bi-inbox fs-3 d-block mb-1"></i>Nenhum participante encontrado com os filtros selecionados.</td></tr>';
       renderPaginationControls(0, 1);
       return;
     }
@@ -1597,7 +1556,6 @@
           repBadge += `<small class="d-block ${p.undime_confirmada === true ? 'text-success' : 'text-danger'} mt-2">Decisão administrativa — Undime: ${p.undime_confirmada === true ? 'Sim' : 'Não'} — registrado por ${escapeHTML(p.undime_confirmado_por)} em ${escapeHTML(p.undime_confirmado_em)}</small>`;
         } else {
           repBadge += '<small class="d-block text-muted mt-2">Decisão administrativa: pendente</small>';
-          repBadge += `<button type="button" class="btn btn-sm btn-outline-success mt-2" data-bs-toggle="modal" data-bs-target="#confirmacaoUndimeModal" data-educador-id="${p.educador_id}">Avaliar vínculo com a Undime</button>`;
         }
       } else if (p.representante_undime_consed === 'Não') {
         repBadge = '<span class="badge bg-light text-secondary border">Não</span>';
@@ -1636,6 +1594,7 @@
           <small class="d-block text-muted">Estado civil: <strong>${escapeHTML(p.estado_civil || 'N\u00e3o informado')}</strong></small>
         </td>
         <td>${refeicoesHtml}</td>
+        <td>${apresentacoesDoParticipante(p).map(a => `<div class="mb-1">${selectedActivityId ? '' : `<small class="d-block">${escapeHTML(a.titulo)}</small>`}<span class="badge ${a.vai_apresentar_trabalho ? 'text-bg-success' : 'text-bg-secondary'}">${a.vai_apresentar_trabalho ? 'Sim' : 'Não'}</span></div>`).join('') || '—'}</td>
       `;
       tBody.appendChild(tr);
     });
@@ -1915,7 +1874,7 @@
         p.representante_undime_consed, p.escola, p.funcao, p.tempo, formacoes,
         selectedActivityId ? (currentActivity?.titulo || '') : (p.atividades || []).map(item => item.titulo).join(', '),
         selectedActivityId ? p.modalidade_inscrito_atual : (p.modalidades_inscricao || []).join(', '),
-        programas[0] || 'Nenhuma', refeicoes, dataInscricao,
+        programas[0] || 'Nenhuma', refeicoes, textoApresentacao(p), dataInscricao,
       ];
       const rows = [base];
       programas.slice(1).forEach(programa => {
@@ -1930,7 +1889,7 @@
       'Estado civil', 'CEP', 'Logradouro, n\u00famero e bairro', 'UF', 'Munic\u00edpio',
       'Representante Undime/Consed', 'Escola', 'Fun\u00e7\u00e3o na EJA', 'Tempo de atua\u00e7\u00e3o',
       'Forma\u00e7\u00e3o acad\u00eamica', 'Atividade(s)', 'Modalidade de participa\u00e7\u00e3o',
-      'Programa\u00e7\u00f5es/salas', 'Refei\u00e7\u00f5es', 'Data(s) da inscri\u00e7\u00e3o',
+      'Programa\u00e7\u00f5es/salas', 'Refei\u00e7\u00f5es', 'Apresentação de trabalho', 'Data(s) da inscri\u00e7\u00e3o',
     ];
     csvContent = '\uFEFF' + headers.map(cleanField).join(';') + '\n';
     dataToExport.forEach(p => {
@@ -2085,6 +2044,7 @@
   if (filterModalidade) filterModalidade.addEventListener('change', applyParticipantFilters);
 
   document.getElementById('filterConfirmacaoUndime')?.addEventListener('change', applyParticipantFilters);
+  document.getElementById('filterApresentacao')?.addEventListener('change', applyParticipantFilters);
   const filterRepresentante = document.getElementById('filterRepresentante');
   if (filterRepresentante) filterRepresentante.addEventListener('change', applyParticipantFilters);
 
@@ -2110,6 +2070,7 @@
       if (document.getElementById('filterMunicipio')) document.getElementById('filterMunicipio').value = '';
       if (document.getElementById('filterModalidade')) document.getElementById('filterModalidade').value = '';
       if (document.getElementById('filterConfirmacaoUndime')) document.getElementById('filterConfirmacaoUndime').value = '';
+      document.getElementById('filterApresentacao').value = '';
       if (document.getElementById('filterRepresentante')) document.getElementById('filterRepresentante').value = '';
       if (document.getElementById('filterGenero')) document.getElementById('filterGenero').value = '';
       if (document.getElementById('filterDataAtividade')) document.getElementById('filterDataAtividade').value = '';

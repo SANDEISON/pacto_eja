@@ -374,7 +374,15 @@ class ConfirmacaoUndimeTests(TestCase):
         self.educador = self.usuario.educador
         self.educador.representante_estado_undime_consed = True
         self.educador.save()
-        self.url = reverse("reports") + "?atividade=1"
+        from django.contrib.auth.models import Permission
+        self.permissao = Permission.objects.get(content_type__app_label="core", codename="view_inscricao")
+        self.admin.user_permissions.add(self.permissao)
+        agora = timezone.now()
+        self.atividade = Atividade.objects.create(
+            titulo="Evento Undime", data_inicio=agora, data_fim=agora, inscricoes_fim=agora,
+        )
+        Inscricao.objects.create(usuario=self.usuario, atividade=self.atividade)
+        self.url = reverse("atividade_inscricoes", args=[self.atividade.pk])
 
     def test_confirma_e_preserva_primeiro_responsavel_e_horario(self):
         self.client.force_login(self.admin)
@@ -386,6 +394,7 @@ class ConfirmacaoUndimeTests(TestCase):
         horario = self.educador.undime_confirmado_em
         self.assertIsNotNone(horario)
         outro = get_user_model().objects.create_user(username="outro-admin", is_staff=True)
+        outro.user_permissions.add(self.permissao)
         self.client.force_login(outro)
         self.client.post(self.url, {"educador_id": self.educador.pk, "undime_confirmada": "sim"})
         self.educador.refresh_from_db()
@@ -399,7 +408,7 @@ class ConfirmacaoUndimeTests(TestCase):
     def test_usuario_comum_nao_confirma(self):
         self.client.force_login(self.usuario)
         response = self.client.post(self.url, {"educador_id": self.educador.pk, "undime_confirmada": "sim"})
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 403)
         self.educador.refresh_from_db()
         self.assertIsNone(self.educador.undime_confirmado_em)
 
@@ -454,3 +463,39 @@ class ConfirmacaoUndimeTests(TestCase):
         self.assertEqual(response.json()["undime_confirmado_por"], self.admin.username)
         self.assertTrue(response.json()["undime_confirmado_em"])
         self.assertEqual(response.json()["educador_id"], self.educador.pk)
+
+    def test_relatorio_somente_consulta(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(reverse("reports"), {"educador_id": self.educador.pk, "undime_confirmada": "sim"})
+        self.assertEqual(response.status_code, 405)
+        response = self.client.get(reverse("reports"))
+        self.assertNotContains(response, 'id="confirmacaoUndimeModal"')
+        self.assertNotContains(response, 'data-bs-target="#confirmacaoUndimeModal"')
+        self.educador.refresh_from_db()
+        self.assertIsNone(self.educador.undime_confirmado_em)
+
+    def test_botao_nas_inscricoes_e_resultado_apos_avaliar(self):
+        self.client.force_login(self.admin)
+        response = self.client.get(self.url)
+        self.assertContains(response, "Avaliar vínculo com a Undime")
+        self.assertContains(response, 'id="confirmacaoUndimeModal"')
+        self.assertNotContains(response, 'name="exportar"')
+        self.client.post(self.url, {"educador_id": self.educador.pk, "undime_confirmada": "nao"})
+        response = self.client.get(self.url)
+        self.assertNotContains(response, "Avaliar vínculo com a Undime")
+        self.assertContains(response, "Decisão administrativa — Undime: Não")
+
+    def test_nao_avalia_educador_sem_inscricao_na_atividade(self):
+        self.client.force_login(self.admin)
+        outro = get_user_model().objects.create_user(username="sem-inscricao-undime")
+        outro.educador.representante_estado_undime_consed = True
+        outro.educador.save()
+        response = self.client.post(self.url, {"educador_id": outro.educador.pk, "undime_confirmada": "sim"})
+        self.assertEqual(response.status_code, 404)
+
+    def test_consulta_sem_staff_nao_pode_avaliar(self):
+        self.usuario.user_permissions.add(self.permissao)
+        self.client.force_login(self.usuario)
+        self.assertNotContains(self.client.get(self.url), "Avaliar vínculo com a Undime")
+        response = self.client.post(self.url, {"educador_id": self.educador.pk, "undime_confirmada": "sim"})
+        self.assertEqual(response.status_code, 403)

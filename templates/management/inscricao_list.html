@@ -4,8 +4,60 @@
 {% block page_title %}Inscrições da atividade{% endblock %}
 {% block breadcrumb %}<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Início</a></li><li class="breadcrumb-item"><a href="{% url 'atividade_list' %}">Eventos e atividades</a></li><li class="breadcrumb-item active">Inscrições</li>{% endblock %}
 {% block content %}<div class="management-shell"><a class="btn btn-outline-primary mb-3" href="{% url 'frequencia_index' %}">Frequência por sala e turno</a><section class="management-card">
-  <header class="management-toolbar"><div><strong>{{ atividade.titulo }}</strong><small class="d-block text-body-secondary">{{ page_obj.paginator.count }} inscrição{{ page_obj.paginator.count|pluralize }}</small></div><form method="get" class="management-search"><i class="bi bi-search"></i><input type="search" name="q" value="{{ search_query }}" placeholder="Pesquisar participante ou trabalho"><button class="btn btn-outline-primary" type="submit">Pesquisar</button></form></header>
-  <div class="table-responsive"><table class="table management-table align-middle mb-0"><thead><tr><th>Participante</th><th>CPF</th><th>Modalidade</th><th>Refeições</th><th>Inscrição</th><th>Trabalho</th><th>Autores e coautores</th></tr></thead><tbody>
-  {% for inscricao in inscricoes %}<tr><td><strong>{{ inscricao.usuario.get_full_name|default:inscricao.usuario.username }}</strong><small class="d-block text-body-secondary">{{ inscricao.usuario.email }}</small></td><td>{{ inscricao.usuario.educador.cpf|default:"—" }}</td><td>{{ inscricao.get_modalidade_display }}</td><td>{{ inscricao.refeicoes.all|join:", "|default:"—" }}</td><td>{{ inscricao.inscrito_em|date:"d/m/Y H:i" }}</td><td>{% if inscricao.trabalho %}{% if perms.core.view_trabalho %}<a href="{% url 'trabalho_download' inscricao.trabalho.pk %}"><i class="bi bi-file-earmark-pdf"></i> {{ inscricao.trabalho.titulo }}</a>{% else %}{{ inscricao.trabalho.titulo }}{% endif %}{% else %}—{% endif %}</td><td>{% if inscricao.trabalho %}{{ inscricao.trabalho.coautores.all|join:", "|default:"—" }}{% else %}—{% endif %}</td></tr>{% empty %}<tr><td colspan="7" class="empty-state">Nenhuma inscrição encontrada.</td></tr>{% endfor %}
-  </tbody></table></div>{% include "management/_pagination.html" %}
-</section></div>{% endblock %}
+  <header class="management-toolbar"><div><strong>{{ atividade.titulo }}</strong><small class="d-block text-body-secondary">{{ page_obj.paginator.count }} inscrição{{ page_obj.paginator.count|pluralize }}</small></div></header>
+  <form method="get" class="p-3 border-bottom bg-body-tertiary" id="inscricao-filtros">
+    <h2 class="h6">Filtros</h2>
+    <div class="row g-3">{% include "management/_field.html" with field=filtros_form.modalidade column="col-12 col-md-6 col-xl-4" %}
+      {% include "management/_field.html" with field=filtros_form.representante column="col-12 col-md-6 col-xl-4" %}
+      {% include "management/_field.html" with field=filtros_form.undime column="col-12 col-md-6 col-xl-4" %}
+      {% include "management/_field.html" with field=filtros_form.apresentacao column="col-12 col-md-6 col-xl-4" %}
+      {% include "management/_field.html" with field=filtros_form.q column="col-12" %}</div>
+    <div class="d-flex flex-wrap gap-2 align-items-center mt-3">
+      <button class="btn btn-primary" type="submit">Aplicar filtros</button>
+      <a class="btn btn-outline-secondary" href="{% url 'atividade_inscricoes' atividade.pk %}">Limpar filtros</a>
+    </div>
+  </form>
+  <div class="table-responsive"><table class="table management-table align-middle mb-0"><thead><tr><th>Participante</th><th>CPF</th><th>Vínculo com a Undime</th><th>Modalidade</th><th>Refeições</th><th>Inscrição</th><th>Apresentação de trabalho</th></tr></thead><tbody>
+  {% for inscricao in inscricoes %}<tr><td><strong>{{ inscricao.usuario.get_full_name|default:inscricao.usuario.username }}</strong><small class="d-block text-body-secondary">{{ inscricao.usuario.email }}</small></td><td>{{ inscricao.usuario.educador.cpf|default:"—" }}</td><td>{% include "management/_undime_inscricao.html" with educador=inscricao.usuario.educador %}</td><td>{{ inscricao.get_modalidade_display }}</td><td>{{ inscricao.refeicoes.all|join:", "|default:"—" }}</td><td>{{ inscricao.inscrito_em|date:"d/m/Y H:i" }}</td><td>{% include "management/_apresentacao_inscricao.html" %}</td></tr>{% empty %}<tr><td colspan="7" class="empty-state">Nenhuma inscrição encontrada.</td></tr>{% endfor %}
+  </tbody></table></div>{% if is_paginated %}<nav class="management-pagination" aria-label="Paginação"><span>Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span><div>{% if page_obj.has_previous %}<a class="btn btn-sm btn-outline-secondary" href="?{{ filtros_query }}&amp;page={{ page_obj.previous_page_number }}">Anterior</a>{% endif %}{% if page_obj.has_next %}<a class="btn btn-sm btn-outline-secondary" href="?{{ filtros_query }}&amp;page={{ page_obj.next_page_number }}">Próxima</a>{% endif %}</div></nav>{% endif %}
+</section></div>
+{% if request.user.is_staff %}{% include "management/_undime_modal.html" %}{% endif %}
+{% endblock %}
+
+{% block page_js %}
+<script>
+  document.addEventListener('submit', async event => {
+    const form = event.target.closest('[data-apresentacao-form]');
+    if (!form) return;
+    event.preventDefault();
+    const button = form.querySelector('button');
+    if (button.disabled) return;
+    const status = form.querySelector('[data-apresentacao-status]');
+    button.disabled = true;
+    status.textContent = 'Salvando…';
+    try {
+      const response = await fetch(window.location.href, {
+        method: 'POST', body: new FormData(form), headers: {'Accept': 'application/json'},
+      });
+      if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) throw new Error();
+      const registro = await response.json();
+      const ativo = registro.vai_apresentar_trabalho;
+      button.textContent = ativo ? 'Sim' : 'Não';
+      button.classList.toggle('btn-success', ativo);
+      button.classList.toggle('btn-outline-success', !ativo);
+      button.setAttribute('aria-pressed', String(ativo));
+      button.setAttribute('aria-label', ativo ? 'Remover indicação de apresentação de trabalho' : 'Indicar que vai apresentar trabalho');
+      form.elements.vai_apresentar_trabalho.value = ativo ? 'nao' : 'sim';
+      status.textContent = ativo ? 'Apresentação indicada' : 'Ainda não indicado';
+    } catch (_) {
+      status.textContent = 'Não foi possível salvar. Tente novamente.';
+    } finally {
+      button.disabled = false;
+    }
+  });
+  document.getElementById('confirmacaoUndimeModal')?.addEventListener('show.bs.modal', event => {
+    document.getElementById('confirmacaoUndimeEducador').value = event.relatedTarget.dataset.educadorId;
+    document.getElementById('confirmacaoUndimeNome').textContent = event.relatedTarget.dataset.nome;
+  });
+</script>
+{% endblock %}

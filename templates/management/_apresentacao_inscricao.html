@@ -1,0 +1,12 @@
+{% if request.user.is_staff and perms.core.change_inscricao %}
+  <form method="post" data-apresentacao-form>
+    {% csrf_token %}
+    <input type="hidden" name="acao" value="definir_apresentacao">
+    <input type="hidden" name="inscricao_id" value="{{ inscricao.pk }}">
+    <input type="hidden" name="vai_apresentar_trabalho" value="{% if inscricao.vai_apresentar_trabalho %}nao{% else %}sim{% endif %}">
+    <button type="submit" class="btn btn-sm {% if inscricao.vai_apresentar_trabalho %}btn-success{% else %}btn-outline-success{% endif %}" aria-pressed="{{ inscricao.vai_apresentar_trabalho|yesno:'true,false' }}" aria-label="{% if inscricao.vai_apresentar_trabalho %}Remover indicação de apresentação de trabalho{% else %}Indicar que vai apresentar trabalho{% endif %}">{{ inscricao.vai_apresentar_trabalho|yesno:"Sim,Não" }}</button>
+    <small class="d-block text-muted mt-1" data-apresentacao-status role="status">{% if inscricao.vai_apresentar_trabalho %}Apresentação indicada{% else %}Ainda não indicado{% endif %}</small>
+  </form>
+{% else %}
+  {% if inscricao.vai_apresentar_trabalho %}<span class="badge text-bg-success">Sim</span>{% else %}<span class="text-muted">Não</span>{% endif %}
+{% endif %}

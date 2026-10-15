@@ -1,0 +1,23 @@
+<div class="modal fade" id="confirmacaoUndimeModal" tabindex="-1" aria-labelledby="confirmacaoUndimeTitulo" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <form method="post" class="modal-content">
+      {% csrf_token %}
+      <input type="hidden" name="educador_id" id="confirmacaoUndimeEducador">
+      <div class="modal-header">
+        <h5 class="modal-title" id="confirmacaoUndimeTitulo">Confirmar vínculo com a Undime</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <p class="fw-semibold" id="confirmacaoUndimeNome"></p>
+        <p>Este educador é da Undime?</p>
+        <div id="confirmacaoUndimeStatus" role="status" aria-live="polite" class="small mb-2"></div>
+        <p class="small text-muted mb-0">A decisão será registrada com seu usuário, data e hora.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" name="undime_confirmada" value="nao" class="btn btn-outline-danger">Não, não é da Undime</button>
+        <button type="submit" name="undime_confirmada" value="sim" class="btn btn-success">Sim, é da Undime</button>
+      </div>
+    </form>
+  </div>
+</div>

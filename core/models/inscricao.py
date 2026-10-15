@@ -52,6 +52,17 @@ class Inscricao(models.Model):
     )
     inscrito_em = models.DateTimeField(auto_now_add=True)
     alterado_em = models.DateTimeField("última alteração da inscrição", null=True, blank=True)
+    vai_apresentar_trabalho = models.BooleanField(
+        "vai apresentar trabalho", default=False, editable=False,
+    )
+    apresentacao_indicada_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="indicacoes_apresentacao", editable=False,
+        verbose_name="apresentação indicada por",
+    )
+    apresentacao_indicada_em = models.DateTimeField(
+        "apresentação indicada em", null=True, blank=True, editable=False,
+    )
 
     class Meta:
         db_table = "core_inscricao"

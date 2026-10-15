@@ -5,8 +5,9 @@ from ..models import Inscricao
 
 @admin.register(Inscricao)
 class InscricaoAdmin(admin.ModelAdmin):
-    list_display = ("usuario", "atividade", "modalidade", "inscrito_em")
+    list_display = ("usuario", "atividade", "modalidade", "vai_apresentar_trabalho", "inscrito_em")
     list_filter = (
+        "vai_apresentar_trabalho",
         "modalidade",
         "atividade",
         "programacoes__sala",
@@ -22,4 +23,4 @@ class InscricaoAdmin(admin.ModelAdmin):
     )
     list_select_related = ("usuario", "atividade")
     filter_horizontal = ("refeicoes", "programacoes")
-    readonly_fields = ("inscrito_em",)
+    readonly_fields = ("inscrito_em", "vai_apresentar_trabalho", "apresentacao_indicada_por", "apresentacao_indicada_em")

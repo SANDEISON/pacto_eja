@@ -1,0 +1,15 @@
+{% if educador.representante_estado_undime_consed == True %}
+  <small class="d-block">Autodeclaração Undime/Consed: Sim</small>
+  {% if educador.undime_confirmado_em %}
+    <small class="d-block">Decisão administrativa — Undime: {{ educador.undime_confirmada|yesno:"Sim,Não" }}</small>
+    <small class="d-block text-muted">Registrado por {{ educador.undime_confirmado_por.get_full_name|default:educador.undime_confirmado_por.username }} em {{ educador.undime_confirmado_em|date:"d/m/Y H:i:s" }}</small>
+  {% elif request.user.is_staff %}
+    <button type="button" class="btn btn-sm btn-outline-success mt-2" data-bs-toggle="modal" data-bs-target="#confirmacaoUndimeModal" data-educador-id="{{ educador.pk }}" data-nome="{{ inscricao.usuario.get_full_name|default:inscricao.usuario.username }}">Avaliar vínculo com a Undime</button>
+  {% else %}
+    <small class="d-block text-muted">Decisão administrativa: pendente</small>
+  {% endif %}
+{% elif educador.representante_estado_undime_consed == False %}
+  <small>Autodeclaração Undime/Consed: Não</small>
+{% else %}
+  <small class="text-muted">Não informado</small>
+{% endif %}
