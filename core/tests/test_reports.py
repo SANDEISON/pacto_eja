@@ -23,6 +23,46 @@ from core.models import (
 )
 
 
+class ReportsQueryCountTests(TestCase):
+    def test_consultas_nao_crescem_com_participantes_da_mesma_atividade(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+        from core.views.reports import listar_participantes_detalhados
+
+        agora = timezone.now()
+        atividade = Atividade.objects.create(
+            titulo="Relatório de desempenho", vagas=100,
+            data_inicio=agora, data_fim=agora,
+            inscricoes_fim=agora + timezone.timedelta(days=1),
+        )
+        sala = Sala.objects.create(nome="Sala de teste")
+        tematica = TematicaSala.objects.create(nome="Temática de teste")
+        for turno in ("manha", "tarde"):
+            atividade.programacoes.add(ProgramacaoSala.objects.create(
+                sala=sala, tematica=tematica, data=agora.date(), turno=turno,
+                modalidade="presencial",
+                quantidade_max_participantes=100,
+            ))
+
+        def inscrever(indice):
+            usuario = get_user_model().objects.create_user(username=f"desempenho-{indice}")
+            inscricao = Inscricao.objects.create(usuario=usuario, atividade=atividade)
+            inscricao.programacoes.set(atividade.programacoes.all())
+
+        inscrever(0)
+        with CaptureQueriesContext(connection) as consultas_iniciais:
+            participantes = listar_participantes_detalhados()
+        self.assertTrue(participantes[0]["atividades"][0]["inscricoes_abertas"])
+
+        for indice in range(1, 6):
+            inscrever(indice)
+        with CaptureQueriesContext(connection) as consultas_ampliadas:
+            participantes = listar_participantes_detalhados()
+        self.assertEqual(len(participantes), 6)
+        self.assertEqual(len(consultas_iniciais), len(consultas_ampliadas))
+        self.assertTrue(all(p["atividades"][0]["inscricoes_abertas"] for p in participantes))
+
+
 class ReportsViewTests(TestCase):
     """Garante acesso e serialização segura dos dados dos relatórios."""
 

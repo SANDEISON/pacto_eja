@@ -1,5 +1,5 @@
 from django.contrib.auth.decorators import user_passes_test
-from django.db.models import Count, F
+from django.db.models import Count, F, Prefetch
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView
@@ -224,12 +224,17 @@ def listar_participantes_detalhados(educadores_qs=None, atividade_selecionada_id
         "funcoes__educador_escola__escola",
         "funcoes__educador_escola__funcao",
         "usuario__inscricoes_atividades__atividade",
-        "usuario__inscricoes_atividades__atividade__programacoes",
+        "usuario__inscricoes_atividades__atividade__inscricoes",
+        Prefetch(
+            "usuario__inscricoes_atividades__atividade__programacoes",
+            queryset=ProgramacaoSala.objects.annotate(_total_inscritos=Count("inscricoes")),
+        ),
         "usuario__inscricoes_atividades__programacoes__sala",
         "usuario__inscricoes_atividades__programacoes__tematica",
         "usuario__inscricoes_atividades__refeicoes",
     )
     participantes = []
+    status_por_atividade = {}
 
     for educador in educadores:
         inscricoes = list(educador.usuario.inscricoes_atividades.all())
@@ -252,7 +257,10 @@ def listar_participantes_detalhados(educadores_qs=None, atividade_selecionada_id
 
         for insc in inscricoes:
             atividade = insc.atividade
-            status_insc = "abertas" if atividade.inscricoes_abertas else "encerradas"
+            if atividade.pk not in status_por_atividade:
+                status_por_atividade[atividade.pk] = atividade.inscricoes_abertas
+            inscricoes_abertas = status_por_atividade[atividade.pk]
+            status_insc = "abertas" if inscricoes_abertas else "encerradas"
             status_ativo = "ativa" if atividade.ativo else "inativa"
 
             atividades_ids.append(atividade.id)
@@ -324,7 +332,7 @@ def listar_participantes_detalhados(educadores_qs=None, atividade_selecionada_id
                     else ""
                 ),
                 "ativo": atividade.ativo,
-                "inscricoes_abertas": atividade.inscricoes_abertas,
+                "inscricoes_abertas": inscricoes_abertas,
             })
 
         dados_atividades = {
