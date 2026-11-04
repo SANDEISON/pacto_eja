@@ -42,7 +42,6 @@ from ..models import (
 )
 from ..validators import somente_digitos
 from ..services.comprovante_inscricao import gerar_comprovante_inscricao
-from ..services.frequencia import url_validacao
 from .management_permission_mixin import ManagementPermissionMixin
 from .searchable_list_mixin import SearchableListMixin
 from .inscricao_relatorios import InscricaoRelatoriosMixin
@@ -873,7 +872,7 @@ def comprovante_inscricao(request, pk):
         atividade_id=pk,
         usuario=request.user,
     )
-    arquivo = gerar_comprovante_inscricao(inscricao, request.build_absolute_uri(url_validacao(inscricao)))
+    arquivo = gerar_comprovante_inscricao(inscricao)
     return FileResponse(
         arquivo,
         as_attachment=True,

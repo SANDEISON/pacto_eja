@@ -1,17 +1,100 @@
-import secrets
-from datetime import timedelta
-
 from django.contrib import messages
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core import signing
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db import transaction
-from django.db.models import Count, Prefetch, Q
+from django.db.models import Count, Prefetch, Q, Value
+from django.db.models.functions import Concat
+from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import get_script_prefix, reverse
 from django.utils import timezone
+from django.utils.text import slugify
 
-from ..models import Atividade, ChamadaFrequencia, Frequencia, Inscricao, ProgramacaoSala
-from ..services.frequencia import pode_operar, registrar
+from ..models import Atividade, Frequencia, Inscricao, ProgramacaoSala
+from ..services.frequencia import pode_operar, registrar_direto
+from ..services.lista_inscritos import gerar_lista_inscritos
+from ..services.frequencia_qr_pdf import gerar_frequencia_qr_pdf
+
+
+@login_required
+def frequencia_qr_pdf(request, pk, programacao_pk):
+    atividade = get_object_or_404(Atividade, pk=pk)
+    programacao = get_object_or_404(
+        atividade.programacoes.select_related("sala", "tematica"),
+        pk=programacao_pk, modalidade="presencial",
+    )
+    if not pode_operar(request.user, programacao):
+        raise PermissionDenied
+    token = signing.Signer(salt="frequencia.programacao").sign(f"{pk}:{programacao_pk}")
+    caminho = reverse("frequencia_confirmar_presencial", args=[token]).removeprefix(get_script_prefix())
+    url = f"{settings.PUBLIC_BASE_URL.rstrip('/')}/{caminho}"
+    return FileResponse(
+        gerar_frequencia_qr_pdf(atividade, programacao, url), as_attachment=True,
+        filename=f"frequencia-qrcode-{slugify(str(programacao))}.pdf",
+        content_type="application/pdf",
+    )
+
+
+@login_required
+def frequencia_confirmar_presencial(request, token):
+    try:
+        identidade = signing.Signer(salt="frequencia.programacao").unsign(token)
+        pk, programacao_pk = identidade.split(":")
+        if not pk.isdecimal() or not programacao_pk.isdecimal():
+            raise ValueError
+    except (signing.BadSignature, ValueError):
+        return render(request, "frequencia/confirmar_presencial.html",
+                      {"erro": "QR Code inválido."}, status=400)
+    atividade = get_object_or_404(Atividade, pk=pk)
+    programacao = get_object_or_404(
+        atividade.programacoes.select_related("sala", "tematica"),
+        pk=programacao_pk, modalidade="presencial",
+    )
+    inscricao = Inscricao.objects.filter(
+        atividade=atividade, programacoes=programacao,
+        usuario=request.user, modalidade="presencial",
+    ).first()
+    contexto = {"atividade": atividade, "programacao": programacao}
+    if inscricao is None:
+        contexto["erro"] = "Você não possui inscrição presencial nesta programação. Entre com a conta utilizada na inscrição."
+        return render(request, "frequencia/confirmar_presencial.html", contexto, status=403)
+    contexto["confirmada"] = Frequencia.objects.filter(inscricao=inscricao, programacao=programacao).exists()
+    agora = timezone.now()
+    if not contexto["confirmada"]:
+        if not atividade.ativo:
+            contexto["erro"] = "O evento está inativo."
+        elif timezone.localdate(agora) != programacao.data or not atividade.data_inicio <= agora <= atividade.data_fim:
+            contexto["erro"] = "A confirmação está disponível somente na data da programação e durante o evento."
+    if request.method == "POST" and not contexto.get("erro"):
+        try:
+            registrar_direto(inscricao, programacao, request.user, Frequencia.Metodo.QR_PROPRIO)
+            return redirect("frequencia_confirmar_presencial", token=token)
+        except ValidationError as erro:
+            contexto["erro"] = " ".join(erro.messages)
+    return render(request, "frequencia/confirmar_presencial.html", contexto)
+
+
+@login_required
+def frequencia_inscritos_pdf(request, pk, programacao_pk, modalidade):
+    if modalidade not in Inscricao.Modalidade.values:
+        raise Http404
+    atividade = get_object_or_404(Atividade, pk=pk)
+    programacao = get_object_or_404(
+        atividade.programacoes.select_related("sala", "responsavel", "tematica"),
+        pk=programacao_pk,
+    )
+    if not pode_operar(request.user, programacao):
+        raise PermissionDenied
+    inscricoes = Inscricao.objects.filter(
+        atividade=atividade, programacoes=programacao, modalidade=modalidade,
+    ).select_related("usuario")
+    return FileResponse(
+        gerar_lista_inscritos(atividade, programacao, modalidade, inscricoes),
+        as_attachment=True,
+        filename=f"inscritos-{slugify(str(programacao))}.pdf",
+        content_type="application/pdf",
+    )
 
 
 @login_required
@@ -33,48 +116,33 @@ def frequencia_sala(request, pk, programacao_pk):
     programacao = get_object_or_404(atividade.programacoes.select_related("sala", "responsavel"), pk=programacao_pk)
     if not pode_operar(request.user, programacao):
         raise PermissionDenied
+    pode_acionar = atividade.ativo
     if request.method == "POST":
         try:
+            if not atividade.ativo:
+                raise ValidationError("O evento está inativo.")
             acao = request.POST.get("acao")
-            if acao == "abrir":
-                minutos = int(request.POST.get("minutos", "30"))
-                if not 1 <= minutos <= 720:
-                    raise ValueError
-                if timezone.localdate() != programacao.data:
-                    raise ValidationError("Abra a chamada na data da programação.")
-                if not atividade.ativo:
-                    raise ValidationError("O evento está inativo.")
-                with transaction.atomic():
-                    ProgramacaoSala.objects.select_for_update().get(pk=programacao.pk)
-                    ChamadaFrequencia.objects.filter(atividade=atividade, programacao=programacao, encerrada_em__isnull=True).update(encerrada_em=timezone.now())
-                    ChamadaFrequencia.objects.create(
-                        atividade=atividade, programacao=programacao, responsavel=request.user,
-                        expira_em=timezone.now() + timedelta(minutes=minutos),
-                        codigo=secrets.token_hex(4).upper() if programacao.modalidade == "online" else "",
-                    )
-                messages.success(request, "Chamada aberta. A abertura de uma nova chamada invalida o código anterior.")
-            elif acao == "encerrar":
-                with transaction.atomic():
-                    chamada = get_object_or_404(ChamadaFrequencia.objects.select_for_update(), pk=request.POST.get("chamada"), atividade=atividade, programacao=programacao)
-                    chamada.encerrada_em = timezone.now()
-                    chamada.save(update_fields=["encerrada_em"])
-                messages.success(request, "Chamada encerrada.")
-            elif acao == "manual" and programacao.modalidade == "presencial":
-                chamada = get_object_or_404(ChamadaFrequencia, pk=request.POST.get("chamada"), atividade=atividade, programacao=programacao)
+            if acao == "manual":
                 inscricao = get_object_or_404(Inscricao, pk=request.POST.get("inscricao"), atividade=atividade, programacoes=programacao)
-                _, criada = registrar(inscricao, chamada, request.user, Frequencia.Metodo.MANUAL)
+                _, criada = registrar_direto(inscricao, programacao, request.user, Frequencia.Metodo.MANUAL)
                 messages.success(request, "Presença registrada." if criada else "Presença já registrada.")
-        except (ValidationError, ValueError) as erro:
-            messages.error(request, " ".join(erro.messages) if isinstance(erro, ValidationError) else "Informe um prazo entre 1 e 720 minutos.")
+        except ValidationError as erro:
+            messages.error(request, " ".join(erro.messages))
         return redirect("frequencia_sala", pk=pk, programacao_pk=programacao_pk)
-    chamada = ChamadaFrequencia.objects.filter(atividade=atividade, programacao=programacao).order_by("-aberta_em", "-pk").first()
     inscricoes = Inscricao.objects.filter(atividade=atividade, programacoes=programacao).select_related("usuario").order_by("usuario__first_name", "usuario__username")
     if request.GET.get("q"):
-        q = request.GET["q"]
-        inscricoes = inscricoes.filter(Q(usuario__first_name__icontains=q) | Q(usuario__last_name__icontains=q) | Q(usuario__email__icontains=q))
+        q = " ".join(request.GET["q"].split())
+        if q:
+            filtro = Q(_nome_completo__icontains=q) | Q(usuario__educador__nome_completo__icontains=q)
+            cpf = "".join(c for c in q if c.isdecimal())
+            if cpf and all(c.isdecimal() or c in ".- " for c in q):
+                filtro |= Q(usuario__educador__cpf__icontains=cpf)
+            inscricoes = inscricoes.annotate(
+                _nome_completo=Concat("usuario__first_name", Value(" "), "usuario__last_name"),
+            ).filter(filtro)
     registros = Frequencia.objects.filter(inscricao__atividade=atividade, programacao=programacao).select_related("inscricao__usuario", "registrada_por")
     presentes = set(registros.values_list("inscricao_id", flat=True))
-    return render(request, "frequencia/sala.html", {"atividade": atividade, "programacao": programacao, "chamada": chamada, "participantes": [(i, i.pk in presentes) for i in inscricoes], "registros": registros})
+    return render(request, "frequencia/sala.html", {"atividade": atividade, "programacao": programacao, "pode_acionar": pode_acionar, "participantes": [(i, i.pk in presentes) for i in inscricoes], "registros": registros})
 
 
 @login_required
@@ -86,26 +154,21 @@ def frequencia_validar(request, token):
     except signing.BadSignature:
         return render(request, "frequencia/validar.html", {"erro": "QR Code inválido."}, status=400)
     inscricao = get_object_or_404(Inscricao.objects.select_related("usuario", "atividade"), pk=pk)
-    chamadas = list(ChamadaFrequencia.objects.filter(
-        atividade=inscricao.atividade, programacao__in=inscricao.programacoes.all(),
-        programacao__modalidade="presencial", encerrada_em__isnull=True,
-        aberta_em__lte=timezone.now(), expira_em__gt=timezone.now(),
-    ).select_related("programacao__sala"))
-    chamadas = [c for c in chamadas if pode_operar(request.user, c.programacao)]
-    # Não expõe os dados nominais do participante para quem apenas possui o QR.
-    if not chamadas:
-        raise PermissionDenied("Nenhuma chamada presencial aberta sob sua responsabilidade para esta inscrição.")
+    programacoes = [p for p in inscricao.programacoes.select_related("sala").filter(modalidade="presencial")
+                    if inscricao.atividade.ativo and pode_operar(request.user, p)]
+    if not programacoes:
+        raise PermissionDenied("Nenhuma sala presencial sob sua responsabilidade para esta inscrição.")
     if request.method == "POST":
-        chamada = next((c for c in chamadas if str(c.pk) == request.POST.get("chamada")), None)
-        if chamada is None:
+        programacao = next((p for p in programacoes if str(p.pk) == request.POST.get("programacao")), None)
+        if programacao is None:
             raise PermissionDenied
         try:
-            _, criada = registrar(inscricao, chamada, request.user, Frequencia.Metodo.QR)
+            _, criada = registrar_direto(inscricao, programacao, request.user, Frequencia.Metodo.QR)
             messages.success(request, "Presença registrada." if criada else "Presença já registrada.")
         except ValidationError as erro:
             messages.error(request, " ".join(erro.messages))
-        return redirect("frequencia_sala", pk=inscricao.atividade_id, programacao_pk=chamada.programacao_id)
-    return render(request, "frequencia/validar.html", {"inscricao": inscricao, "chamadas": chamadas})
+        return redirect("frequencia_sala", pk=inscricao.atividade_id, programacao_pk=programacao.pk)
+    return render(request, "frequencia/validar.html", {"inscricao": inscricao, "programacoes": programacoes})
 
 
 @login_required
@@ -114,18 +177,10 @@ def frequencia_online(request, pk, programacao_pk):
     programacao = get_object_or_404(inscricao.atividade.programacoes, pk=programacao_pk, modalidade="online")
     erro = ""
     if request.method == "POST":
-        codigo = request.POST.get("codigo", "").strip().upper()
-        chamada = ChamadaFrequencia.objects.filter(
-            atividade_id=pk, programacao=programacao, codigo=codigo,
-            encerrada_em__isnull=True, aberta_em__lte=timezone.now(), expira_em__gt=timezone.now(),
-        ).order_by("-pk").first() if codigo else None
-        if chamada is None:
-            erro = "Código inválido, expirado ou de outra programação."
-        else:
-            try:
-                _, criada = registrar(inscricao, chamada, request.user, Frequencia.Metodo.ONLINE, codigo=codigo)
-                messages.success(request, "Presença confirmada." if criada else "Presença já confirmada.")
-                return redirect("frequencia_index")
-            except ValidationError as exc:
-                erro = " ".join(exc.messages)
+        try:
+            _, criada = registrar_direto(inscricao, programacao, request.user, Frequencia.Metodo.ONLINE)
+            messages.success(request, "Presença confirmada." if criada else "Presença já confirmada.")
+            return redirect("frequencia_index")
+        except ValidationError as exc:
+            erro = " ".join(exc.messages)
     return render(request, "frequencia/online.html", {"inscricao": inscricao, "programacao": programacao, "erro": erro})

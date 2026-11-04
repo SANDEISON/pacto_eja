@@ -7,8 +7,6 @@ from django.contrib.staticfiles import finders
 from django.db.models import Case, IntegerField, Value, When
 from django.utils import timezone
 from reportlab.lib import colors
-from reportlab.graphics.barcode.qr import QrCodeWidget
-from reportlab.graphics.shapes import Drawing
 from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
@@ -26,7 +24,6 @@ from reportlab.platypus import (
 )
 
 from ..models import ProgramacaoSala
-from .frequencia import url_validacao
 
 
 AZUL = colors.HexColor("#087FE5")
@@ -70,7 +67,7 @@ def _rodape(canvas, documento):
     canvas.restoreState()
 
 
-def gerar_comprovante_inscricao(inscricao, validacao_url=None):
+def gerar_comprovante_inscricao(inscricao):
     """Gera um comprovante nominal em PDF para uma inscrição confirmada."""
     atividade = inscricao.atividade
     usuario = inscricao.usuario
@@ -150,17 +147,10 @@ def gerar_comprovante_inscricao(inscricao, validacao_url=None):
     elementos = []
     codigo = f"INS-{inscricao.inscrito_em:%Y}-{inscricao.pk:06d}"
     nome = usuario.get_full_name().strip() or usuario.get_username()
-    qr = QrCodeWidget(validacao_url or url_validacao(inscricao), barLevel="M")
-    x0, y0, x1, y1 = qr.getBounds()
-    tamanho = 34 * mm
-    desenho = Drawing(tamanho, tamanho, transform=[tamanho / (x1-x0), 0, 0, tamanho / (y1-y0), 0, 0])
-    desenho.add(qr)
-    desenho.hAlign = "CENTER"
     logo = finders.find("img/ufpb-unesco-eja.png")
     imagem = Image(logo, width=76 * mm, height=38.4 * mm) if logo else Spacer(1, 1)
-    cabecalho = Table([[imagem, [desenho, Paragraph("QR Code de presença", estilos["pequeno"])]]], colWidths=(110 * mm, 52 * mm))
-    cabecalho.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("ALIGN", (0, 0), (-1, -1), "CENTER")]))
-    elementos.extend((cabecalho, Spacer(1, 3 * mm)))
+    imagem.hAlign = "CENTER"
+    elementos.extend((imagem, Spacer(1, 3 * mm)))
 
     elementos.extend(
         (
@@ -216,8 +206,8 @@ def gerar_comprovante_inscricao(inscricao, validacao_url=None):
     )
     elementos.append(tabela)
     elementos.extend((Spacer(1, 2 * mm), Paragraph(
-        "No presencial, apresente o QR Code ao responsável em cada sala para confirmar sua presença. "
-        "No on-line, acesse Frequência no sistema e informe o código anunciado durante a transmissão.",
+        "No presencial, solicite ao responsável da sala a confirmação da sua presença. "
+        "No on-line, acesse Frequência no sistema e confirme sua presença na programação.",
         estilos["pequeno"],
     )))
 

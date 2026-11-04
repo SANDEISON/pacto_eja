@@ -2,10 +2,14 @@ from django.urls import path
 from django.views.generic import RedirectView
 
 from . import views
+from .views.atividade_inscricao_pdf import atividade_inscricao_pdf
 from .views import frequencia as frequencia_views
 
 
 urlpatterns = [
+    path("frequencia/<int:pk>/salas/<int:programacao_pk>/qrcode/pdf/", frequencia_views.frequencia_qr_pdf, name="frequencia_qr_pdf"),
+    path("frequencia/presencial/<str:token>/", frequencia_views.frequencia_confirmar_presencial, name="frequencia_confirmar_presencial"),
+    path("frequencia/<int:pk>/salas/<int:programacao_pk>/inscritos/<str:modalidade>/pdf/", frequencia_views.frequencia_inscritos_pdf, name="frequencia_inscritos_pdf"),
     path("frequencia/", frequencia_views.frequencia_index, name="frequencia_index"),
     path("frequencia/validar/<str:token>/", frequencia_views.frequencia_validar, name="frequencia_validar"),
     path("frequencia/<int:pk>/salas/<int:programacao_pk>/", frequencia_views.frequencia_sala, name="frequencia_sala"),
@@ -38,6 +42,7 @@ urlpatterns = [
     path("erro/<int:status_code>/", views.error_preview, name="error_preview"),
     path("administracao/usuarios/", views.UserListView.as_view(), name="user_list"),
     path("administracao/atividades/", views.AtividadeListView.as_view(), name="atividade_list"),
+    path("administracao/atividades/<int:pk>/inscricao/pdf/", atividade_inscricao_pdf, name="atividade_inscricao_pdf"),
     path("administracao/atividades/cadastrar/", views.AtividadeCreateView.as_view(), name="atividade_create"),
     path("administracao/atividades/<int:pk>/editar/", views.AtividadeUpdateView.as_view(), name="atividade_update"),
     path("administracao/atividades/<int:pk>/adicionar-sala/", views.adicionar_sala_atividade, name="atividade_add_room"),

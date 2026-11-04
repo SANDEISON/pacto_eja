@@ -29,6 +29,65 @@ class FrequenciaTests(TestCase):
     def sala_url(self, programacao=None):
         return reverse("frequencia_sala", args=[self.atividade.pk, (programacao or self.presencial).pk])
 
+    def test_busca_participantes_por_nome_ou_cpf(self):
+        from core.models import Educador
+
+        self.participante.first_name = "Maria"
+        self.participante.last_name = "Silva Santos"
+        self.participante.save()
+        Educador.objects.filter(usuario=self.participante).update(nome_completo="Maria Silva Santos", cpf="52998224725")
+        Educador.objects.filter(usuario=self.outro).update(nome_completo="Outra Pessoa", cpf="11144477735")
+        self.client.force_login(self.responsavel)
+        for busca in ("maria", "Silva Santos", "Maria Silva", "52998224725", "529.982.247-25", "  Maria   Silva  ", "   "):
+            with self.subTest(busca=busca):
+                resposta = self.client.get(self.sala_url(), {"q": busca})
+                self.assertEqual([i.pk for i, _ in resposta.context["participantes"]], [self.inscricao.pk])
+        for busca in ("111.444.777-35", "Nome inexistente", "Pessoa 529", "99999999999"):
+            with self.subTest(busca=busca):
+                resposta = self.client.get(self.sala_url(), {"q": busca})
+                self.assertEqual(resposta.context["participantes"], [])
+
+    def test_dashboard_responsavel_acessa_chamada_sem_inscricao_e_com_inscricoes_encerradas(self):
+        self.client.force_login(self.responsavel)
+        response = self.client.get(reverse("dashboard"))
+        self.assertContains(response, self.atividade.titulo)
+        self.assertContains(response, "Você é responsável pela frequência")
+        self.assertContains(response, f'href="{self.sala_url()}"', count=1)
+        self.assertContains(response, f'href="{self.sala_url(self.online)}"', count=1)
+        self.assertEqual(self.client.get(self.sala_url()).status_code, 200)
+        self.presencial.responsavel = self.outro
+        self.presencial.save(update_fields=["responsavel"])
+        response = self.client.get(reverse("dashboard"))
+        self.assertNotContains(response, f'href="{self.sala_url()}"')
+        self.assertContains(response, f'href="{self.sala_url(self.online)}"')
+        self.client.force_login(self.participante)
+        self.assertNotContains(self.client.get(reverse("dashboard")), "Gerenciar frequência")
+
+    def test_dashboard_frequencia_online_apenas_para_inscrito_durante_evento(self):
+        self.client.force_login(self.participante)
+        url = reverse("frequencia_online", args=[self.atividade.pk, self.online.pk])
+        self.assertNotContains(self.client.get(reverse("dashboard")), f'href="{url}"')
+        self.inscricao.modalidade = "online"
+        self.inscricao.save(update_fields=["modalidade"])
+        self.inscricao.programacoes.set([self.online])
+        self.assertContains(self.client.get(reverse("dashboard")), f'href="{url}"')
+        self.assertEqual(self.client.get(url).status_code, 200)
+        agora = timezone.now()
+        for inicio, fim in (
+            (agora + timedelta(hours=1), agora + timedelta(hours=2)),
+            (agora - timedelta(hours=2), agora - timedelta(hours=1)),
+        ):
+            with self.subTest(inicio=inicio):
+                self.atividade.data_inicio = inicio
+                self.atividade.data_fim = fim
+                self.atividade.save(update_fields=["data_inicio", "data_fim"])
+                self.assertNotContains(self.client.get(reverse("dashboard")), f'href="{url}"')
+        self.atividade.data_inicio = agora - timedelta(hours=1)
+        self.atividade.data_fim = agora + timedelta(hours=1)
+        self.atividade.save(update_fields=["data_inicio", "data_fim"])
+        self.client.force_login(self.outro)
+        self.assertNotContains(self.client.get(reverse("dashboard")), f'href="{url}"')
+
     def test_index_exibe_capacidade_e_saldo_para_responsavel_e_participante(self):
         self.client.force_login(self.responsavel)
         response = self.client.get(reverse("frequencia_index"))
@@ -72,7 +131,7 @@ class FrequenciaTests(TestCase):
         self.assertContains(self.client.get(url_validacao(self.inscricao)), "Sala 1")
         self.assertEqual(Frequencia.objects.count(), 0)
         for _ in range(2):
-            self.assertEqual(self.client.post(url_validacao(self.inscricao), {"chamada": self.chamada.pk}).status_code, 302)
+            self.assertEqual(self.client.post(url_validacao(self.inscricao), {"programacao": self.presencial.pk}).status_code, 302)
         registro = Frequencia.objects.get()
         self.assertEqual(registro.programacao, self.presencial)
         self.assertEqual(registro.registrada_por, self.responsavel)
@@ -97,48 +156,6 @@ class FrequenciaTests(TestCase):
             registrar(self.inscricao, self.chamada, self.responsavel, "manual")
         self.assertEqual(Frequencia.objects.count(), 0)
 
-    def test_chamada_permissao_data_e_manual(self):
-        self.client.force_login(self.outro)
-        self.assertEqual(self.client.post(self.sala_url(), {"acao": "abrir"}).status_code, 403)
-        self.client.force_login(self.responsavel)
-        self.assertContains(self.client.get(self.sala_url()), "Chamada aberta")
-        self.client.post(self.sala_url(), {"acao": "manual", "chamada": self.chamada.pk, "inscricao": self.inscricao.pk})
-        self.assertEqual(Frequencia.objects.get().metodo, "manual")
-        self.presencial.data = timezone.localdate() + timedelta(days=1)
-        self.presencial.save()
-        self.client.post(self.sala_url(), {"acao": "abrir"})
-        self.assertEqual(ChamadaFrequencia.objects.count(), 1)
-
-    def test_codigo_online_expira_e_nao_aceita_outra_sala(self):
-        self.inscricao.modalidade = "online"
-        self.inscricao.save()
-        self.inscricao.programacoes.set([self.online])
-        self.client.force_login(self.responsavel)
-        self.client.post(self.sala_url(self.online), {"acao": "abrir", "minutos": "5"})
-        chamada = ChamadaFrequencia.objects.get(programacao=self.online)
-        self.assertTrue(chamada.codigo)
-        url = reverse("frequencia_online", args=[self.atividade.pk, self.online.pk])
-        self.client.force_login(self.outro)
-        self.assertEqual(self.client.post(url, {"codigo": chamada.codigo}).status_code, 404)
-        self.client.force_login(self.participante)
-        self.assertContains(self.client.post(url, {"codigo": "ERRADO"}), "Código inválido")
-        self.assertEqual(Frequencia.objects.count(), 0)
-        self.client.post(url, {"codigo": chamada.codigo.lower()})
-        self.client.post(url, {"codigo": chamada.codigo})
-        self.assertEqual(Frequencia.objects.count(), 1)
-        self.assertEqual(Frequencia.objects.get().metodo, "online")
-        chamada.expira_em = timezone.now() - timedelta(seconds=1)
-        chamada.save()
-        self.assertContains(self.client.post(url, {"codigo": chamada.codigo}), "Código inválido")
-
-    def test_renovacao_invalida_chamada_anterior(self):
-        self.client.force_login(self.responsavel)
-        self.client.post(self.sala_url(), {"acao": "abrir", "minutos": "5"})
-        self.chamada.refresh_from_db()
-        self.assertIsNotNone(self.chamada.encerrada_em)
-        with self.assertRaises(ValidationError):
-            registrar(self.inscricao, self.chamada, self.responsavel, "qr")
-
     def test_presenca_separada_por_sala_e_rejeita_chamada_de_outro_evento(self):
         segunda = ProgramacaoSala.objects.create(sala=self.presencial.sala, tematica=self.presencial.tematica, data=self.presencial.data, turno="tarde", modalidade="presencial", responsavel=self.responsavel, quantidade_max_participantes=50)
         self.atividade.programacoes.add(segunda)
@@ -161,14 +178,6 @@ class FrequenciaTests(TestCase):
         self.presencial.responsavel = self.outro
         self.presencial.full_clean()
 
-    def test_chamada_encerrada_nao_registra_e_get_nao_abre_chamada(self):
-        self.client.force_login(self.responsavel)
-        self.client.get(self.sala_url(), {"acao": "abrir"})
-        self.assertEqual(ChamadaFrequencia.objects.count(), 1)
-        self.client.post(self.sala_url(), {"acao": "encerrar", "chamada": self.chamada.pk})
-        with self.assertRaises(ValidationError):
-            registrar(self.inscricao, self.chamada, self.responsavel, "manual")
-
     def test_codigo_online_validado_tambem_no_servico(self):
         self.inscricao.modalidade = "online"
         self.inscricao.save()
@@ -178,13 +187,77 @@ class FrequenciaTests(TestCase):
             registrar(self.inscricao, chamada, self.participante, "online", codigo="ERRADO")
         self.assertEqual(Frequencia.objects.count(), 0)
 
-    def test_painel_e_pdf_com_qr_inscricao_existente(self):
-        from unittest.mock import patch
-        from core.services.comprovante_inscricao import QrCodeWidget
+    def test_painel_e_pdf_sem_qr_inscricao_existente(self):
         self.client.force_login(self.participante)
-        self.assertContains(self.client.get(reverse("frequencia_index")), "Minha participação")
-        with patch("core.services.comprovante_inscricao.QrCodeWidget", wraps=QrCodeWidget) as qr:
-            response = self.client.get(reverse("inscricao_comprovante", args=[self.atividade.pk]))
+        pagina = self.client.get(reverse("frequencia_index"))
+        self.assertContains(pagina, "Minha participação")
+        self.assertNotContains(pagina, "com QR Code")
+        response = self.client.get(reverse("inscricao_comprovante", args=[self.atividade.pk]))
         self.assertEqual(response.status_code, 200)
         self.assertTrue(b"".join(response.streaming_content).startswith(b"%PDF"))
-        self.assertEqual(qr.call_args.args[0], "http://testserver" + url_validacao(self.inscricao))
+
+    def test_confirmacao_direta_presencial_e_online_sem_abertura(self):
+        ChamadaFrequencia.objects.all().delete()
+        self.client.force_login(self.responsavel)
+        for programacao in (self.presencial, self.online):
+            self.inscricao.modalidade = programacao.modalidade
+            self.inscricao.save(update_fields=["modalidade"])
+            self.inscricao.programacoes.set([programacao])
+            ProgramacaoSala.objects.filter(pk=programacao.pk).update(data=timezone.localdate() - timedelta(days=2))
+            pagina = self.client.get(self.sala_url(programacao))
+            self.assertContains(pagina, 'value="manual"')
+            for texto in ('value="abrir"', 'value="encerrar"', 'name="codigo"', 'name="minutos"'):
+                self.assertNotContains(pagina, texto)
+            for _ in range(2):
+                self.client.post(self.sala_url(programacao), {"acao": "manual", "inscricao": self.inscricao.pk})
+            registro = Frequencia.objects.get(programacao=programacao)
+            self.assertEqual(registro.registrada_por, self.responsavel)
+            self.assertEqual(registro.metodo, "manual")
+            self.assertFalse(registro.chamada.codigo)
+        self.assertEqual(Frequencia.objects.count(), 2)
+        self.assertEqual(ChamadaFrequencia.objects.count(), 2)
+
+    def test_online_sem_codigo_e_sem_abertura(self):
+        ChamadaFrequencia.objects.all().delete()
+        self.inscricao.modalidade = "online"
+        self.inscricao.save(update_fields=["modalidade"])
+        self.inscricao.programacoes.set([self.online])
+        url = reverse("frequencia_online", args=[self.atividade.pk, self.online.pk])
+        self.client.force_login(self.outro)
+        self.assertEqual(self.client.post(url).status_code, 404)
+        self.client.force_login(self.participante)
+        self.assertNotContains(self.client.get(url), 'name="codigo"')
+        self.assertFalse(ChamadaFrequencia.objects.exists())
+        for _ in range(2):
+            self.assertEqual(self.client.post(url).status_code, 302)
+        registro = Frequencia.objects.get()
+        self.assertEqual(registro.metodo, "online")
+        self.assertEqual(registro.registrada_por, self.participante)
+        self.assertEqual(ChamadaFrequencia.objects.count(), 1)
+        self.assertFalse(registro.chamada.codigo)
+
+    def test_registro_direto_exige_permissao_evento_ativo_e_inscricao_correta(self):
+        from core.services.frequencia import registrar_direto
+        ChamadaFrequencia.objects.all().delete()
+        for usuario, programacao, metodo in (
+            (self.outro, self.presencial, "manual"),
+            (self.participante, self.presencial, "qr"),
+            (self.responsavel, self.online, "manual"),
+        ):
+            with self.assertRaises(ValidationError):
+                registrar_direto(self.inscricao, programacao, usuario, metodo)
+        self.atividade.ativo = False
+        self.atividade.save(update_fields=["ativo"])
+        with self.assertRaises(ValidationError):
+            registrar_direto(self.inscricao, self.presencial, self.responsavel, "manual")
+        self.assertFalse(Frequencia.objects.exists())
+        self.assertFalse(ChamadaFrequencia.objects.exists())
+
+    def test_qr_sem_abertura_previa(self):
+        ChamadaFrequencia.objects.all().delete()
+        self.client.force_login(self.responsavel)
+        url = url_validacao(self.inscricao)
+        self.assertContains(self.client.get(url), "Sala 1")
+        self.assertFalse(ChamadaFrequencia.objects.exists())
+        self.client.post(url, {"programacao": self.presencial.pk})
+        self.assertEqual(Frequencia.objects.get().metodo, "qr")

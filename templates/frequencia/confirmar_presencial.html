@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Confirmar presença presencial | Pacto EJA{% endblock %}
+{% block page_title %}Confirmar presença presencial{% endblock %}
+{% block content %}
+<section class="management-card p-4">
+  {% if atividade %}<h2>{{ atividade.titulo }}</h2><p>{{ programacao }}</p><p>{{ programacao.tematica }}</p>{% endif %}
+  <p>Participante: <strong>{{ request.user.get_full_name|default:request.user.username }}</strong></p>
+  {% if erro %}<div class="alert alert-danger" role="alert">{{ erro }}</div>
+  {% elif confirmada %}<div class="alert alert-success" role="status">Sua presença nesta programação já está confirmada.</div>
+  {% else %}
+  <p>Confirme que você está presente nesta sala para registrar sua frequência.</p>
+  <form method="post">{% csrf_token %}<button type="submit" class="btn btn-primary">Confirmar minha presença</button></form>
+  {% endif %}
+  <a class="btn btn-link mt-3" href="{% url 'frequencia_index' %}">Ver minhas frequências</a>
+</section>
+{% endblock %}

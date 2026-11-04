@@ -43,6 +43,10 @@ CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
 # Public path used by the STI reverse proxy. The proxy must strip this prefix
 # before forwarding the request to Gunicorn.
 FORCE_SCRIPT_NAME = os.environ.get("DJANGO_FORCE_SCRIPT_NAME", "").rstrip("/") or None
+# Canonical public address, including the deployment prefix, for shared PDFs.
+PUBLIC_BASE_URL = os.environ.get(
+    "DJANGO_PUBLIC_BASE_URL", "https://www.ce.ufpb.br/catedraunescoeja/eventos"
+).strip().rstrip("/")
 
 INSTALLED_APPS = [
     "django_components",

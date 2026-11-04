@@ -1,4 +1,5 @@
 import secrets
+from datetime import datetime, time, timedelta
 
 from django.core import signing
 from django.core.exceptions import ValidationError
@@ -6,7 +7,21 @@ from django.db import transaction
 from django.urls import reverse
 from django.utils import timezone
 
-from ..models import ChamadaFrequencia, Frequencia
+from ..models import ChamadaFrequencia, Frequencia, ProgramacaoSala
+
+
+@transaction.atomic
+def registrar_direto(inscricao, programacao, usuario, metodo):
+    """Registra presença sem exigir abertura prévia ou código de transmissão."""
+    ProgramacaoSala.objects.select_for_update().get(pk=programacao.pk)
+    chamada = ChamadaFrequencia.objects.create(
+        atividade=inscricao.atividade, programacao=programacao, responsavel=usuario,
+        expira_em=timezone.make_aware(datetime.combine(timezone.localdate() + timedelta(days=1), time.min)),
+    )
+    registro, criada = registrar(inscricao, chamada, usuario, metodo)
+    if not criada:
+        chamada.delete()
+    return registro, criada
 
 
 def token_inscricao(inscricao):
@@ -42,9 +57,20 @@ def registrar(inscricao, chamada, usuario, metodo, codigo=None):
     if metodo == Frequencia.Metodo.ONLINE:
         if programacao.modalidade != "online" or usuario.pk != inscricao.usuario_id:
             raise ValidationError("Confirmação on-line inválida.")
-        if not codigo or not chamada.codigo or not secrets.compare_digest(chamada.codigo, codigo):
+        if chamada.codigo and (not codigo or not secrets.compare_digest(chamada.codigo, codigo)):
             raise ValidationError("Código de presença inválido.")
-    elif metodo not in (Frequencia.Metodo.QR, Frequencia.Metodo.MANUAL) or programacao.modalidade != "presencial" or not pode_operar(usuario, programacao):
+    elif metodo == Frequencia.Metodo.QR_PROPRIO:
+        agora = timezone.now()
+        if programacao.modalidade != "presencial" or usuario.pk != inscricao.usuario_id:
+            raise ValidationError("Somente o próprio inscrito presencial pode confirmar sua presença.")
+        if (timezone.localdate(agora) != programacao.data
+                or not chamada.atividade.data_inicio <= agora <= chamada.atividade.data_fim):
+            raise ValidationError("A confirmação está disponível somente na data da programação e durante o evento.")
+    elif (
+        metodo not in (Frequencia.Metodo.QR, Frequencia.Metodo.MANUAL)
+        or (metodo == Frequencia.Metodo.QR and programacao.modalidade != "presencial")
+        or not pode_operar(usuario, programacao)
+    ):
         raise ValidationError("Você não pode registrar presença nesta sala.")
     return Frequencia.objects.get_or_create(
         inscricao=inscricao, programacao=programacao,

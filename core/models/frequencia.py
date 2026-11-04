@@ -14,13 +14,17 @@ class ChamadaFrequencia(models.Model):
 
     @property
     def aberta(self):
-        return self.encerrada_em is None and self.aberta_em <= timezone.now() < self.expira_em
+        return (
+            self.encerrada_em is None
+            and self.aberta_em <= timezone.now() < self.expira_em
+        )
 
 
 class Frequencia(models.Model):
     class Metodo(models.TextChoices):
         QR = "qr", "QR Code presencial"
-        MANUAL = "manual", "Chamada presencial manual"
+        QR_PROPRIO = "qr_proprio", "Autoconfirmação presencial por QR Code"
+        MANUAL = "manual", "Chamada manual"
         ONLINE = "online", "Código on-line"
 
     inscricao = models.ForeignKey("Inscricao", on_delete=models.PROTECT, related_name="frequencias")
