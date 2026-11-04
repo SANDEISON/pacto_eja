@@ -41,10 +41,10 @@
             {% if atividade.inscricao_usuario %}
               <div class="activity-registration-panel">
                 <div class="activity-registration-status"><span class="registration-ok"><i class="bi bi-check-circle-fill"></i> Inscrição confirmada</span></div>
+                {% if atividade.inscricao_usuario.modalidade == 'online' and atividade.acesso_evento_disponivel %}
+                  <a class="btn btn-primary w-100" href="{% url 'frequencia_index' %}#participacao-{{ atividade.pk }}"><i class="bi bi-camera-video" aria-hidden="true"></i> Confirmar presença e acessar evento</a>
+                {% endif %}
                 <div class="activity-registration-actions">
-                  {% for programacao in atividade.programacoes_frequencia %}
-                    <a class="btn btn-primary btn-sm activity-action w-100" style="grid-column: 1 / -1" href="{% url 'frequencia_online' atividade.pk programacao.pk %}"><i class="bi bi-check2-square" aria-hidden="true"></i><span>Registrar frequência on-line{% if atividade.programacoes_frequencia|length > 1 %} — {{ programacao.sala }} · {{ programacao.get_turno_display }} · {{ programacao.data|date:"d/m" }}{% endif %}</span></a>
-                  {% endfor %}
                   <a class="btn btn-sm activity-action activity-action-receipt" href="{% url 'inscricao_comprovante' atividade.pk %}"><i class="bi bi-file-earmark-check"></i><span>Emitir comprovante de inscrição</span></a>
                   {% if atividade.periodo_inscricoes_aberto %}
                     <a class="btn btn-sm activity-action activity-action-edit" href="{% url 'atividade_inscricao' atividade.pk %}"><i class="bi bi-pencil-square"></i><span>Editar inscrição</span></a>

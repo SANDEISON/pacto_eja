@@ -29,6 +29,34 @@ class FrequenciaTests(TestCase):
     def sala_url(self, programacao=None):
         return reverse("frequencia_sala", args=[self.atividade.pk, (programacao or self.presencial).pk])
 
+    def test_cancelar_presenca_restaura_estado_e_permite_nova_confirmacao(self):
+        registrar(self.inscricao, self.chamada, self.responsavel, "manual")
+        self.client.force_login(self.responsavel)
+        self.assertContains(self.client.get(self.sala_url()), "Cancelar presença")
+        resposta = self.client.post(self.sala_url(), {"acao": "cancelar", "inscricao": self.inscricao.pk})
+        self.assertEqual(resposta.status_code, 302)
+        self.assertFalse(self.inscricao.frequencias.exists())
+        self.assertTrue(ChamadaFrequencia.objects.filter(pk=self.chamada.pk).exists())
+        self.assertTrue(self.inscricao.programacoes.filter(pk=self.presencial.pk).exists())
+        self.assertContains(self.client.get(self.sala_url()), "Não confirmada")
+        self.client.post(self.sala_url(), {"acao": "cancelar", "inscricao": self.inscricao.pk})
+        self.client.post(self.sala_url(), {"acao": "manual", "inscricao": self.inscricao.pk})
+        self.assertEqual(self.inscricao.frequencias.count(), 1)
+
+    def test_cancelar_presenca_exige_permissao_e_evento_correto(self):
+        from core.services.frequencia import cancelar_presenca
+        registrar(self.inscricao, self.chamada, self.responsavel, "manual")
+        self.client.force_login(self.outro)
+        self.assertEqual(self.client.post(self.sala_url(), {"acao": "cancelar", "inscricao": self.inscricao.pk}).status_code, 403)
+        with self.assertRaises(ValidationError):
+            cancelar_presenca(self.inscricao, self.presencial, self.outro)
+        self.client.force_login(self.responsavel)
+        self.assertEqual(self.client.post(self.sala_url(self.online), {"acao": "cancelar", "inscricao": self.inscricao.pk}).status_code, 404)
+        self.atividade.ativo = False
+        self.atividade.save(update_fields=["ativo"])
+        self.client.post(self.sala_url(), {"acao": "cancelar", "inscricao": self.inscricao.pk})
+        self.assertEqual(self.inscricao.frequencias.count(), 1)
+
     def test_busca_participantes_por_nome_ou_cpf(self):
         from core.models import Educador
 
@@ -229,12 +257,36 @@ class FrequenciaTests(TestCase):
         self.assertNotContains(self.client.get(url), 'name="codigo"')
         self.assertFalse(ChamadaFrequencia.objects.exists())
         for _ in range(2):
-            self.assertEqual(self.client.post(url).status_code, 302)
+            resposta = self.client.post(url)
+            self.assertContains(resposta, "Inscrição confirmada.")
+            self.assertContains(resposta, "O link de acesso on-line ainda não foi cadastrado.")
         registro = Frequencia.objects.get()
         self.assertEqual(registro.metodo, "online")
         self.assertEqual(registro.registrada_por, self.participante)
         self.assertEqual(ChamadaFrequencia.objects.count(), 1)
         self.assertFalse(registro.chamada.codigo)
+
+    def test_acesso_online_prioriza_link_da_programacao_e_atualiza_botao(self):
+        self.inscricao.modalidade = "online"
+        self.inscricao.save(update_fields=["modalidade"])
+        self.inscricao.programacoes.set([self.online])
+        self.atividade.link = "https://example.com/evento"
+        self.atividade.save(update_fields=["link"])
+        self.client.force_login(self.participante)
+        url = reverse("frequencia_online", args=[self.atividade.pk, self.online.pk])
+        self.assertContains(self.client.get(reverse("frequencia_index")), "Confirmar presença e acessar evento")
+        self.assertFalse(Frequencia.objects.exists())
+        resposta = self.client.post(url)
+        self.assertEqual(resposta.context["link_evento"], self.atividade.link)
+        self.assertContains(resposta, "window.location.replace")
+        self.online.link = "https://example.com/sala"
+        self.online.save(update_fields=["link"])
+        resposta = self.client.post(url)
+        self.assertEqual(resposta.context["link_evento"], self.online.link)
+        self.assertEqual(Frequencia.objects.filter(inscricao=self.inscricao, programacao=self.online).count(), 1)
+        pagina = self.client.get(reverse("frequencia_index"))
+        self.assertContains(pagina, "Acessar evento on-line")
+        self.assertNotContains(pagina, "Confirmar presença e acessar evento")
 
     def test_registro_direto_exige_permissao_evento_ativo_e_inscricao_correta(self):
         from core.services.frequencia import registrar_direto

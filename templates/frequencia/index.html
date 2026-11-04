@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{% load static %}
+{% block page_css %}<link rel="stylesheet" href="{% static 'css/frequencia.css' %}?v=20261104-1">{% endblock %}
 {% block title %}Frequência | Pacto EJA{% endblock %}
 {% block page_title %}Frequência{% endblock %}
 {% block content %}
@@ -9,9 +11,50 @@
 <a class="btn btn-outline-primary mt-2 mt-sm-0" href="{% url 'frequencia_inscritos_pdf' atividade.pk programacao.pk programacao.modalidade %}">Baixar inscritos (PDF)</a>
 {% if programacao.modalidade == 'presencial' %}<a class="btn btn-outline-primary mt-2 mt-sm-0" href="{% url 'frequencia_qr_pdf' atividade.pk programacao.pk %}">Baixar QR Code de frequência (PDF)</a>{% endif %}</div>{% empty %}<p>Nenhuma sala atribuída a você.</p>{% endfor %}
 </section>
-<section class="management-card p-4"><h2>Minha participação</h2>
-{% for inscricao in inscricoes %}<div class="border-bottom py-3"><h3>{{ inscricao.atividade.titulo }}</h3><a href="{% url 'inscricao_comprovante' inscricao.atividade_id %}">Baixar comprovante de inscrição</a>
-<ul>{% for programacao in inscricao.programacoes.all %}<li>{{ programacao }}{% include "frequencia/_vagas_programacao.html" %}{% if programacao.modalidade == 'online' %}<a href="{% url 'frequencia_online' inscricao.atividade_id programacao.pk %}">Confirmar presença on-line</a>{% endif %}</li>{% endfor %}</ul>
-<strong>Presenças confirmadas:</strong><ul>{% for frequencia in inscricao.frequencias.all %}<li>{{ frequencia.programacao }} — {{ frequencia.registrada_em|date:"d/m/Y H:i" }}</li>{% empty %}<li>Nenhuma presença confirmada.</li>{% endfor %}</ul></div>{% empty %}<p>Você ainda não tem inscrições.</p>{% endfor %}
+<section class="participation" aria-labelledby="participation-title">
+  <header class="participation-heading">
+    <div class="participation-icon" aria-hidden="true"><i class="bi bi-person-check"></i></div>
+    <div><h2 id="participation-title">Minha participação</h2><p>Acompanhe sua programação, acesse seus comprovantes e confira suas presenças.</p></div>
+  </header>
+  <div class="participation-list">
+    {% for inscricao in inscricoes %}
+    <article class="management-card participation-card" id="participacao-{{ inscricao.atividade_id }}">
+      <header class="participation-card-header">
+        <div><span class="participation-eyebrow">EVENTO INSCRITO</span><h3>{{ inscricao.atividade.titulo }}</h3></div>
+        <a class="btn btn-outline-primary participation-receipt" href="{% url 'inscricao_comprovante' inscricao.atividade_id %}"><i class="bi bi-download" aria-hidden="true"></i> Baixar comprovante de inscrição</a>
+      </header>
+      <div class="participation-columns">
+        <section class="participation-schedules" aria-labelledby="schedules-{{ inscricao.pk }}">
+          <h4 id="schedules-{{ inscricao.pk }}"><i class="bi bi-calendar3" aria-hidden="true"></i> Sua programação</h4>
+          <ul class="participation-items">
+            {% for programacao in inscricao.programacoes.all %}
+            <li class="participation-schedule">
+              <div class="participation-schedule-top"><strong>{{ programacao.sala }}</strong><span class="participation-mode{% if programacao.modalidade == 'online' %} participation-mode-online{% endif %}">{{ programacao.get_modalidade_display }}</span></div>
+              <p class="participation-meta">{{ programacao.data|date:"d/m/Y" }} <span aria-hidden="true">·</span> {{ programacao.get_turno_display }}</p>
+              {% include "frequencia/_vagas_programacao.html" %}
+              {% if programacao.modalidade == 'online' %}
+              <form method="post" action="{% url 'frequencia_online' inscricao.atividade_id programacao.pk %}">
+                {% csrf_token %}
+                <button class="btn btn-primary participation-confirm" type="submit"><i class="bi bi-check2-circle" aria-hidden="true"></i> {% if programacao.presenca_confirmada %}Acessar evento on-line{% else %}Confirmar presença e acessar evento{% endif %}</button>
+              </form>
+              {% endif %}
+            </li>
+            {% empty %}<li class="participation-note">Nenhuma programação vinculada à sua inscrição.</li>{% endfor %}
+          </ul>
+        </section>
+        <section class="participation-attendance" aria-labelledby="attendance-{{ inscricao.pk }}">
+          <h4 id="attendance-{{ inscricao.pk }}"><i class="bi bi-check2-circle" aria-hidden="true"></i> Presenças confirmadas: <span class="participation-count">{{ inscricao.frequencias.all|length }}</span></h4>
+          <ul class="participation-items">
+            {% for frequencia in inscricao.frequencias.all %}
+            <li class="participation-record"><i class="bi bi-check-circle-fill" aria-hidden="true"></i><div><strong>{{ frequencia.programacao }}</strong><span>Registrada em {{ frequencia.registrada_em|date:"d/m/Y" }} às {{ frequencia.registrada_em|date:"H:i" }}</span></div></li>
+            {% empty %}<li class="participation-pending"><i class="bi bi-clock-history" aria-hidden="true"></i><strong>Nenhuma presença confirmada.</strong><p>Seus registros de presença aparecerão aqui após a confirmação.</p></li>{% endfor %}
+          </ul>
+        </section>
+      </div>
+    </article>
+    {% empty %}
+    <div class="management-card participation-empty"><div class="participation-icon" aria-hidden="true"><i class="bi bi-calendar3"></i></div><h3>Você ainda não tem inscrições.</h3><p>Após se inscrever em um evento, acompanhe aqui sua programação e suas presenças.</p></div>
+    {% endfor %}
+  </div>
 </section>
 {% endblock %}

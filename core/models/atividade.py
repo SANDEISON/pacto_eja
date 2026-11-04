@@ -125,6 +125,12 @@ class Atividade(models.Model):
         return valor
 
     @property
+    def acesso_evento_disponivel(self):
+        """Libera o acesso somente durante o período do evento."""
+        agora = timezone.now()
+        return self.ativo and self.data_inicio <= agora <= self.data_fim
+
+    @property
     def periodo_inscricoes_aberto(self):
         """Indica se alterações em inscrições ainda são permitidas."""
         agora = timezone.now()

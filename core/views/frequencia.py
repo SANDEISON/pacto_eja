@@ -12,7 +12,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 
 from ..models import Atividade, Frequencia, Inscricao, ProgramacaoSala
-from ..services.frequencia import pode_operar, registrar_direto
+from ..services.frequencia import cancelar_presenca, pode_operar, registrar_direto
 from ..services.lista_inscritos import gerar_lista_inscritos
 from ..services.frequencia_qr_pdf import gerar_frequencia_qr_pdf
 
@@ -60,12 +60,13 @@ def frequencia_confirmar_presencial(request, token):
         contexto["erro"] = "Você não possui inscrição presencial nesta programação. Entre com a conta utilizada na inscrição."
         return render(request, "frequencia/confirmar_presencial.html", contexto, status=403)
     contexto["confirmada"] = Frequencia.objects.filter(inscricao=inscricao, programacao=programacao).exists()
-    agora = timezone.now()
+    # Validação de data desativada temporariamente para testes no servidor.
+    # agora = timezone.now()
     if not contexto["confirmada"]:
         if not atividade.ativo:
             contexto["erro"] = "O evento está inativo."
-        elif timezone.localdate(agora) != programacao.data or not atividade.data_inicio <= agora <= atividade.data_fim:
-            contexto["erro"] = "A confirmação está disponível somente na data da programação e durante o evento."
+        # elif timezone.localdate(agora) != programacao.data or not atividade.data_inicio <= agora <= atividade.data_fim:
+        #     contexto["erro"] = "A confirmação está disponível somente na data da programação e durante o evento."
     if request.method == "POST" and not contexto.get("erro"):
         try:
             registrar_direto(inscricao, programacao, request.user, Frequencia.Metodo.QR_PROPRIO)
@@ -107,6 +108,10 @@ def frequencia_index(request):
         Prefetch("programacoes", queryset=ProgramacaoSala.objects.select_related("sala").annotate(_total_inscritos=Count("inscricoes", distinct=True))),
         "frequencias__programacao__sala",
     )
+    for inscricao in inscricoes:
+        confirmadas = {f.programacao_id for f in inscricao.frequencias.all()}
+        for programacao in inscricao.programacoes.all():
+            programacao.presenca_confirmada = programacao.pk in confirmadas
     return render(request, "frequencia/index.html", {"pares": pares, "inscricoes": inscricoes})
 
 
@@ -126,6 +131,10 @@ def frequencia_sala(request, pk, programacao_pk):
                 inscricao = get_object_or_404(Inscricao, pk=request.POST.get("inscricao"), atividade=atividade, programacoes=programacao)
                 _, criada = registrar_direto(inscricao, programacao, request.user, Frequencia.Metodo.MANUAL)
                 messages.success(request, "Presença registrada." if criada else "Presença já registrada.")
+            elif acao == "cancelar":
+                inscricao = get_object_or_404(Inscricao, pk=request.POST.get("inscricao"), atividade=atividade, programacoes=programacao)
+                cancelada = cancelar_presenca(inscricao, programacao, request.user)
+                messages.success(request, "Confirmação de presença cancelada." if cancelada else "A presença já estava sem confirmação.")
         except ValidationError as erro:
             messages.error(request, " ".join(erro.messages))
         return redirect("frequencia_sala", pk=pk, programacao_pk=programacao_pk)
@@ -179,8 +188,11 @@ def frequencia_online(request, pk, programacao_pk):
     if request.method == "POST":
         try:
             _, criada = registrar_direto(inscricao, programacao, request.user, Frequencia.Metodo.ONLINE)
-            messages.success(request, "Presença confirmada." if criada else "Presença já confirmada.")
-            return redirect("frequencia_index")
+            return render(request, "frequencia/online.html", {
+                "inscricao": inscricao, "programacao": programacao,
+                "confirmada": True,
+                "link_evento": programacao.link or inscricao.atividade.link,
+            })
         except ValidationError as exc:
             erro = " ".join(exc.messages)
     return render(request, "frequencia/online.html", {"inscricao": inscricao, "programacao": programacao, "erro": erro})

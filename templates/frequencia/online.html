@@ -1,2 +1,32 @@
-{% extends "base.html" %}{% block page_title %}Presença on-line{% endblock %}
-{% block content %}<section class="management-card p-4"><a href="{% url 'frequencia_index' %}">Voltar à frequência</a><h2>{{ inscricao.atividade.titulo }}</h2><h3>{{ programacao }}</h3>{% if programacao.link %}<a class="btn btn-outline-primary mb-3" href="{{ programacao.link }}" target="_blank" rel="noopener noreferrer">Assistir à transmissão</a>{% endif %}<p>Confirme sua presença nesta programação usando o botão abaixo.</p>{% if erro %}<div class="alert alert-danger" role="alert">{{ erro }}</div>{% endif %}<form method="post">{% csrf_token %}<button class="btn btn-primary mt-3">Confirmar minha presença</button></form></section>{% endblock %}
+{% extends "base.html" %}
+{% block page_title %}Presença on-line{% endblock %}
+{% block content %}
+<section class="management-card p-4">
+  <a href="{% url 'frequencia_index' %}">Voltar à frequência</a>
+  <h2>{{ inscricao.atividade.titulo }}</h2>
+  <h3>{{ programacao }}</h3>
+  {% if confirmada %}
+    <div class="alert alert-success" role="status">Inscrição confirmada. Sua presença nesta programação está registrada.</div>
+    {% if link_evento %}
+      <p>Você será redirecionado para o evento on-line em instantes.</p>
+      <a class="btn btn-primary" href="{{ link_evento }}">Acessar evento on-line</a>
+      {{ link_evento|json_script:"link-evento" }}
+    {% else %}
+      <p>O link de acesso on-line ainda não foi cadastrado. Sua presença foi confirmada.</p>
+    {% endif %}
+  {% else %}
+    {% if erro %}<div class="alert alert-danger" role="alert">{{ erro }}</div>{% endif %}
+    <p>Confirme sua presença para acessar esta programação.</p>
+    <form method="post">{% csrf_token %}<button class="btn btn-primary mt-3">Confirmar presença e acessar evento</button></form>
+  {% endif %}
+</section>
+{% endblock %}
+{% block page_js %}
+{% if confirmada and link_evento %}
+<script>
+  window.setTimeout(function () {
+    window.location.replace(JSON.parse(document.getElementById('link-evento').textContent));
+  }, 1800);
+</script>
+{% endif %}
+{% endblock %}

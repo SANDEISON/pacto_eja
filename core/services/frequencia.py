@@ -24,6 +24,20 @@ def registrar_direto(inscricao, programacao, usuario, metodo):
     return registro, criada
 
 
+@transaction.atomic
+def cancelar_presenca(inscricao, programacao, usuario):
+    """Desfaz apenas a presença desta inscrição e programação."""
+    ProgramacaoSala.objects.select_for_update().get(pk=programacao.pk)
+    if not pode_operar(usuario, programacao):
+        raise ValidationError("Você não pode cancelar presença nesta sala.")
+    if not inscricao.atividade.ativo:
+        raise ValidationError("O evento está inativo.")
+    if not inscricao.atividade.programacoes.filter(pk=programacao.pk).exists():
+        raise ValidationError("Esta programação não pertence mais ao evento.")
+    excluidas, _ = Frequencia.objects.filter(inscricao=inscricao, programacao=programacao).delete()
+    return bool(excluidas)
+
+
 def token_inscricao(inscricao):
     # Assinatura estável: funciona também para inscrições anteriores à implantação.
     return signing.Signer(salt="frequencia.inscricao").sign(str(inscricao.pk))
@@ -60,12 +74,13 @@ def registrar(inscricao, chamada, usuario, metodo, codigo=None):
         if chamada.codigo and (not codigo or not secrets.compare_digest(chamada.codigo, codigo)):
             raise ValidationError("Código de presença inválido.")
     elif metodo == Frequencia.Metodo.QR_PROPRIO:
-        agora = timezone.now()
+        # Validação de data desativada temporariamente para testes no servidor.
+        # agora = timezone.now()
         if programacao.modalidade != "presencial" or usuario.pk != inscricao.usuario_id:
             raise ValidationError("Somente o próprio inscrito presencial pode confirmar sua presença.")
-        if (timezone.localdate(agora) != programacao.data
-                or not chamada.atividade.data_inicio <= agora <= chamada.atividade.data_fim):
-            raise ValidationError("A confirmação está disponível somente na data da programação e durante o evento.")
+        # if (timezone.localdate(agora) != programacao.data
+        #         or not chamada.atividade.data_inicio <= agora <= chamada.atividade.data_fim):
+        #     raise ValidationError("A confirmação está disponível somente na data da programação e durante o evento.")
     elif (
         metodo not in (Frequencia.Metodo.QR, Frequencia.Metodo.MANUAL)
         or (metodo == Frequencia.Metodo.QR and programacao.modalidade != "presencial")

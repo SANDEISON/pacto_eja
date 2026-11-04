@@ -107,6 +107,8 @@ class AtividadeForm(BootstrapFormMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         """Configura formatos HTML5 e textos de ajuda exibidos na administração."""
         super().__init__(*args, **kwargs)
+        self.fields["data_inicio"].label = "Inicio do evento"
+        self.fields["data_fim"].label = "Termino do evento"
         self.fields["endereco"].help_text = "Informe o nome do local ou o endereço como texto."
         self.fields["local"].help_text = "Cole o link do local do evento no Google Maps."
         self.fields["link"].help_text = "Use este campo para informar o acesso ao evento on-line."
