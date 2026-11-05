@@ -22,6 +22,7 @@
             <td>{% if perms.core.view_inscricao %}<a href="{% url 'atividade_inscricoes' atividade.pk %}">{{ atividade.total_inscricoes }}</a>{% else %}{{ atividade.total_inscricoes }}{% endif %}<small class="d-block">{{ atividade.vagas }} vagas presenciais · {{ atividade.vagas_online }} on-line</small></td>
             <td>{% if atividade.ativo %}<span class="status-pill status-active">Ativa</span>{% else %}<span class="status-pill status-inactive">Inativa</span>{% endif %}</td>
             <td class="text-end text-nowrap">
+              {% if perms.core.view_credenciamento %}<a class="btn btn-sm btn-outline-success" href="{% url 'atividade_credenciamento' atividade.pk %}" target="_blank" rel="noopener noreferrer" title="Credenciamento presencial (nova aba)" aria-label="Credenciamento presencial (nova aba)"><i class="bi bi-person-badge" aria-hidden="true"></i></a>{% endif %}
               <a class="btn btn-sm btn-outline-danger" href="{% url 'atividade_inscricao_pdf' atividade.pk %}" title="Baixar PDF com QR code de inscrição" aria-label="Baixar PDF com QR code de inscrição"><i class="bi bi-file-earmark-pdf" aria-hidden="true"></i></a>
               <a class="btn btn-sm btn-outline-info" href="{% url 'frequencia_index' %}" title="Ver frequências" aria-label="Ver frequências"><i class="bi bi-calendar-check" aria-hidden="true"></i></a>
               {% if perms.core.view_inscricao %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'atividade_inscricoes' atividade.pk %}" title="Ver inscrições"><i class="bi bi-people"></i></a>{% endif %}

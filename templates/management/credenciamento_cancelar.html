@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Cancelar credenciamento | Pacto EJA{% endblock %}
+{% block page_title %}Cancelar credenciamento{% endblock %}
+{% block content %}
+<section class="management-card delete-card">
+  <h2>Cancelar credenciamento?</h2>
+  <p>Participante: <strong>{{ inscricao.usuario.get_full_name|default:inscricao.usuario.username }}</strong></p>
+  <p>Atividade: <strong>{{ atividade.titulo }}</strong></p>
+  <p>O participante voltará para a situação pendente e poderá ser credenciado novamente.</p>
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="inscricao" value="{{ inscricao.pk }}">
+    <input type="hidden" name="acao" value="cancelar">
+    <a class="btn btn-outline-secondary" href="{{ voltar_url }}">Voltar sem cancelar</a>
+    <button class="btn btn-danger" type="submit">Confirmar cancelamento</button>
+  </form>
+</section>
+{% endblock %}

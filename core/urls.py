@@ -3,6 +3,7 @@ from django.views.generic import RedirectView
 
 from . import views
 from .views.atividade_inscricao_pdf import atividade_inscricao_pdf
+from .views.credenciamento import atividade_credenciamento, atividade_credenciamento_pdf
 from .views import frequencia as frequencia_views
 
 
@@ -42,6 +43,8 @@ urlpatterns = [
     path("erro/<int:status_code>/", views.error_preview, name="error_preview"),
     path("administracao/usuarios/", views.UserListView.as_view(), name="user_list"),
     path("administracao/atividades/", views.AtividadeListView.as_view(), name="atividade_list"),
+    path("administracao/atividades/<int:pk>/credenciamento/", atividade_credenciamento, name="atividade_credenciamento"),
+    path("administracao/atividades/<int:pk>/credenciamento/pdf/", atividade_credenciamento_pdf, name="atividade_credenciamento_pdf"),
     path("administracao/atividades/<int:pk>/inscricao/pdf/", atividade_inscricao_pdf, name="atividade_inscricao_pdf"),
     path("administracao/atividades/cadastrar/", views.AtividadeCreateView.as_view(), name="atividade_create"),
     path("administracao/atividades/<int:pk>/editar/", views.AtividadeUpdateView.as_view(), name="atividade_update"),

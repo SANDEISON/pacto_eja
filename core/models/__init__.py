@@ -1,4 +1,5 @@
 from .atividade import Atividade
+from .credenciamento import Credenciamento
 from .frequencia import ChamadaFrequencia, Frequencia
 from .avaliacao import Avaliacao, CandidaturaAvaliador, ChamadaAvaliadores, DesignacaoAvaliacao
 from .cadastro_pendente import CadastroPendente
@@ -31,6 +32,7 @@ from .trabalho import EvidenciaTrabalho, Trabalho, TrabalhoMunicipio
 from .coautor import Coautor
 
 __all__ = [
+    "Credenciamento",
     "Atividade",
     "ChamadaFrequencia",
     "Frequencia",

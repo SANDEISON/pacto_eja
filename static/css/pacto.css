@@ -116,3 +116,20 @@ body { font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; col
 @media (max-width: 575px) { .dashboard-section-heading { align-items: flex-start; flex-direction: column; }.review-dashboard-card .candidate-state { max-width: 100%; } }
 .dashboard-opportunities-heading .eyebrow { font-size: .86rem; }.dashboard-opportunities-heading h2 { font-size: clamp(1.7rem, 3vw, 2.15rem); line-height: 1.15; }.dashboard-opportunities { overflow: hidden; border: 1px solid #dce5ee; border-radius: 14px; background: #fff; box-shadow: 0 8px 24px rgba(29,43,71,.07); }.dashboard-opportunity-tabs { padding: 0 .45rem; background: #087fe5; }.dashboard-opportunity-tabs .nav { flex-wrap: nowrap; overflow-x: auto; }.dashboard-opportunity-tabs .nav-link { display: flex; min-height: 56px; flex: 1 1 0; align-items: center; justify-content: center; gap: .55rem; padding: .75rem 1rem; border-radius: 10px 10px 0 0; color: rgba(255,255,255,.9); font-weight: 750; white-space: nowrap; }.dashboard-opportunity-tabs .nav-link:hover, .dashboard-opportunity-tabs .nav-link:focus-visible { color: #fff; background: rgba(255,255,255,.12); }.dashboard-opportunity-tabs .nav-link.active { background: #fff; color: var(--pacto-ink); }.dashboard-opportunity-tabs .nav-link small { display: grid; min-width: 24px; height: 24px; place-items: center; padding: 0 .35rem; border-radius: 999px; background: rgba(255,255,255,.18); font-size: .72rem; }.dashboard-opportunity-tabs .nav-link.active small { background: #eaf6ff; color: #0664bb; }.dashboard-opportunity-content { padding: 1.25rem; }.dashboard-tab-heading { margin-bottom: 1rem; }.dashboard-tab-heading h3 { margin: 0 0 .2rem; color: var(--pacto-ink); font-size: 1.08rem; font-weight: 800; }.dashboard-tab-heading p { margin: 0; color: #718096; font-size: .86rem; }.dashboard-tab-heading-action { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 @media (max-width: 575px) { .dashboard-opportunity-content { padding: 1rem; }.dashboard-opportunity-tabs .nav-link { min-width: 205px; justify-content: flex-start; }.dashboard-tab-heading-action { align-items: stretch; flex-direction: column; }.dashboard-tab-heading-action .btn { width: 100%; }.dashboard-opportunity-content .activity-empty { min-height: 240px; padding: 1rem; } }
+/* Distribui os controles conforme o espaço real disponível no painel. */
+.management-toolbar.credenciamento-toolbar { display: block; padding: 1.5rem; }
+.credenciamento-filtros { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 1.25rem; width: 100%; min-width: 0; margin: 0; }
+.credenciamento-filtros > div { min-width: 0; }
+.credenciamento-busca { flex: 2 1 280px; }
+.credenciamento-status { flex: 1 1 210px; }
+.credenciamento-filtros .form-label { display: block; margin-bottom: .5rem; }
+.credenciamento-filtros .form-control, .credenciamento-filtros .form-select { width: 100%; min-width: 0; min-height: 44px; }
+.credenciamento-acoes { display: flex; flex: 1 1 210px; gap: .75rem; }
+.credenciamento-acoes .btn { flex: 1; }
+.credenciamento-filtros .btn { display: flex; align-items: center; justify-content: center; gap: .5rem; min-height: 44px; padding: .65rem 1rem; white-space: normal; text-align: center; }
+.credenciamento-download { flex: 1 1 290px; }
+@media (max-width: 575px) {
+  .management-toolbar.credenciamento-toolbar { padding: 1rem; }
+  .credenciamento-filtros { gap: 1rem; }
+  .credenciamento-busca, .credenciamento-status, .credenciamento-acoes, .credenciamento-download { flex-basis: 100%; }
+}

@@ -850,8 +850,8 @@ def cancelar_inscricao_atividade(request, pk):
         return redirect("dashboard")
 
     if request.method == "POST":
-        if inscricao.frequencias.exists():
-            messages.error(request, "Esta inscrição já possui frequência registrada e não pode ser cancelada.")
+        if inscricao.frequencias.exists() or hasattr(inscricao, "credenciamento"):
+            messages.error(request, "Esta inscrição já possui frequência ou credenciamento registrado e não pode ser cancelada.")
             return redirect("dashboard")
         inscricao.delete()
         messages.success(request, "Sua inscrição foi cancelada com sucesso.")

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Credenciamento | {{ atividade.titulo }}{% endblock %}
+{% block page_title %}Credenciamento presencial{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item"><a href="{% url 'atividade_list' %}">Eventos e atividades</a></li><li class="breadcrumb-item active">Credenciamento</li>{% endblock %}
+{% block content %}
+<div class="management-shell">
+  {% include "management/_messages.html" %}
+  <section class="management-card p-3">
+    <h2 class="h4">{{ atividade.titulo }}</h2>
+    <p>{{ atividade.data_inicio|date:"d/m/Y H:i" }} até {{ atividade.data_fim|date:"d/m/Y H:i" }}{% if atividade.endereco %} · {{ atividade.endereco }}{% endif %}</p>
+    <p class="text-body-secondary">Confirmação de chegada dos inscritos presenciais. A frequência nas salas é registrada separadamente.</p>
+    {% if not atividade.ativo %}<div class="alert alert-warning">Evento inativo. Novos credenciamentos estão bloqueados.</div>{% endif %}
+    <div class="row g-3" aria-label="Resumo do credenciamento">
+      <div class="col-sm-4"><div class="border rounded p-3">Inscritos presenciais <strong class="d-block fs-3">{{ total }}</strong></div></div>
+      <div class="col-sm-4"><div class="border rounded p-3">Credenciados <strong class="d-block fs-3 text-success">{{ credenciados }}</strong></div></div>
+      <div class="col-sm-4"><div class="border rounded p-3">Pendentes <strong class="d-block fs-3">{{ pendentes }}</strong></div></div>
+    </div>
+  </section>
+  <section class="management-card">
+    <header class="management-toolbar credenciamento-toolbar">
+      <form method="get" class="credenciamento-filtros">
+        <div class="credenciamento-busca">
+          <label class="form-label" for="busca">Nome ou CPF</label>
+          <input class="form-control" id="busca" type="search" name="q" value="{{ search_query }}" placeholder="Pesquisar por nome ou CPF">
+        </div>
+        <div class="credenciamento-status">
+          <label class="form-label" for="status">Situação</label>
+          <select class="form-select" id="status" name="status"><option value="">Todas as situações</option><option value="pendente" {% if status == 'pendente' %}selected{% endif %}>Pendentes</option><option value="credenciado" {% if status == 'credenciado' %}selected{% endif %}>Credenciados</option></select>
+        </div>
+        <div class="credenciamento-acoes">
+          <button class="btn btn-primary" type="submit">Pesquisar</button>
+          <a class="btn btn-outline-secondary" href="{% url 'atividade_credenciamento' atividade.pk %}">Limpar</a>
+        </div>
+        <a class="btn btn-outline-danger credenciamento-download" href="{% url 'atividade_credenciamento_pdf' atividade.pk %}" title="Todos os inscritos presenciais em ordem alfabética, com campos para assinatura e data"><i class="bi bi-file-earmark-pdf" aria-hidden="true"></i> Baixar lista de inscritos em PDF</a>
+      </form>
+    </header>
+    <div class="table-responsive">
+      <table class="table management-table align-middle mb-0">
+        <thead><tr><th>Participante</th><th>Salas / programações</th><th>Refeições selecionadas</th><th>Situação</th><th>Registro</th><th>Ação</th></tr></thead>
+        <tbody>{% for inscricao in page_obj %}<tr>
+          <td><strong>{{ inscricao.usuario.get_full_name|default:inscricao.usuario.username }}</strong><small class="d-block">CPF: {{ inscricao.usuario.educador.cpf|default:"Não informado" }}</small><small class="d-block">{{ inscricao.usuario.email }}</small><span class="badge text-bg-light">Presencial</span></td>
+          <td>{% for programacao in inscricao.programacoes.all %}<small class="d-block">{{ programacao }}</small>{% empty %}Sem programação selecionada{% endfor %}</td>
+          <td>{% for refeicao in inscricao.refeicoes.all %}<small class="d-block">{{ refeicao }}</small>{% empty %}Nenhuma{% endfor %}</td>
+          <td>{% if inscricao.credenciamento %}<span class="status-pill status-active">Credenciado</span>{% else %}<span class="status-pill status-inactive">Pendente</span>{% endif %}</td>
+          <td>{% if inscricao.credenciamento %}<small class="d-block">{{ inscricao.credenciamento.registrado_em|date:"d/m/Y H:i:s" }}</small><small class="d-block">Por {{ inscricao.credenciamento.registrado_por.get_full_name|default:inscricao.credenciamento.registrado_por.username }}</small><small>{{ inscricao.credenciamento.get_metodo_display }}</small>{% else %}—{% endif %}</td>
+          <td>{% if not inscricao.credenciamento and perms.core.add_credenciamento and atividade.ativo %}<form method="post">{% csrf_token %}<input type="hidden" name="inscricao" value="{{ inscricao.pk }}"><button class="btn btn-sm btn-success" type="submit" aria-label="Credenciar {{ inscricao.usuario.get_full_name|default:inscricao.usuario.username }}">Confirmar credenciamento</button></form>{% elif inscricao.credenciamento %}{% if perms.core.add_credenciamento %}<form method="post">{% csrf_token %}<input type="hidden" name="inscricao" value="{{ inscricao.pk }}"><input type="hidden" name="acao" value="confirmar_cancelamento"><button class="btn btn-sm btn-outline-danger" type="submit">Cancelar credenciamento</button></form>{% else %}<i class="bi bi-check-circle text-success" aria-label="Confirmado"></i>{% endif %}{% else %}—{% endif %}</td>
+        </tr>{% empty %}<tr><td colspan="6" class="empty-state">Nenhuma inscrição presencial encontrada.</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+    {% if page_obj.has_other_pages %}<nav class="management-pagination" aria-label="Paginação"><span>Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span><div>{% if page_obj.has_previous %}<a class="btn btn-sm btn-outline-secondary" href="?{{ filtros }}&amp;page={{ page_obj.previous_page_number }}">Anterior</a>{% endif %} {% if page_obj.has_next %}<a class="btn btn-sm btn-outline-secondary" href="?{{ filtros }}&amp;page={{ page_obj.next_page_number }}">Próxima</a>{% endif %}</div></nav>{% endif %}
+  </section>
+</div>
+{% endblock %}
