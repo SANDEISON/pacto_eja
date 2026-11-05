@@ -264,6 +264,7 @@ def _serializar_programacao_atividade(atividade, programacao):
         "modalidade_value": programacao.modalidade,
         "link": programacao.link,
         "responsavel_id": programacao.responsavel_id,
+        "mediador": programacao.mediador,
         "responsavel": (programacao.responsavel.get_full_name().strip() or programacao.responsavel.email or "Sem nome cadastrado") if programacao.responsavel else "Não definido",
         "tematica": str(programacao.tematica),
         "tematica_id": programacao.tematica_id,
@@ -327,7 +328,8 @@ def adicionar_programacao_sala_atividade(request, pk, sala_pk):
         raise Http404
     atividade = get_object_or_404(Atividade, pk=pk)
     sala = get_object_or_404(
-        Sala, pk=sala_pk, programacoes__atividades=atividade
+        Sala.objects.filter(programacoes__atividades=atividade).distinct(),
+        pk=sala_pk,
     )
     programacao = ProgramacaoSala(sala=sala)
     form = ProgramacaoSalaInlineForm(

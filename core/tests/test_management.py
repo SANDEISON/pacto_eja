@@ -386,7 +386,7 @@ class CatalogManagementTests(TestCase):
         self.assertEqual(presencial.descricao, "Atividade presencial atualizada.")
         self.assertFalse(ProgramacaoSala.objects.filter(pk=online.pk).exists())
 
-    def test_room_cannot_repeat_date_shift_and_modality(self):
+    def test_room_can_repeat_date_shift_and_modality(self):
         sala = Sala.objects.get(nome="Beatriz Nascimento")
         tecnologias = TematicaSala.objects.get(nome="Tecnologias")
         matematica = TematicaSala.objects.get(nome="Matemática")
@@ -423,17 +423,17 @@ class CatalogManagementTests(TestCase):
                 "modalidade": ProgramacaoSala.Modalidade.PRESENCIAL,
                 "link": "",
                 "tematica": matematica.pk,
-                "descricao": "Atividade presencial conflitante.",
+                "descricao": "Atividade presencial no mesmo turno.",
+                "mediador": "Ana Silva",
                 "quantidade_max_participantes": 50,
             },
         )
 
-        self.assertEqual(duplicate_response.status_code, 200)
-        self.assertContains(
-            duplicate_response,
-            "Esta sala já possui uma atividade cadastrada nesta data, turno e modalidade.",
+        self.assertRedirects(duplicate_response, reverse("room_schedule_list"))
+        self.assertEqual(ProgramacaoSala.objects.filter(sala=sala).count(), 3)
+        self.assertTrue(
+            ProgramacaoSala.objects.filter(sala=sala, mediador="Ana Silva").exists()
         )
-        self.assertEqual(ProgramacaoSala.objects.filter(sala=sala).count(), 2)
 
     def test_link_is_rejected_for_in_person_room_schedule(self):
         sala = Sala.objects.get(nome="Carolina Maria de Jesus")

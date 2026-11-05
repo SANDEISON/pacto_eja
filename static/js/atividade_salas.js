@@ -95,6 +95,7 @@ document.addEventListener("DOMContentLoaded", () => {
     schedule.dataset.shift = program.turno_value;
     schedule.dataset.modality = program.modalidade_value;
     schedule.dataset.link = program.link || "";
+    schedule.dataset.mediador = program.mediador || "";
     schedule.dataset.responsavelId = program.responsavel_id || "";
     schedule.dataset.themeId = String(program.tematica_id);
     schedule.dataset.description = program.descricao || "";
@@ -109,6 +110,7 @@ document.addEventListener("DOMContentLoaded", () => {
       ["bi bi-calendar3", program.data],
       ["bi bi-clock", program.turno],
       ["bi bi-person-check", `Responsável: ${program.responsavel}`],
+      ["bi bi-person", `Mediador: ${program.mediador || "Não definido"}`],
       ["bi bi-broadcast", program.modalidade],
       ["bi bi-people", `${program.capacidade} vagas`],
     ].forEach(([iconClass, text]) => {
@@ -186,6 +188,9 @@ document.addEventListener("DOMContentLoaded", () => {
   function openScheduleModal(button, schedule = null) {
     scheduleForm.reset();
     scheduleForm.action = button.dataset.url;
+    const responsibleField = scheduleField("responsavel");
+    responsibleField.closest(".col-12").classList.toggle("d-none", !schedule);
+    responsibleField.disabled = !schedule;
     scheduleErrors.hidden = true;
     scheduleErrors.replaceChildren();
     scheduleTitle.textContent = schedule ? "Editar programação" : "Adicionar programação";
@@ -196,6 +201,7 @@ document.addEventListener("DOMContentLoaded", () => {
       scheduleField("turno").value = schedule.dataset.shift;
       scheduleField("modalidade").value = schedule.dataset.modality;
       scheduleField("link").value = schedule.dataset.link;
+      scheduleField("mediador").value = schedule.dataset.mediador || "";
       scheduleField("responsavel").value = schedule.dataset.responsavelId || "";
       scheduleField("tematica").value = schedule.dataset.themeId;
       scheduleField("descricao").value = schedule.dataset.description;
@@ -285,6 +291,18 @@ document.addEventListener("DOMContentLoaded", () => {
     scheduleSubmit.disabled = true;
     try {
       const response = await fetch(scheduleForm.action, { method: "POST", body: new FormData(scheduleForm), headers: { "X-Requested-With": "XMLHttpRequest" } });
+      if (response.redirected) {
+        showErrors(scheduleErrors, null, "Sua sessão pode ter expirado. Recarregue a página e entre novamente.");
+        return;
+      }
+      if (!response.headers.get("content-type")?.includes("application/json")) {
+        const message = response.status === 403
+          ? "Acesso negado ou sessão expirada. Recarregue a página e verifique sua permissão."
+          : `O servidor não retornou uma resposta válida (HTTP ${response.status}).`;
+        console.error("Falha ao salvar programação", response.status, response.url);
+        showErrors(scheduleErrors, null, message);
+        return;
+      }
       const responseData = await response.json();
       if (!response.ok) {
         showErrors(scheduleErrors, responseData.errors, "Não foi possível salvar a programação.");
@@ -295,7 +313,8 @@ document.addEventListener("DOMContentLoaded", () => {
       successMessage.hidden = false;
       bootstrap.Modal.getOrCreateInstance(scheduleModal).hide();
     } catch (error) {
-      showErrors(scheduleErrors, null, "Não foi possível salvar a programação. Tente novamente.");
+      console.error("Falha ao salvar ou atualizar a programação na tela", error);
+      showErrors(scheduleErrors, null, "Não foi possível concluir a operação. Recarregue a página para verificar se a programação foi salva antes de tentar novamente.");
     } finally {
       scheduleSubmit.disabled = false;
     }

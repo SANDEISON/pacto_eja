@@ -65,7 +65,7 @@
     <form class="modal-content" id="activity-schedule-form" method="post">
       {% csrf_token %}
       <div class="modal-header"><div><h2 class="modal-title fs-5" id="activity-schedule-modal-title">Adicionar programação</h2><p class="mb-0 text-body-secondary small" data-activity-schedule-room></p></div><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Fechar"></button></div>
-      <div class="modal-body"><div class="alert alert-danger" data-activity-schedule-errors hidden></div><div class="row g-3">{% for field in programacao_atividade_form.visible_fields %}{% include "management/_field.html" with field=field column="col-12 col-md-6" %}{% endfor %}</div></div>
+      <div class="modal-body"><div class="alert alert-danger" data-activity-schedule-errors hidden></div><div class="row g-3">{% for field in programacao_atividade_form.visible_fields %}{% if field.name == "responsavel" %}{% include "management/_field.html" with field=field column="col-12 col-md-6 d-none" %}{% else %}{% include "management/_field.html" with field=field column="col-12 col-md-6" %}{% endif %}{% endfor %}</div></div>
       <div class="modal-footer"><button class="btn btn-light" type="button" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-primary" type="submit" data-save-activity-schedule><i class="bi bi-check-lg"></i> Salvar programação</button></div>
     </form>
   </div>
@@ -73,4 +73,4 @@
 {% endif %}
 {% endblock %}
 
-{% block page_js %}<script src="{% static 'js/catalog_form.js' %}?v=20261009-1"></script><script src="{% static 'js/atividade_refeicoes.js' %}?v=20260914-1"></script><script src="{% static 'js/atividade_salas.js' %}?v=20261009-1"></script>{% endblock %}
+{% block page_js %}<script src="{% static 'js/catalog_form.js' %}?v=20261009-1"></script><script src="{% static 'js/atividade_refeicoes.js' %}?v=20260914-1"></script><script src="{% static 'js/atividade_salas.js' %}?v=20261105-3"></script>{% endblock %}

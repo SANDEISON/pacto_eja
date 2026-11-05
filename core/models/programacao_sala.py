@@ -32,6 +32,7 @@ class ProgramacaoSala(models.Model):
         related_name="programacoes_frequencia",
         help_text="Usuário autorizado a abrir chamadas e registrar presença nesta sala e turno.",
     )
+    mediador = models.CharField("mediador", max_length=255, blank=True)
     turno = models.CharField("turno", max_length=5, choices=Turno.choices)
     modalidade = models.CharField(
         "modalidade", max_length=10, choices=Modalidade.choices
@@ -60,13 +61,14 @@ class ProgramacaoSala(models.Model):
         verbose_name_plural = "programações das salas"
         ordering = ("data", "turno", "sala__nome")
         constraints = [
-            models.UniqueConstraint(
-                fields=("sala", "data", "turno", "modalidade"),
-                name="programacao_unica_por_sala_data_turno_modalidade",
-                violation_error_message=(
-                    "Esta sala já possui uma atividade cadastrada nesta data, turno e modalidade."
-                ),
-            ),
+            # Temporariamente desativado até a inclusão dos horários da programação.
+            # models.UniqueConstraint(
+            #     fields=("sala", "data", "turno", "modalidade"),
+            #     name="programacao_unica_por_sala_data_turno_modalidade",
+            #     violation_error_message=(
+            #         "Esta sala já possui uma atividade cadastrada nesta data, turno e modalidade."
+            #     ),
+            # ),
             models.CheckConstraint(
                 condition=models.Q(modalidade="online") | models.Q(link=""),
                 name="link_apenas_para_programacao_online",

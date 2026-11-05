@@ -576,7 +576,7 @@ class AtividadeFlowTests(TestCase):
             [online, online_tarde],
         )
 
-    def test_registration_requires_morning_and_afternoon_for_both_modalities(self):
+    def test_registration_allows_single_shift_for_both_modalities(self):
         self.atividade.modalidade = Atividade.ModalidadeParticipacao.AMBAS
         self.atividade.permite_submissao = False
         self.atividade.save(update_fields=("modalidade", "permite_submissao"))
@@ -598,10 +598,6 @@ class AtividadeFlowTests(TestCase):
             self.atividade.programacoes.add(manha, tarde)
 
         url = reverse("atividade_inscricao", args=[self.atividade.pk])
-        mensagem = (
-            "Selecione pelo menos uma programação pela manhã e uma à tarde, "
-            "independentemente do dia."
-        )
         for modalidade in (
             ProgramacaoSala.Modalidade.ONLINE,
             ProgramacaoSala.Modalidade.PRESENCIAL,
@@ -621,16 +617,13 @@ class AtividadeFlowTests(TestCase):
                         },
                     )
 
-                    self.assertEqual(response.status_code, 200)
-                    self.assertFormError(
-                        response.context["dados_form"],
-                        "programacoes",
-                        mensagem,
+                    self.assertRedirects(response, reverse("dashboard"))
+                    inscricao = Inscricao.objects.get(
+                        atividade=self.atividade, usuario=self.user
                     )
-                    self.assertEqual(response.context["active_tab"], "modalidade")
-                    self.assertFalse(
-                        Inscricao.objects.filter(atividade=self.atividade).exists()
-                    )
+                    self.assertEqual(inscricao.modalidade, modalidade)
+                    self.assertQuerySetEqual(inscricao.programacoes.all(), [programacao])
+                    inscricao.delete()
 
     def test_registration_rejects_program_from_another_modality(self):
         self.atividade.modalidade = Atividade.ModalidadeParticipacao.AMBAS
@@ -1607,6 +1600,7 @@ class AtividadeManagementTests(TestCase):
                 "nova_programacoes-0-link": "",
                 "nova_programacoes-0-tematica": str(tematica.pk),
                 "nova_programacoes-0-descricao": "Roda de conversa.",
+                "nova_programacoes-0-mediador": "Ana Silva",
                 "nova_programacoes-0-quantidade_max_participantes": "30",
                 "nova_programacoes-1-data": data_programacao.isoformat(),
                 "nova_programacoes-1-turno": ProgramacaoSala.Turno.TARDE,
@@ -1630,6 +1624,7 @@ class AtividadeManagementTests(TestCase):
         self.assertEqual(response.status_code, 201)
         sala = Sala.objects.get(nome="Sala de práticas")
         self.assertEqual(sala.programacoes.count(), 2)
+        self.assertEqual(sala.programacoes.get(turno="manha").mediador, "Ana Silva")
         self.assertQuerySetEqual(
             atividade.programacoes.order_by("pk"),
             sala.programacoes.order_by("pk"),
@@ -1719,7 +1714,15 @@ class AtividadeManagementTests(TestCase):
             tematica=tematica,
             quantidade_max_participantes=25,
         )
-        atividade.programacoes.add(programacao_existente)
+        outra_programacao = ProgramacaoSala.objects.create(
+            sala=sala,
+            data=data_programacao + timedelta(days=1),
+            turno=ProgramacaoSala.Turno.MANHA,
+            modalidade=ProgramacaoSala.Modalidade.PRESENCIAL,
+            tematica=tematica,
+            quantidade_max_participantes=25,
+        )
+        atividade.programacoes.add(programacao_existente, outra_programacao)
         payload = {
             "programacao-data": data_programacao.isoformat(),
             "programacao-turno": ProgramacaoSala.Turno.TARDE,
@@ -1727,6 +1730,7 @@ class AtividadeManagementTests(TestCase):
             "programacao-link": "https://example.com/oficina",
             "programacao-tematica": str(tematica.pk),
             "programacao-descricao": "Oficina inicial.",
+            "programacao-mediador": "João Silva",
             "programacao-quantidade_max_participantes": "40",
         }
 
@@ -1746,6 +1750,26 @@ class AtividadeManagementTests(TestCase):
             pk=add_response.json()["programacao"]["id"]
         )
         self.assertTrue(atividade.programacoes.filter(pk=nova_programacao.pk).exists())
+        self.assertEqual(nova_programacao.mediador, "João Silva")
+        self.assertEqual(add_response.json()["programacao"]["mediador"], "João Silva")
+
+        duplicate_response = self.client.post(
+            reverse("atividade_add_room_schedule", args=[atividade.pk, sala.pk]),
+            payload,
+        )
+        self.assertEqual(duplicate_response.status_code, 201)
+        self.assertNotEqual(
+            duplicate_response.json()["programacao"]["id"], nova_programacao.pk
+        )
+        self.assertEqual(
+            atividade.programacoes.filter(
+                sala=sala,
+                data=data_programacao,
+                turno=ProgramacaoSala.Turno.TARDE,
+                modalidade=ProgramacaoSala.Modalidade.ONLINE,
+            ).count(),
+            2,
+        )
 
         edit_response = self.client.post(
             reverse(
@@ -1756,6 +1780,7 @@ class AtividadeManagementTests(TestCase):
             | {
                 "programacao-turno": ProgramacaoSala.Turno.NOITE,
                 "programacao-descricao": "Oficina atualizada.",
+                "programacao-mediador": "Maria Santos",
                 "programacao-quantidade_max_participantes": "55",
             },
         )
@@ -1763,6 +1788,7 @@ class AtividadeManagementTests(TestCase):
         self.assertEqual(edit_response.json()["vagas_online"], 100)
         nova_programacao.refresh_from_db()
         self.assertEqual(nova_programacao.turno, ProgramacaoSala.Turno.NOITE)
+        self.assertEqual(nova_programacao.mediador, "Maria Santos")
         self.assertEqual(nova_programacao.quantidade_max_participantes, 55)
 
         delete_response = self.client.post(

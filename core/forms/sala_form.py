@@ -15,6 +15,7 @@ class ProgramacaoSalaInlineForm(BootstrapFormMixin, forms.ModelForm):
             "modalidade",
             "link",
             "responsavel",
+            "mediador",
             "tematica",
             "descricao",
             "quantidade_max_participantes",
@@ -42,6 +43,21 @@ class ProgramacaoSalaInlineForm(BootstrapFormMixin, forms.ModelForm):
             }),
         )
         self._apply_bootstrap_classes()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        # Temporariamente desativado até a inclusão dos horários da programação.
+        # campos = ("data", "turno", "modalidade")
+        # if self.instance.sala_id and all(cleaned_data.get(campo) for campo in campos):
+        #     duplicadas = ProgramacaoSala.objects.filter(
+        #         sala_id=self.instance.sala_id,
+        #         **{campo: cleaned_data[campo] for campo in campos},
+        #     ).exclude(pk=self.instance.pk)
+        #     if duplicadas.exists():
+        #         raise forms.ValidationError(
+        #             "Esta sala já possui uma atividade cadastrada nesta data, turno e modalidade."
+        #         )
+        return cleaned_data
 
 
 class SalaAtividadeForm(BootstrapFormMixin, forms.ModelForm):

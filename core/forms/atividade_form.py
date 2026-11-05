@@ -724,7 +724,6 @@ class DadosPessoaisInscricaoForm(BootstrapFormMixin, forms.ModelForm):
                         f"de {programacao.data:%d/%m/%Y}) está sem vagas. Escolha outra sala.",
                     )
             horarios = set()
-            tem_conflito = False
             for programacao in programacoes:
                 horario = (programacao.data, programacao.turno)
                 if horario in horarios:
@@ -732,25 +731,8 @@ class DadosPessoaisInscricaoForm(BootstrapFormMixin, forms.ModelForm):
                         "programacoes",
                         "Escolha apenas uma programação por turno em cada data.",
                     )
-                    tem_conflito = True
                     break
                 horarios.add(horario)
-            turnos_selecionados = {
-                programacao.turno for programacao in programacoes
-            }
-            turnos_obrigatorios = {
-                ProgramacaoSala.Turno.MANHA,
-                ProgramacaoSala.Turno.TARDE,
-            }
-            if (
-                not tem_conflito
-                and not turnos_obrigatorios.issubset(turnos_selecionados)
-            ):
-                self.add_error(
-                    "programacoes",
-                    "Selecione pelo menos uma programação pela manhã e uma à tarde, "
-                    "independentemente do dia.",
-                )
             if any(
                 programacao.modalidade not in self._modalidades_atividade
                 for programacao in programacoes

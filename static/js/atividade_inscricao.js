@@ -281,13 +281,6 @@
       firstConflict?.focus();
       return false;
     }
-    const selectedShifts = new Set(selectedPrograms.map((field) => field.dataset.turno));
-    if (programFields.length && (!selectedShifts.has("manha") || !selectedShifts.has("tarde"))) {
-      showSelectionError(
-        "Selecione pelo menos uma programação pela manhã e uma à tarde, independentemente do dia.",
-      );
-      return false;
-    }
     requiredMessage?.classList.remove("d-block");
     return true;
   }

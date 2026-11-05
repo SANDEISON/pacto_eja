@@ -19,11 +19,12 @@ class ProgramacaoSalaAdmin(admin.ModelAdmin):
         "modalidade",
         "link",
         "responsavel",
+        "mediador",
         "tematica",
         "quantidade_max_participantes",
     )
     list_filter = ("turno", "modalidade", "data", "tematica")
-    search_fields = ("sala__nome", "tematica__nome", "descricao")
+    search_fields = ("sala__nome", "tematica__nome", "mediador", "descricao")
 
 
 @admin.register(TematicaSala)
