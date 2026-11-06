@@ -52,6 +52,27 @@ def _resposta_programacao(atividade):
 
 
 @login_required
+def salas_online_publicas(request, pk):
+    atividade = get_object_or_404(
+        atividades_visiveis_no_painel(request.user, timezone.now()), pk=pk
+    )
+    programacoes = list(
+        atividade.programacoes.filter(publica=True, modalidade=ProgramacaoSala.Modalidade.ONLINE)
+        .select_related("sala", "tematica")
+    )
+    datas = {programacao.data.isoformat(): programacao.data for programacao in programacoes}
+    data_selecionada = datas.get(request.GET.get("data"))
+    if data_selecionada:
+        programacoes = [programacao for programacao in programacoes if programacao.data == data_selecionada]
+    return render(request, "atividades/salas_online_publicas.html", {
+        "atividade": atividade,
+        "programacoes": programacoes,
+        "datas": datas.values(),
+        "data_selecionada": data_selecionada,
+    })
+
+
+@login_required
 def dashboard(request):
     """Monta o painel com atividades abertas, inscrições e chamadas atribuídas."""
     horario_atual = timezone.now()

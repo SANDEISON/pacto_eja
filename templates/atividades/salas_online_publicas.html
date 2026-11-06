@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Salas on-line — {{ atividade.titulo }} | Pacto EJA{% endblock %}
+{% block page_title %}Salas on-line{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Início</a></li><li class="breadcrumb-item active">Salas on-line</li>{% endblock %}
+
+{% block content %}
+<div>
+  <section class="registration-programs" aria-labelledby="public-programs-title">
+    <div class="registration-programs-heading">
+      <div>
+        <h4 id="public-programs-title"><i class="bi bi-calendar2-week" aria-hidden="true"></i> Programação pública</h4>
+        <p>Filtre por data para encontrar as salas e acessar a programação on-line.</p>
+      </div>
+    </div>
+    {% if datas %}
+      <form method="get" class="registration-programs-filters">
+        <div>
+          <label class="form-label" for="public-program-date">Data disponível</label>
+          <div class="d-flex flex-wrap gap-2">
+            <select class="form-select w-auto flex-grow-1" id="public-program-date" name="data">
+              <option value="">Todas as datas</option>
+              {% for data in datas %}
+                <option value="{{ data|date:'Y-m-d' }}"{% if data == data_selecionada %} selected{% endif %}>{{ data|date:"d/m/Y" }}</option>
+              {% endfor %}
+            </select>
+            <button class="btn btn-outline-primary" type="submit">Filtrar</button>
+          </div>
+        </div>
+      </form>
+    {% endif %}
+
+    {% regroup programacoes by data as dias %}
+    <div class="certificate-options">
+      {% for dia in dias %}
+        <div class="registration-program-day">
+          <h5><i class="bi bi-calendar3" aria-hidden="true"></i> {{ dia.grouper|date:"d/m/Y" }}</h5>
+          <div class="registration-program-period-options">
+            {% for programacao in dia.list %}
+              <article class="program-card-content p-3">
+                <div class="program-card-heading">
+                  <strong>{{ programacao.sala }}</strong>
+                  <span class="program-modality program-modality-online">On-line</span>
+                </div>
+                <div class="program-card-meta">
+                  <span><i class="bi bi-clock" aria-hidden="true"></i> {{ programacao.get_turno_display }}</span>
+                  {% if programacao.mediador %}<span><i class="bi bi-person" aria-hidden="true"></i> Mediação: {{ programacao.mediador }}</span>{% endif %}
+                </div>
+                <div class="program-card-theme"><i class="bi bi-bookmark" aria-hidden="true"></i> {{ programacao.tematica }}</div>
+                {% if programacao.descricao %}<p class="program-details-description mb-0">{{ programacao.descricao }}</p>{% endif %}
+                <div class="align-self-end">
+                  {% if programacao.link %}
+                    <a class="btn btn-primary btn-sm" href="{{ programacao.link }}" target="_blank" rel="noopener noreferrer">
+                      Acessar sala on-line <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i><span class="visually-hidden"> (abre em nova aba)</span>
+                    </a>
+                  {% else %}
+                    <span class="text-body-secondary small">Link de acesso ainda indisponível.</span>
+                  {% endif %}
+                </div>
+              </article>
+            {% endfor %}
+          </div>
+        </div>
+      {% empty %}
+        <p class="registration-programs-empty mb-0">Este evento ainda não tem programações on-line públicas.</p>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}
