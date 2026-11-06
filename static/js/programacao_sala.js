@@ -1,28 +1,10 @@
 document.addEventListener("DOMContentLoaded", () => {
-  // O backend continua responsável por validar a modalidade. Aqui apenas
-  // ocultamos o campo de link quando a programação é presencial.
-  function configurarLink(container) {
-    const modalidade = container.querySelector('[name$="modalidade"]');
-    const link = container.querySelector('[name$="link"]');
-    if (!modalidade || !link || modalidade.dataset.linkConfigured) return;
-    const linkContainer = link.closest(".col-12");
-    function atualizarLink() {
-      const isOnline = modalidade.value === "online";
-      link.disabled = !isOnline;
-      linkContainer.hidden = !isOnline;
-      if (!isOnline) link.value = "";
-    }
-    modalidade.dataset.linkConfigured = "true";
-    modalidade.addEventListener("change", atualizarLink);
-    atualizarLink();
-  }
-
   const editors = document.getElementById("room-schedule-editors");
   const summaries = document.getElementById("room-schedules-summary");
   const emptyState = document.getElementById("room-schedules-empty");
-  document.querySelectorAll("[data-room-schedule-form]").forEach(configurarLink);
+  document.querySelectorAll("[data-room-schedule-form]").forEach(configurarCamposProgramacao);
   if (!editors || !summaries) {
-    configurarLink(document);
+    configurarCamposProgramacao(document);
     return;
   }
 
@@ -129,7 +111,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function bindEditor(editor) {
-    configurarLink(editor);
+    configurarCamposProgramacao(editor);
     editor.querySelectorAll("[data-cancel-schedule]").forEach((button) => {
       button.addEventListener("click", () => {
         if (editor.dataset.newSchedule === "true") {

@@ -20,22 +20,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const scheduleTitle = scheduleForm?.querySelector("#activity-schedule-modal-title");
   const scheduleRoom = scheduleForm?.querySelector("[data-activity-schedule-room]");
 
-  function configureLink(container) {
-    const modality = container.querySelector('[name$="-modalidade"]');
-    const link = container.querySelector('[name$="-link"]');
-    const linkContainer = link?.closest(".col-12");
-    if (!modality || !link || !linkContainer || modality.dataset.linkConfigured) return;
-    const update = () => {
-      const online = modality.value === "online";
-      link.disabled = !online;
-      linkContainer.hidden = !online;
-      if (!online) link.value = "";
-    };
-    modality.dataset.linkConfigured = "true";
-    modality.addEventListener("change", update);
-    update();
-  }
-
   function showErrors(container, messages, fallback) {
     // Usa textContent para que mensagens retornadas pela API nunca virem HTML.
     const list = document.createElement("ul");
@@ -56,7 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const row = wrapper.firstElementChild;
     roomScheduleList.append(row);
     totalRoomScheduleForms.value = String(index + 1);
-    configureLink(row);
+    configurarCamposProgramacao(row);
     row.querySelector("input:not([type=hidden]), select")?.focus();
   }
 
@@ -100,6 +84,7 @@ document.addEventListener("DOMContentLoaded", () => {
     schedule.dataset.themeId = String(program.tematica_id);
     schedule.dataset.description = program.descricao || "";
     schedule.dataset.capacity = String(program.capacidade);
+    schedule.dataset.publica = String(program.publica);
 
     const content = document.createElement("div");
     content.className = "activity-linked-schedule-content";
@@ -206,13 +191,14 @@ document.addEventListener("DOMContentLoaded", () => {
       scheduleField("tematica").value = schedule.dataset.themeId;
       scheduleField("descricao").value = schedule.dataset.description;
       scheduleField("quantidade_max_participantes").value = schedule.dataset.capacity;
+      scheduleField("publica").checked = schedule.dataset.publica === "true";
     }
     scheduleField("responsavel").dispatchEvent(new Event("change", { bubbles: true }));
     scheduleField("modalidade").dispatchEvent(new Event("change"));
     bootstrap.Modal.getOrCreateInstance(scheduleModal).show();
   }
 
-  roomForm?.querySelectorAll("[data-activity-room-schedule]").forEach(configureLink);
+  roomForm?.querySelectorAll("[data-activity-room-schedule]").forEach(configurarCamposProgramacao);
   roomForm?.querySelector("[data-add-activity-room-schedule]")?.addEventListener("click", addScheduleToRoomForm);
   roomScheduleList?.addEventListener("click", (event) => {
     const remove = event.target.closest("[data-remove-activity-room-schedule]");
@@ -247,7 +233,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  if (scheduleForm) configureLink(scheduleForm);
+  if (scheduleForm) configurarCamposProgramacao(scheduleForm);
   linkedRooms?.addEventListener("click", async (event) => {
     // A lista usa delegação porque novos cartões são inseridos após o carregamento.
     const add = event.target.closest("[data-add-linked-schedule]");

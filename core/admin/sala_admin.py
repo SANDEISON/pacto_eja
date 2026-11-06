@@ -11,6 +11,9 @@ class SalaAdmin(admin.ModelAdmin):
 
 @admin.register(ProgramacaoSala)
 class ProgramacaoSalaAdmin(admin.ModelAdmin):
+    class Media:
+        js = ("js/programacao_sala_modalidade.js",)
+
     list_display = (
         "id",
         "sala",
@@ -21,9 +24,10 @@ class ProgramacaoSalaAdmin(admin.ModelAdmin):
         "responsavel",
         "mediador",
         "tematica",
+        "publica",
         "quantidade_max_participantes",
     )
-    list_filter = ("turno", "modalidade", "data", "tematica")
+    list_filter = ("turno", "modalidade", "data", "tematica", "publica")
     search_fields = ("sala__nome", "tematica__nome", "mediador", "descricao")
 
 

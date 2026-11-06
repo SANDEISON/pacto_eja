@@ -18,6 +18,7 @@ class ProgramacaoSalaInlineForm(BootstrapFormMixin, forms.ModelForm):
             "mediador",
             "tematica",
             "descricao",
+            "publica",
             "quantidade_max_participantes",
         )
         widgets = {

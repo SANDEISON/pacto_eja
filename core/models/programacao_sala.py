@@ -50,6 +50,11 @@ class ProgramacaoSala(models.Model):
         on_delete=models.PROTECT,
     )
     descricao = models.TextField("descrição", blank=True)
+    publica = models.BooleanField(
+        "programação pública",
+        default=False,
+        help_text="Programações públicas não aparecem na seleção de salas da inscrição.",
+    )
     quantidade_max_participantes = models.PositiveIntegerField(
         "quantidade máxima de participantes",
         validators=[MinValueValidator(1)],
@@ -89,6 +94,10 @@ class ProgramacaoSala(models.Model):
         if self.modalidade != self.Modalidade.ONLINE and self.link:
             raise ValidationError(
                 {"link": "O link só pode ser informado para uma programação on-line."}
+            )
+        if self.modalidade != self.Modalidade.ONLINE and self.publica:
+            raise ValidationError(
+                {"publica": "Somente programações on-line podem ser públicas."}
             )
 
     def __str__(self):

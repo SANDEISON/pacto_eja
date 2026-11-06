@@ -651,7 +651,7 @@ class DadosPessoaisInscricaoForm(BootstrapFormMixin, forms.ModelForm):
         )
         programacoes = atividade.programacoes.select_related(
             "sala", "tematica"
-        ).filter(modalidade__in=modalidades_disponiveis).annotate(
+        ).filter(modalidade__in=modalidades_disponiveis, publica=False).annotate(
             _ordem_turno=ordem_turnos,
             _ocupacao=Count("inscricoes", distinct=True),
         ).order_by("data", "_ordem_turno", "sala__nome", "modalidade")
@@ -674,7 +674,7 @@ class DadosPessoaisInscricaoForm(BootstrapFormMixin, forms.ModelForm):
             self.fields["refeicoes"].widget.attrs["disabled"] = True
         if inscricao:
             self.fields["modalidade_inscricao"].initial = inscricao.modalidade
-            self.fields["programacoes"].initial = inscricao.programacoes.all()
+            self.fields["programacoes"].initial = inscricao.programacoes.filter(publica=False)
             self.fields["refeicoes"].initial = inscricao.refeicoes.all()
         else:
             self.fields["modalidade_inscricao"].initial = ""

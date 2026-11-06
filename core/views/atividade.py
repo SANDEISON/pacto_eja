@@ -270,6 +270,7 @@ def _serializar_programacao_atividade(atividade, programacao):
         "tematica_id": programacao.tematica_id,
         "descricao": programacao.descricao,
         "capacidade": programacao.quantidade_max_participantes,
+        "publica": programacao.publica,
         "edit_url": reverse(
             "atividade_edit_room_schedule",
             kwargs={"pk": atividade.pk, "programacao_pk": programacao.pk},
@@ -691,6 +692,7 @@ def _salvar_inscricao(atividade, formularios):
     )
     campos_alterados = []
     programacoes = list(formularios.dados_pessoais.cleaned_data["programacoes"])
+    programacoes.extend(inscricao.programacoes.filter(publica=True, modalidade=modalidade))
     refeicoes = list(refeicoes)
     selecoes_alteradas = (
         set(inscricao.refeicoes.values_list("pk", flat=True)) != {r.pk for r in refeicoes}

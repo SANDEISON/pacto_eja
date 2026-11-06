@@ -683,6 +683,36 @@ class AtividadeFlowTests(TestCase):
         self.assertEqual(response.context["active_tab"], "modalidade")
         self.assertFalse(Inscricao.objects.filter(atividade=self.atividade).exists())
 
+    def test_registration_excludes_public_programs(self):
+        modalidade = ProgramacaoSala.Modalidade.ONLINE
+        sala = self.create_programacao(modalidade, "Sala com inscrição")
+        publica = self.create_programacao(modalidade, "Sala pública")
+        publica.publica = True
+        publica.save(update_fields=["publica"])
+        self.atividade.modalidade = Atividade.ModalidadeParticipacao.AMBAS
+        self.atividade.save(update_fields=["modalidade"])
+        self.atividade.programacoes.add(sala, publica)
+
+        response = self.client.get(reverse("atividade_inscricao", args=[self.atividade.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Sala com inscrição")
+        self.assertNotContains(response, "Sala pública")
+        campo = response.context["dados_form"].fields["programacoes"]
+        with self.assertRaisesMessage(ValidationError, "não é uma das escolhas disponíveis"):
+            campo.clean([str(publica.pk)])
+
+    def test_only_online_programs_can_be_public(self):
+        sala = self.create_programacao(ProgramacaoSala.Modalidade.PRESENCIAL, "Sala presencial")
+        sala.publica = True
+
+        with self.assertRaises(ValidationError) as error:
+            sala.full_clean()
+        self.assertIn("publica", error.exception.message_dict)
+
+        sala.modalidade = ProgramacaoSala.Modalidade.ONLINE
+        sala.full_clean()
+
     def test_registration_rejects_program_not_available_in_activity(self):
         externa = self.create_programacao(ProgramacaoSala.Modalidade.PRESENCIAL, "Sala externa")
 
