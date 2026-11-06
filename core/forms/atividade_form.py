@@ -90,9 +90,10 @@ class AtividadeForm(BootstrapFormMixin, forms.ModelForm):
         fields = (
             "tipo", "modalidade", "vagas", "vagas_online", "titulo", "descricao", "endereco", "local", "link", "data_inicio", "data_fim",
             "inscricoes_inicio", "inscricoes_fim", "permite_submissao",
-            "modelo_submissao", "submissoes_fim", "ativo",
+            "modelo_submissao", "submissoes_fim", "ativo", "arquivo_programacao",
         )
         widgets = {
+            "arquivo_programacao": forms.FileInput(),
             "descricao": forms.Textarea(attrs={"rows": 5}),
             "endereco": forms.TextInput(attrs={"placeholder": "Nome do local ou endereço completo"}),
             "local": forms.TextInput(attrs={"placeholder": "https://maps.app.goo.gl/..."}),

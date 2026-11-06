@@ -1522,7 +1522,11 @@ class AtividadeManagementTests(TestCase):
         self.assertContains(response, "Refeições disponíveis")
         self.assertContains(response, "Adicionar refeição")
 
-    def test_superuser_can_create_activity_with_meals(self):
+    @override_settings(STORAGES={
+        "default": {"BACKEND": "django.core.files.storage.InMemoryStorage"},
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    })
+    def test_superuser_can_create_activity_with_meals_and_schedule_attachment(self):
         admin = get_user_model().objects.create_superuser(
             username="admin.refeicoes@example.com",
             email="admin.refeicoes@example.com",
@@ -1541,6 +1545,7 @@ class AtividadeManagementTests(TestCase):
                 "modalidade": Atividade.ModalidadeParticipacao.PRESENCIAL,
                 "titulo": "Encontro com refeições",
                 "descricao": "Atividade de dois dias.",
+                "arquivo_programacao": SimpleUploadedFile("programacao.txt", b"08:00 Abertura"),
                 "local": "Centro de convenções",
                 "link": "https://example.com/encontro-refeicoes",
                 "data_inicio": inicio.strftime("%Y-%m-%dT%H:%M"),
@@ -1572,6 +1577,23 @@ class AtividadeManagementTests(TestCase):
         self.assertTrue(
             atividade.refeicoes.filter(tipo=Refeicao.Tipo.CAFE_DA_MANHA).exists()
         )
+
+        participante = get_user_model().objects.create_user(username="participante@example.com")
+        self.client.force_login(participante)
+        download_url = reverse("atividade_programacao_download", args=[atividade.pk])
+        painel = self.client.get(reverse("dashboard"))
+        self.assertContains(painel, f'href="{download_url}"')
+        self.assertContains(painel, "Baixar programação")
+        download = self.client.get(download_url)
+        self.addCleanup(download.close)
+        self.assertEqual(download.status_code, 200)
+        self.assertEqual(download["Content-Disposition"], 'attachment; filename="programacao.txt"')
+        self.assertEqual(b"".join(download.streaming_content), b"08:00 Abertura")
+
+        sem_anexo = self.create_activity()
+        url_sem_anexo = reverse("atividade_programacao_download", args=[sem_anexo.pk])
+        self.assertNotContains(self.client.get(reverse("dashboard")), url_sem_anexo)
+        self.assertEqual(self.client.get(url_sem_anexo).status_code, 404)
 
     def test_superuser_can_add_room_programs_and_link_them_to_activity(self):
         admin = get_user_model().objects.create_superuser(

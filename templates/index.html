@@ -15,7 +15,10 @@
     {% for atividade in atividades_disponiveis %}
       <div class="col-12 col-lg-6 col-xxl-4">
         <article class="activity-card h-100">
-          <header><span class="activity-type activity-type-{{ atividade.tipo }}">{{ atividade.get_tipo_display }}</span>{% if atividade.permite_submissao %}<span class="activity-submission"><i class="bi bi-file-earmark-pdf"></i> Aceita trabalhos</span>{% endif %}</header>
+          <header>
+            <span class="activity-type activity-type-{{ atividade.tipo }}">{{ atividade.get_tipo_display }}</span>
+            {% if atividade.permite_submissao %}<span class="activity-submission"><i class="bi bi-file-earmark-pdf"></i> Aceita trabalhos</span>{% endif %}
+          </header>
           <div class="activity-card-body">
             <h3>{{ atividade.titulo }}</h3>
             <p>{{ atividade.descricao|truncatewords:24 }}</p>
@@ -28,6 +31,12 @@
               <div><dt><i class="bi bi-people"></i><span class="visually-hidden">Vagas presenciais</span></dt><dd><strong>Vagas presenciais restantes:</strong> {{ atividade.vagas_restantes }}</dd></div>
               <div><dt><i class="bi bi-camera-video"></i><span class="visually-hidden">Vagas on-line</span></dt><dd><strong>Vagas on-line restantes:</strong> {{ atividade.vagas_online_restantes }}</dd></div>
             </dl>
+            {% if atividade.arquivo_programacao %}
+              <a class="btn btn-warning activity-schedule-download d-flex align-items-center justify-content-center gap-2 w-100 mt-3 py-2 fw-semibold" href="{% url 'atividade_programacao_download' atividade.pk %}">
+                <i class="bi bi-download" aria-hidden="true"></i>
+                <span>Baixar programação</span>
+              </a>
+            {% endif %}
             {% if atividade.programacoes_responsavel %}
               <div class="activity-registration-panel mt-3">
                 <strong><i class="bi bi-clipboard-check" aria-hidden="true"></i> Você é responsável pela frequência</strong>

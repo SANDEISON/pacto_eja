@@ -1,4 +1,4 @@
-"""Material para divulgação do endereço de inscrição de uma atividade."""
+"""Material para divulgação da inscrição e da programação de uma atividade."""
 
 from html import escape
 from io import BytesIO
@@ -14,13 +14,14 @@ from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 
 
-def gerar_atividade_inscricao_pdf(atividade, url):
-    """Gera PDF com QR vetorial e link clicável para a inscrição."""
+def gerar_atividade_inscricao_pdf(atividade, url, *, programacao=False):
+    """Gera PDF com QR vetorial e link clicável para a atividade."""
+    assunto = "Programação" if programacao else "Inscrição"
     arquivo = BytesIO()
     documento = SimpleDocTemplate(
         arquivo, pagesize=A4, rightMargin=22 * mm, leftMargin=22 * mm,
         topMargin=22 * mm, bottomMargin=22 * mm,
-        title=f"Inscrição - {atividade.titulo}", author="Pacto EJA",
+        title=f"{assunto} - {atividade.titulo}", author="Pacto EJA",
     )
     texto = ParagraphStyle(
         "InscricaoTexto", fontName="Helvetica", fontSize=12, leading=18,
@@ -47,15 +48,22 @@ def gerar_atividade_inscricao_pdf(atividade, url):
     ]
     if atividade.endereco:
         conteudo.append(Paragraph(f"Local: {escape(atividade.endereco)}", texto))
-    conteudo.extend([
-        Spacer(1, 5 * mm),
-        Paragraph("Inscreva-se nesta atividade", titulo),
-        desenho,
-        Paragraph("Aponte a câmera do celular para o QR code e acesse a página de inscrição.", texto),
-        Paragraph(f'Inscrições até {timezone.localtime(atividade.inscricoes_fim):%d/%m/%Y às %H:%M}.', texto),
-        Paragraph("Entre com sua conta para realizar a inscrição.", texto),
-        Paragraph(f'<link href="{escape(url, quote=True)}" color="#075DB9">{escape(url)}</link>', texto),
-    ])
+    conteudo.append(Spacer(1, 5 * mm))
+    if programacao:
+        conteudo.extend([
+            Paragraph("Baixe a programação da atividade", titulo),
+            desenho,
+            Paragraph("Aponte a câmera do celular para o QR code para baixar a programação.", texto),
+        ])
+    else:
+        conteudo.extend([
+            Paragraph("Inscreva-se nesta atividade", titulo),
+            desenho,
+            Paragraph("Aponte a câmera do celular para o QR code e acesse a página de inscrição.", texto),
+            Paragraph(f'Inscrições até {timezone.localtime(atividade.inscricoes_fim):%d/%m/%Y às %H:%M}.', texto),
+            Paragraph("Entre com sua conta para realizar a inscrição.", texto),
+        ])
+    conteudo.append(Paragraph(f'<link href="{escape(url, quote=True)}" color="#075DB9">{escape(url)}</link>', texto))
     documento.build(conteudo)
     arquivo.seek(0)
     return arquivo

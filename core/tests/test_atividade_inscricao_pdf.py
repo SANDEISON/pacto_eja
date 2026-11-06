@@ -3,13 +3,15 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.core.exceptions import PermissionDenied
+from django.core.files.base import ContentFile
+from django.http import Http404
 from django.test import RequestFactory, SimpleTestCase, override_settings
 from django.urls import get_script_prefix, reverse, set_script_prefix
 from django.utils import timezone
 
 from core.models import Atividade
 from core.services.atividade_inscricao_pdf import gerar_atividade_inscricao_pdf
-from core.views.atividade_inscricao_pdf import atividade_inscricao_pdf
+from core.views.atividade_inscricao_pdf import atividade_inscricao_pdf, atividade_programacao_pdf
 
 
 @override_settings(PUBLIC_BASE_URL="https://www.ce.ufpb.br/catedraunescoeja/eventos")
@@ -78,3 +80,39 @@ class AtividadeInscricaoPdfTests(SimpleTestCase):
         response = atividade_inscricao_pdf(request, 42)
         self.assertEqual(response.status_code, 302)
         self.assertIn("next=", response.url)
+
+    def test_schedule_pdf_encodes_the_attachment_download_url(self):
+        self.atividade.arquivo_programacao = "atividades/programacoes/programacao.pdf"
+        with patch("core.views.atividade_inscricao_pdf.get_object_or_404", return_value=self.atividade), patch(
+            "core.views.atividade_inscricao_pdf.gerar_atividade_inscricao_pdf", wraps=gerar_atividade_inscricao_pdf
+        ) as gerar:
+            response = atividade_programacao_pdf(self.request("core.view_atividade"), 42)
+        self.addCleanup(response.close)
+        gerar.assert_called_once_with(
+            self.atividade,
+            f"https://www.ce.ufpb.br/catedraunescoeja/eventos/atividades/programacao/{self.atividade.token_programacao_publica}/",
+            programacao=True,
+        )
+        self.assertIn('attachment; filename="programacao-seminario-de-educacao-cidadania.pdf"', response["Content-Disposition"])
+        self.assertTrue(b"".join(response.streaming_content).startswith(b"%PDF-"))
+
+    def test_schedule_pdf_requires_an_attachment(self):
+        with patch("core.views.atividade_inscricao_pdf.get_object_or_404", return_value=self.atividade):
+            with self.assertRaises(Http404):
+                atividade_programacao_pdf(self.request("core.view_atividade"), 42)
+
+    def test_public_schedule_download_without_login(self):
+        arquivo = ContentFile(b"Programacao", name="programacao.txt")
+        atividade = SimpleNamespace(arquivo_programacao=arquivo)
+        url = reverse("atividade_programacao_publica", args=[self.atividade.token_programacao_publica])
+        with patch("core.views.dashboard.get_object_or_404", return_value=atividade) as buscar:
+            response = self.client.get(url)
+        self.addCleanup(response.close)
+        self.assertEqual(buscar.call_args.kwargs["pk"], "42")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Disposition"], 'attachment; filename="programacao.txt"')
+        self.assertEqual(b"".join(response.streaming_content), b"Programacao")
+
+    def test_public_schedule_rejects_an_invalid_signature(self):
+        url = reverse("atividade_programacao_publica", args=[f"{self.atividade.token_programacao_publica}x"])
+        self.assertEqual(self.client.get(url).status_code, 404)

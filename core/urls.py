@@ -2,8 +2,9 @@ from django.urls import path
 from django.views.generic import RedirectView
 
 from . import views
-from .views.atividade_inscricao_pdf import atividade_inscricao_pdf
+from .views.atividade_inscricao_pdf import atividade_inscricao_pdf, atividade_programacao_pdf
 from .views.credenciamento import atividade_credenciamento, atividade_credenciamento_pdf
+from .views.dashboard import baixar_programacao_atividade, baixar_programacao_publica
 from .views import frequencia as frequencia_views
 
 
@@ -29,6 +30,8 @@ urlpatterns = [
     path("relatorios/certificados/exportar-csv/", views.reports_certificados_export_csv, name="reports_certificados_export_csv"),
     path("", RedirectView.as_view(pattern_name="cadastro_educador", permanent=False), name="home"),
     path("painel/", views.dashboard, name="dashboard"),
+    path("atividades/<int:pk>/programacao/baixar/", baixar_programacao_atividade, name="atividade_programacao_download"),
+    path("atividades/programacao/<str:token>/", baixar_programacao_publica, name="atividade_programacao_publica"),
     path("atividades/<int:pk>/inscricao/", views.inscricao_atividade, name="atividade_inscricao"),
     path("atividades/<int:pk>/inscricao/comprovante/", views.comprovante_inscricao, name="inscricao_comprovante"),
     path("atividades/<int:pk>/inscricao/cancelar/", views.cancelar_inscricao_atividade, name="atividade_inscricao_cancelar"),
@@ -46,6 +49,7 @@ urlpatterns = [
     path("administracao/atividades/<int:pk>/credenciamento/", atividade_credenciamento, name="atividade_credenciamento"),
     path("administracao/atividades/<int:pk>/credenciamento/pdf/", atividade_credenciamento_pdf, name="atividade_credenciamento_pdf"),
     path("administracao/atividades/<int:pk>/inscricao/pdf/", atividade_inscricao_pdf, name="atividade_inscricao_pdf"),
+    path("administracao/atividades/<int:pk>/programacao/pdf/", atividade_programacao_pdf, name="atividade_programacao_pdf"),
     path("administracao/atividades/cadastrar/", views.AtividadeCreateView.as_view(), name="atividade_create"),
     path("administracao/atividades/<int:pk>/editar/", views.AtividadeUpdateView.as_view(), name="atividade_update"),
     path("administracao/atividades/<int:pk>/adicionar-sala/", views.adicionar_sala_atividade, name="atividade_add_room"),

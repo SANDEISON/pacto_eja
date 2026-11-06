@@ -1,16 +1,15 @@
 from django.contrib.auth.decorators import login_required
+from django.core.signing import BadSignature, Signer
 from django.db.models import Count, Prefetch, Q
-from django.shortcuts import render
+from django.http import FileResponse, Http404
+from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 
 from ..models import Atividade, ProgramacaoSala, RascunhoInscricao
 
 
-@login_required
-def dashboard(request):
-    """Monta o painel com atividades abertas, inscrições e chamadas atribuídas."""
-    horario_atual = timezone.now()
-    atividades_disponiveis = (
+def atividades_visiveis_no_painel(usuario, horario_atual):
+    return (
         Atividade.objects.filter(ativo=True, data_fim__gte=horario_atual)
         .filter(
             Q(inscricoes_fim__gte=horario_atual)
@@ -18,14 +17,50 @@ def dashboard(request):
                 Q(inscricoes_inicio__isnull=True)
                 | Q(inscricoes_inicio__lte=horario_atual)
             )
-            | Q(inscricoes__usuario=request.user)
-            | Q(programacoes__responsavel=request.user)
+            | Q(inscricoes__usuario=usuario)
+            | Q(programacoes__responsavel=usuario)
         )
+        .distinct()
+    )
+
+
+@login_required
+def baixar_programacao_atividade(request, pk):
+    atividades = Atividade.objects.all()
+    if not request.user.has_perm("core.change_atividade"):
+        atividades = atividades_visiveis_no_painel(request.user, timezone.now())
+    atividade = get_object_or_404(atividades.exclude(arquivo_programacao=""), pk=pk)
+    return _resposta_programacao(atividade)
+
+
+def baixar_programacao_publica(request, token):
+    """Entrega a programação a quem tem o link público assinado."""
+    try:
+        pk = Signer(salt=Atividade.SALT_PROGRAMACAO_PUBLICA).unsign(token)
+    except BadSignature as exc:
+        raise Http404 from exc
+    atividade = get_object_or_404(Atividade.objects.exclude(arquivo_programacao=""), pk=pk)
+    return _resposta_programacao(atividade)
+
+
+def _resposta_programacao(atividade):
+    try:
+        arquivo = atividade.arquivo_programacao.open("rb")
+    except FileNotFoundError as exc:
+        raise Http404 from exc
+    return FileResponse(arquivo, as_attachment=True)
+
+
+@login_required
+def dashboard(request):
+    """Monta o painel com atividades abertas, inscrições e chamadas atribuídas."""
+    horario_atual = timezone.now()
+    atividades_disponiveis = (
+        atividades_visiveis_no_painel(request.user, horario_atual)
         .prefetch_related(
             "inscricoes",
             Prefetch("programacoes", queryset=ProgramacaoSala.objects.select_related("sala").annotate(_total_inscritos=Count("inscricoes", distinct=True))),
         )
-        .distinct()
         .order_by("data_inicio")
     )
     inscricoes_usuario = {

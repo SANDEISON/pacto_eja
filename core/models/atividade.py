@@ -2,12 +2,15 @@ import re
 from urllib.parse import quote_plus
 
 from django.core.exceptions import ValidationError
+from django.core.signing import Signer
 from django.db import models
 from django.utils import timezone
 
 
 class Atividade(models.Model):
     """Evento, palestra ou curso que aceita inscrições de educadores."""
+    SALT_PROGRAMACAO_PUBLICA = "core.atividade.programacao-publica"
+
     class Tipo(models.TextChoices):
         EVENTO = "evento", "Evento"
         PALESTRA = "palestra", "Palestra"
@@ -40,6 +43,11 @@ class Atividade(models.Model):
     data_fim = models.DateTimeField("término")
     inscricoes_inicio = models.DateTimeField("início das inscrições", null=True, blank=True)
     inscricoes_fim = models.DateTimeField("fim das inscrições")
+    arquivo_programacao = models.FileField(
+        "arquivo da programação",
+        upload_to="atividades/programacoes/",
+        blank=True,
+    )
     programacoes = models.ManyToManyField(
         "ProgramacaoSala",
         verbose_name="programações disponíveis",
@@ -70,6 +78,10 @@ class Atividade(models.Model):
 
     def __str__(self):
         return self.titulo
+
+    @property
+    def token_programacao_publica(self):
+        return Signer(salt=self.SALT_PROGRAMACAO_PUBLICA).sign(self.pk)
 
     def clean(self):
         """Valida a coerência entre local, datas de inscrição e submissão."""
