@@ -133,6 +133,18 @@ def gerar_comprovante_inscricao(inscricao):
             spaceBefore=0,
         ),
     }
+    estilos["titulo_programacao"] = ParagraphStyle(
+        "TituloProgramacaoComprovante",
+        parent=estilos["corpo"],
+        fontName="PactoSans-Bold",
+        textColor=AZUL_ESCURO,
+        spaceBefore=2 * mm,
+    )
+    estilos["descricao_programacao"] = ParagraphStyle(
+        "DescricaoProgramacaoComprovante",
+        parent=estilos["corpo"],
+        leftIndent=4 * mm,
+    )
     arquivo = BytesIO()
     documento = SimpleDocTemplate(
         arquivo,
@@ -219,20 +231,29 @@ def gerar_comprovante_inscricao(inscricao):
         output_field=IntegerField(),
     )
     programacoes = list(
-        inscricao.programacoes.select_related("sala").annotate(
+        inscricao.programacoes.select_related("sala", "tematica").annotate(
             _ordem_turno=ordem_turnos,
         ).order_by("data", "_ordem_turno", "sala__nome")
     )
     if programacoes:
         itens = [Paragraph("Programações selecionadas", estilos["subtitulo"])]
         for programacao in programacoes:
+            descricao = programacao.descricao.strip()
             itens.append(
                 Paragraph(
                     f"- {programacao.data:%d/%m/%Y} - "
-                    f"{_texto(programacao.get_turno_display())}: {_texto(programacao.sala.nome)}",
-                    estilos["corpo"],
+                    f"{_texto(programacao.tematica.nome)} "
+                    f"({_texto(programacao.get_turno_display())}, {_texto(programacao.sala.nome)})",
+                    estilos["titulo_programacao"],
                 )
             )
+            if descricao:
+                itens.append(
+                    Paragraph(
+                        f"<b>Descrição:</b> {_texto_com_quebras(descricao)}",
+                        estilos["descricao_programacao"],
+                    )
+                )
         elementos.append(KeepTogether(itens))
 
     refeicoes = list(inscricao.refeicoes.order_by("data", "horario", "tipo"))

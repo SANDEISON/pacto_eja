@@ -1185,9 +1185,10 @@ class AtividadeFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 404)
 
-    def test_receipt_lists_date_and_room_in_chronological_shift_order(self):
+    def test_receipt_lists_programming_in_shift_order_with_optional_descriptions(self):
         from ..services.comprovante_inscricao import Paragraph, gerar_comprovante_inscricao
 
+        tematica, _ = TematicaSala.objects.get_or_create(nome="Educação de Jovens e Adultos")
         inscricao = Inscricao.objects.create(atividade=self.atividade, usuario=self.user)
         data = timezone.localdate(self.atividade.data_inicio)
         modalidade = ProgramacaoSala.Modalidade.PRESENCIAL
@@ -1197,16 +1198,26 @@ class AtividadeFlowTests(TestCase):
             self.create_programacao(modalidade, "Sala da tarde", turno=ProgramacaoSala.Turno.TARDE, data=data),
             self.create_programacao(modalidade, "Sala da manhã", turno=ProgramacaoSala.Turno.MANHA, data=data),
         ]
+        for programacao, descricao in zip(
+            programacoes, ("", "", "Oficina <prática> & debate\nAtividade em grupo", "   "),
+        ):
+            programacao.descricao = descricao
+            programacao.tematica = tematica
+            programacao.save(update_fields=["descricao", "tematica"])
         inscricao.programacoes.add(*programacoes)
         with patch("core.services.comprovante_inscricao.Paragraph", wraps=Paragraph) as paragraph:
             arquivo = gerar_comprovante_inscricao(inscricao)
         self.assertTrue(arquivo.read().startswith(b"%PDF-"))
-        linhas = [call.args[0] for call in paragraph.call_args_list if call.args[0].startswith("- ")]
+        linhas = [
+            call.args[0] for call in paragraph.call_args_list
+            if call.args[0].startswith(("- ", "<b>Descrição:</b>"))
+        ]
         self.assertEqual(linhas, [
-            f"- {data:%d/%m/%Y} - Manhã: Sala da manhã",
-            f"- {data:%d/%m/%Y} - Tarde: Sala da tarde",
-            f"- {data:%d/%m/%Y} - Noite: Sala da noite",
-            f"- {data + timedelta(days=1):%d/%m/%Y} - Manhã: Sala do segundo dia",
+            f"- {data:%d/%m/%Y} - {tematica.nome} (Manhã, Sala da manhã)",
+            f"- {data:%d/%m/%Y} - {tematica.nome} (Tarde, Sala da tarde)",
+            "<b>Descrição:</b> Oficina &lt;prática&gt; &amp; debate<br/>Atividade em grupo",
+            f"- {data:%d/%m/%Y} - {tematica.nome} (Noite, Sala da noite)",
+            f"- {data + timedelta(days=1):%d/%m/%Y} - {tematica.nome} (Manhã, Sala do segundo dia)",
         ])
 
     def test_user_can_update_registration_during_registration_period(self):
