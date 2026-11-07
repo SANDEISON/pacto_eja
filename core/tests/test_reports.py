@@ -6,10 +6,13 @@ from django.utils import timezone
 from core.models import (
     Atividade,
     Cidade,
+    Credenciamento,
     EducadorEscola,
     Escola,
     Estado,
     Formacao,
+    Frequencia,
+    ChamadaFrequencia,
     Funcao,
     FuncaoCaracterizacaoTurma,
     FuncaoEducador,
@@ -403,6 +406,125 @@ class ReportsViewTests(TestCase):
         self.assertIn("Escola Estadual Beta", participantes[0]["escola"])
         self.assertEqual(participantes[0]["cpf"], "01234567890")
 
+    def test_frequencia_relatorios_kpis_e_distribuicoes(self):
+        agora = timezone.now()
+        staff_user = get_user_model().objects.create_user(username="staff-freq", is_staff=True)
+        usuario = get_user_model().objects.create_user(username="aluno-freq")
+
+        estado, _ = Estado.objects.get_or_create(sigla="CE", defaults={"nome_estado": "Ceará"})
+        cidade, _ = Cidade.objects.get_or_create(nome_cidade="Fortaleza", estado=estado, defaults={"codigo_ibge": 2304400})
+        escola = Escola.objects.create(id_escola=9991, nome="Escola Central", id_municipio=cidade.codigo_ibge, sigla_uf=estado.sigla)
+        funcao = Funcao.objects.create(nome="Professor")
+        caract = FuncaoCaracterizacaoTurma.objects.create(nome="Geral")
+        ee = EducadorEscola.objects.create(
+            escola=escola, cidade=cidade, funcao=funcao,
+            funcao_caracterizacao_turmas=caract,
+            tempo_atuacao=EducadorEscola.TempoAtuacao.ZERO_A_TRES_ANOS,
+        )
+        FuncaoEducador.objects.create(educador=usuario.educador, educador_escola=ee)
+
+        atividade = Atividade.objects.create(
+            titulo="Jornada Pedagógica Freq", vagas=100,
+            data_inicio=agora, data_fim=agora + timezone.timedelta(days=1),
+            inscricoes_fim=agora + timezone.timedelta(days=1),
+        )
+        tematica = TematicaSala.objects.create(nome="Alfabetização Freq")
+        sala_p = Sala.objects.create(nome="Sala Presencial Alfa")
+        sala_o = Sala.objects.create(nome="Sala Virtual Beta")
+        prog_p = ProgramacaoSala.objects.create(
+            sala=sala_p, tematica=tematica, data=agora.date(), turno="manha",
+            modalidade="presencial", quantidade_max_participantes=50,
+        )
+        prog_o = ProgramacaoSala.objects.create(
+            sala=sala_o, tematica=tematica, data=agora.date(), turno="tarde",
+            modalidade="online", quantidade_max_participantes=50,
+        )
+        atividade.programacoes.add(prog_p, prog_o)
+
+        inscricao = Inscricao.objects.create(
+            usuario=usuario, atividade=atividade, modalidade=Inscricao.Modalidade.PRESENCIAL
+        )
+        inscricao.programacoes.add(prog_p)
+
+        # Credenciamento com material entregue
+        Credenciamento.objects.create(
+            inscricao=inscricao,
+            registrado_por=staff_user,
+            metodo=Credenciamento.Metodo.QR,
+        )
+
+        # Participante 2: Ausente
+        usuario_ausente = get_user_model().objects.create_user(username="aluno-ausente")
+        ee_ausente = EducadorEscola.objects.create(
+            escola=escola, cidade=cidade, funcao=funcao,
+            funcao_caracterizacao_turmas=caract,
+            tempo_atuacao=EducadorEscola.TempoAtuacao.ZERO_A_TRES_ANOS,
+        )
+        FuncaoEducador.objects.create(educador=usuario_ausente.educador, educador_escola=ee_ausente)
+        inscricao_ausente = Inscricao.objects.create(
+            usuario=usuario_ausente, atividade=atividade, modalidade=Inscricao.Modalidade.PRESENCIAL
+        )
+        inscricao_ausente.programacoes.add(prog_p)
+
+        chamada = ChamadaFrequencia.objects.create(
+            atividade=atividade, programacao=prog_p, aberta_em=agora,
+            expira_em=agora + timezone.timedelta(hours=2), responsavel=staff_user,
+        )
+        Frequencia.objects.create(
+            inscricao=inscricao, programacao=prog_p, chamada=chamada,
+            metodo=Frequencia.Metodo.MANUAL, registrada_por=staff_user,
+        )
+
+        self.client.force_login(staff_user)
+        response = self.client.get(reverse("reports") + f"?atividade={atividade.id}")
+        self.assertEqual(response.status_code, 200)
+
+        # 1. Total e KPIs
+        kpis = response.context["frequencia_kpis"]
+        self.assertEqual(kpis["total_inscritos"], 2)
+        self.assertEqual(kpis["total_presentes"], 1)
+        self.assertEqual(kpis["total_presentes_presencial"], 1)
+        self.assertEqual(kpis["total_presentes_online"], 0)
+        self.assertEqual(kpis["total_ausentes"], 1)
+        self.assertEqual(kpis["total_ausentes_presencial"], 1)
+        self.assertEqual(kpis["taxa_presenca"], 50.0)
+        self.assertEqual(kpis["taxa_ausencia"], 50.0)
+        self.assertEqual(kpis["total_credenciados"], 1)
+        self.assertEqual(kpis["total_inscritos_presenciais"], 2)
+        self.assertEqual(kpis["total_credenciamento_pendente"], 1)
+        self.assertEqual(kpis["taxa_credenciamento"], 50.0)
+
+        # 2. Por Estado
+        estado_dados = response.context["frequencia_estado_dados"]
+        self.assertTrue(any(e["qtd"] == 1 and e["total_ausentes"] == 1 for e in estado_dados))
+
+        # 3. Por Cidade
+        cidade_dados = response.context["frequencia_cidade_dados"]
+        self.assertTrue(any(c["qtd"] == 1 and c["total_ausentes"] == 1 for c in cidade_dados))
+
+        # 4. Por Sala Presencial
+        sala_p_dados = response.context["frequencia_sala_presencial_dados"]
+        self.assertTrue(any(s["label"] == "Sala Presencial Alfa" and s["presentes"] == 1 and s["ausentes"] == 1 for s in sala_p_dados))
+
+        # 5. Por Sala On-line
+        sala_o_dados = response.context["frequencia_sala_online_dados"]
+        self.assertTrue(any(s["label"] == "Sala Virtual Beta" and s["qtd"] == 0 for s in sala_o_dados))
+
+        # 6. Presença no HTML
+        self.assertContains(response, 'id="sectionFrequenciaReports"')
+        self.assertContains(response, 'id="pane-freq-estado"')
+        self.assertContains(response, 'id="pane-freq-cidade"')
+        self.assertContains(response, 'id="pane-freq-sala-p"')
+        self.assertContains(response, 'id="pane-freq-sala-o"')
+        self.assertContains(response, 'id="pane-freq-material"')
+        self.assertContains(response, 'btnExportFreqEstadoCsv')
+        self.assertContains(response, 'btnExportFreqCidadeCsv')
+        self.assertContains(response, 'btnExportFreqSalaPresencialCsv')
+        self.assertContains(response, 'btnExportFreqSalaOnlineCsv')
+        self.assertContains(response, 'btnExportCredenciamentoMaterialCsv')
+        self.assertContains(response, 'btnMenuExportCredenciamentoMaterial')
+        self.assertContains(response, 'id="filterPresenca"')
+
 
 
 
@@ -539,3 +661,4 @@ class ConfirmacaoUndimeTests(TestCase):
         self.assertNotContains(self.client.get(self.url), "Avaliar vínculo com a Undime")
         response = self.client.post(self.url, {"educador_id": self.educador.pk, "undime_confirmada": "sim"})
         self.assertEqual(response.status_code, 403)
+

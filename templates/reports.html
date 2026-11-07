@@ -125,6 +125,306 @@
     padding: 4px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
   }
+
+  /* ========================================================= */
+  /* REFACTOR: DARK DASHBOARD UI - BARRA DE FILTROS           */
+  /* ========================================================= */
+  #participantFiltersContainer.dark-dashboard-filter-panel {
+    background-color: #171B22 !important;
+    border: 1px solid #2B3340 !important;
+    border-radius: 10px !important;
+    padding: 22px 24px !important;
+    color: #E0E5ED !important;
+    margin-top: 14px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25) !important;
+  }
+
+  .dark-filter-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+    padding-bottom: 4px;
+  }
+
+  .dark-filter-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #E0E5ED;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+
+  .dark-filter-top-badge {
+    background-color: rgba(59, 130, 246, 0.12);
+    color: #60A5FA;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    letter-spacing: 0.01em;
+  }
+
+  .dark-filter-group-header {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    color: #A8B4C5;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .dark-filter-divider {
+    border-bottom: 1px solid #28303C;
+    margin: 18px 0;
+  }
+
+  /* Grid Layouts Responsivos */
+  .grid-filter-localizacao {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+  @media (max-width: 768px) {
+    .grid-filter-localizacao {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+  }
+
+  .grid-filter-participante {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px 16px;
+  }
+  @media (max-width: 992px) {
+    .grid-filter-participante {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (max-width: 576px) {
+    .grid-filter-participante {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+  }
+
+  .grid-filter-atividades {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px 16px;
+  }
+  @media (max-width: 992px) {
+    .grid-filter-atividades {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (max-width: 576px) {
+    .grid-filter-atividades {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+  }
+
+  /* Labels & Inputs Padronizados */
+  .dark-filter-field {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .dark-filter-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: #A8B4C5;
+    margin-bottom: 6px;
+  }
+
+  .dark-filter-select {
+    background-color: #242B36 !important;
+    color: #E0E5ED !important;
+    border: 1px solid #394352 !important;
+    border-radius: 6px !important;
+    height: 42px !important;
+    font-size: 0.875rem !important;
+    padding: 0 34px 0 14px !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23A8B4C5' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 12px center !important;
+    background-size: 12px 10px !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    transition: all 150ms ease-in-out !important;
+    width: 100% !important;
+  }
+
+  .dark-filter-select:hover:not(:disabled) {
+    border-color: #4B5563 !important;
+    background-color: #28303C !important;
+  }
+
+  .dark-filter-select:focus {
+    border-color: #60A5FA !important;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25) !important;
+    outline: none !important;
+    color: #E0E5ED !important;
+  }
+
+  .dark-filter-select:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    background-color: #1A2028 !important;
+    border-color: #2A3340 !important;
+  }
+
+  .dark-filter-select option {
+    background-color: #242B36 !important;
+    color: #E0E5ED !important;
+    padding: 8px 12px !important;
+  }
+
+  .dark-filter-select optgroup {
+    background-color: #1C222B !important;
+    color: #60A5FA !important;
+    font-weight: 700 !important;
+  }
+
+  /* Actions & Search Area */
+  .dark-filter-actions-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-top: 4px;
+  }
+
+  .dark-filter-search-box {
+    background-color: #242B36;
+    border: 1px solid #394352;
+    border-radius: 6px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    flex: 1;
+    transition: all 150ms ease-in-out;
+  }
+
+  .dark-filter-search-box:hover {
+    border-color: #4B5563;
+    background-color: #28303C;
+  }
+
+  .dark-filter-search-box:focus-within {
+    border-color: #60A5FA;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25);
+  }
+
+  .dark-filter-search-icon {
+    color: #6B7280;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+  }
+
+  .dark-filter-search-input {
+    background: transparent !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    color: #E0E5ED !important;
+    font-size: 0.875rem !important;
+    width: 100% !important;
+    padding-left: 10px !important;
+  }
+
+  .dark-filter-search-input::placeholder {
+    color: #6B7280 !important;
+    opacity: 1 !important;
+  }
+
+  .dark-filter-btn-reset {
+    background: #242B36;
+    border: 1px solid #394352;
+    border-radius: 6px;
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #A8B4C5;
+    transition: all 150ms ease-in-out;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .dark-filter-btn-reset:hover {
+    background: #2D3644;
+    border-color: #60A5FA;
+    color: #E0E5ED;
+  }
+
+  .dark-filter-footer-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 10px;
+    font-size: 0.85rem;
+  }
+
+  .dark-filter-counter-text {
+    color: #A8B4C5;
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+
+  .dark-filter-advanced-link {
+    color: #3B82F6;
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    padding: 0;
+    transition: color 150ms ease;
+  }
+
+  .dark-filter-advanced-link:hover {
+    color: #60A5FA;
+    text-decoration: underline;
+  }
+
+  .dark-filter-chips-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed #2A3342;
+  }
+
+  .dark-filter-chip {
+    background-color: rgba(59, 130, 246, 0.15);
+    color: #93C5FD;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 4px;
+    font-size: 0.75rem;
+    padding: 3px 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .dark-filter-chip-remove {
+    cursor: pointer;
+    color: #93C5FD;
+    opacity: 0.7;
+    margin-left: 2px;
+  }
+  .dark-filter-chip-remove:hover {
+    opacity: 1;
+    color: #BFDBFE;
+  }
 </style>
 {% endblock %}
 
@@ -379,6 +679,86 @@
     </div>
   </div>
 
+  <!-- Cards de Frequência, Presença e Credenciamento do Evento -->
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-sm-6 col-xl">
+      <div class="card stat-card-widget shadow-sm h-100 p-3" style="border-left: 5px solid #198754; background: linear-gradient(135deg, rgba(25, 135, 84, 0.05) 0%, rgba(25, 135, 84, 0.01) 100%);">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <span class="text-muted small fw-semibold text-uppercase">Presentes no Evento</span>
+            <h3 class="fw-bold my-1 text-success">{{ frequencia_kpis.total_presentes|default:0 }}</h3>
+            <span class="badge bg-success-subtle text-success fw-bold">{{ frequencia_kpis.taxa_presenca|default:"0.0" }}% dos inscritos</span>
+          </div>
+          <div class="stat-icon-wrapper bg-success-subtle text-success">
+            <i class="bi bi-check2-circle"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl">
+      <div class="card stat-card-widget shadow-sm h-100 p-3" style="border-left: 5px solid #0d6efd;">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <span class="text-muted small fw-semibold text-uppercase">Presentes Presencial</span>
+            <h3 class="fw-bold my-1 text-primary">{{ frequencia_kpis.total_presentes_presencial|default:0 }}</h3>
+            <span class="text-muted small">Salas presenciais</span>
+          </div>
+          <div class="stat-icon-wrapper bg-primary-subtle text-primary">
+            <i class="bi bi-building"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl">
+      <div class="card stat-card-widget shadow-sm h-100 p-3" style="border-left: 5px solid #0dcaf0;">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <span class="text-muted small fw-semibold text-uppercase">Presentes On-line</span>
+            <h3 class="fw-bold my-1 text-info">{{ frequencia_kpis.total_presentes_online|default:0 }}</h3>
+            <span class="text-muted small">Salas virtuais</span>
+          </div>
+          <div class="stat-icon-wrapper bg-info-subtle text-info">
+            <i class="bi bi-camera-video"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl">
+      <div class="card stat-card-widget shadow-sm h-100 p-3" style="border-left: 5px solid #dc3545;">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <span class="text-muted small fw-semibold text-uppercase">Total Ausentes</span>
+            <h3 class="fw-bold my-1 text-danger">{{ frequencia_kpis.total_ausentes|default:0 }}</h3>
+            <span class="badge bg-danger-subtle text-danger fw-bold">{{ frequencia_kpis.taxa_ausencia|default:"0.0" }}% dos inscritos</span>
+            <div class="text-muted mt-1" style="font-size: 0.72rem;">{{ frequencia_kpis.total_ausentes_presencial|default:0 }} pres. · {{ frequencia_kpis.total_ausentes_online|default:0 }} on-line</div>
+          </div>
+          <div class="stat-icon-wrapper bg-danger-subtle text-danger">
+            <i class="bi bi-person-x"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl">
+      <div class="card stat-card-widget shadow-sm h-100 p-3" style="border-left: 5px solid #fd7e14; background: linear-gradient(135deg, rgba(253, 126, 20, 0.05) 0%, rgba(253, 126, 20, 0.01) 100%);">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <span class="text-muted small fw-semibold text-uppercase">Material Entregue</span>
+            <h3 class="fw-bold my-1 text-warning-emphasis" style="color: #fd7e14 !important;">{{ frequencia_kpis.total_credenciados|default:0 }}</h3>
+            <span class="badge bg-warning-subtle text-warning-emphasis fw-bold" style="color: #b05000 !important;">{{ frequencia_kpis.taxa_credenciamento|default:"0.0" }}% dos presenciais</span>
+            <div class="text-muted mt-1" style="font-size: 0.72rem;">{{ frequencia_kpis.total_credenciamento_pendente|default:0 }} pendentes de entrega</div>
+          </div>
+          <div class="stat-icon-wrapper text-warning" style="background-color: rgba(253, 126, 20, 0.15); color: #fd7e14;">
+            <i class="bi bi-box-seam-fill"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Mapa Interativo de Distribuição Geográfica do Brasil -->
   <div class="card chart-card shadow-sm mb-4">
     <div class="card-header bg-transparent border-bottom p-3 d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2">
@@ -421,6 +801,12 @@
             <option value="escolaridade">🎓 Escolaridade</option>
             <option value="genero">👤 Gênero</option>
             <option value="cor">🎨 Cor / Raça</option>
+            <optgroup label="Frequência & Presença">
+              <option value="frequencia_estado">🗺️ Presença por Estado</option>
+              <option value="frequencia_cidade">🏙️ Presença por Cidade</option>
+              <option value="frequencia_sala_presencial">🏛️ Presença por Sala (Presencial)</option>
+              <option value="frequencia_sala_online">💻 Presença por Sala (On-line)</option>
+            </optgroup>
           </select>
         </div>
 
@@ -518,6 +904,242 @@
     </div>
   </div>
 
+  <!-- ======================================================== -->
+  <!-- SEÇÃO DE RELATÓRIOS DE FREQUÊNCIA & PRESENÇA             -->
+  <!-- ======================================================== -->
+  <div class="card chart-card shadow-sm mb-4" id="sectionFrequenciaReports">
+    <div class="card-header bg-transparent border-bottom p-3">
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+        <div>
+          <h5 class="fw-bold m-0 d-flex align-items-center gap-2">
+            <i class="bi bi-person-check-fill text-success"></i> Relatórios de Frequência & Presença
+          </h5>
+          <span class="small text-muted">Contagem e detalhamento dos participantes presentes por Estado, Cidade e Salas.</span>
+        </div>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          <ul class="nav nav-pills nav-pills-sm card-header-pills" id="frequenciaTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active fw-semibold btn-sm py-1 px-3" id="tab-freq-estado" data-bs-toggle="pill" data-bs-target="#pane-freq-estado" type="button" role="tab">
+                🗺️ Por Estado
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link fw-semibold btn-sm py-1 px-3" id="tab-freq-cidade" data-bs-toggle="pill" data-bs-target="#pane-freq-cidade" type="button" role="tab">
+                🏙️ Por Cidade
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link fw-semibold btn-sm py-1 px-3" id="tab-freq-sala-p" data-bs-toggle="pill" data-bs-target="#pane-freq-sala-p" type="button" role="tab">
+                🏛️ Por Sala (Presencial)
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link fw-semibold btn-sm py-1 px-3" id="tab-freq-sala-o" data-bs-toggle="pill" data-bs-target="#pane-freq-sala-o" type="button" role="tab">
+                💻 Por Sala (On-line)
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link fw-semibold btn-sm py-1 px-3" id="tab-freq-material" data-bs-toggle="pill" data-bs-target="#pane-freq-material" type="button" role="tab">
+                🪪 Credenciamento & Material
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-body p-3 p-md-4">
+      <div class="tab-content" id="frequenciaTabContent">
+        <!-- 1. Presença & Ausência por Estado -->
+        <div class="tab-pane fade show active" id="pane-freq-estado" role="tabpanel">
+          <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <div>
+              <h6 class="fw-bold mb-0 text-primary">Participantes Presentes e Ausentes por Estado (Online e Presencial)</h6>
+              <small class="text-muted">Total de inscritos, presenças confirmadas e ausências registradas em cada Unidade Federativa.</small>
+            </div>
+            <button type="button" class="btn btn-outline-success btn-sm fw-semibold" id="btnExportFreqEstadoCsv">
+              <i class="bi bi-file-earmark-spreadsheet me-1"></i> Exportar Estados (CSV)
+            </button>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th style="width: 50px;">#</th>
+                  <th>Estado (UF)</th>
+                  <th class="text-center" style="width: 100px;">Inscritos</th>
+                  <th class="text-center" style="width: 160px;">Presentes (Total)</th>
+                  <th class="text-center" style="width: 160px;">Ausentes (Total)</th>
+                  <th style="width: 150px;">Taxa Presença</th>
+                  <th style="width: 150px;">Taxa Ausência</th>
+                </tr>
+              </thead>
+              <tbody id="tableFreqEstadoBody">
+                <!-- Renderizado via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 2. Presença & Ausência por Cidade -->
+        <div class="tab-pane fade" id="pane-freq-cidade" role="tabpanel">
+          <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <div>
+              <h6 class="fw-bold mb-0 text-primary">Participantes Presentes e Ausentes por Cidade (Online e Presencial)</h6>
+              <small class="text-muted">Detalhamento municipal de presenças confirmadas e ausências.</small>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <input type="text" id="searchFreqCidade" class="form-control form-control-sm" placeholder="Filtrar cidade..." style="max-width: 200px;">
+              <button type="button" class="btn btn-outline-success btn-sm fw-semibold text-nowrap" id="btnExportFreqCidadeCsv">
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i> Exportar Cidades (CSV)
+              </button>
+            </div>
+          </div>
+          <div class="table-responsive" style="max-height: 420px; overflow-y: auto;">
+            <table class="table table-sm table-hover align-middle mb-0">
+              <thead class="table-light sticky-top">
+                <tr>
+                  <th style="width: 50px;">#</th>
+                  <th>Cidade / Município</th>
+                  <th class="text-center" style="width: 80px;">UF</th>
+                  <th class="text-center" style="width: 100px;">Inscritos</th>
+                  <th class="text-center" style="width: 150px;">Presentes (Total)</th>
+                  <th class="text-center" style="width: 150px;">Ausentes (Total)</th>
+                  <th style="width: 140px;">Taxa Presença</th>
+                  <th style="width: 140px;">Taxa Ausência</th>
+                </tr>
+              </thead>
+              <tbody id="tableFreqCidadeBody">
+                <!-- Renderizado via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 3. Presença & Ausência por Sala (Presencial) -->
+        <div class="tab-pane fade" id="pane-freq-sala-p" role="tabpanel">
+          <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <div>
+              <h6 class="fw-bold mb-0 text-primary">Participantes Presentes e Ausentes por Sala (Presencial)</h6>
+              <small class="text-muted">Total de inscritos nas programações da sala, participantes presentes e faltantes.</small>
+            </div>
+            <button type="button" class="btn btn-outline-success btn-sm fw-semibold" id="btnExportFreqSalaPresencialCsv">
+              <i class="bi bi-file-earmark-spreadsheet me-1"></i> Exportar Salas Presenciais (CSV)
+            </button>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th style="width: 50px;">#</th>
+                  <th>Sala Física</th>
+                  <th class="text-center" style="width: 120px;">Capacidade</th>
+                  <th class="text-center" style="width: 120px;">Inscritos</th>
+                  <th class="text-center" style="width: 140px;">Presentes</th>
+                  <th class="text-center" style="width: 140px;">Ausentes</th>
+                  <th style="width: 150px;">Taxa Presença</th>
+                  <th style="width: 150px;">Taxa Ausência</th>
+                </tr>
+              </thead>
+              <tbody id="tableFreqSalaPresencialBody">
+                <!-- Renderizado via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 4. Presença & Ausência por Sala (On-line) -->
+        <div class="tab-pane fade" id="pane-freq-sala-o" role="tabpanel">
+          <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <div>
+              <h6 class="fw-bold mb-0 text-primary">Participantes Presentes e Ausentes por Sala (On-line)</h6>
+              <small class="text-muted">Total de inscritos nas salas virtuais, participantes conectados e ausentes.</small>
+            </div>
+            <button type="button" class="btn btn-outline-success btn-sm fw-semibold" id="btnExportFreqSalaOnlineCsv">
+              <i class="bi bi-file-earmark-spreadsheet me-1"></i> Exportar Salas On-line (CSV)
+            </button>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th style="width: 50px;">#</th>
+                  <th>Sala Virtual / Programação On-line</th>
+                  <th class="text-center" style="width: 120px;">Capacidade</th>
+                  <th class="text-center" style="width: 120px;">Inscritos</th>
+                  <th class="text-center" style="width: 140px;">Presentes</th>
+                  <th class="text-center" style="width: 140px;">Ausentes</th>
+                  <th style="width: 150px;">Taxa Presença</th>
+                  <th style="width: 150px;">Taxa Ausência</th>
+                </tr>
+              </thead>
+              <tbody id="tableFreqSalaOnlineBody">
+                <!-- Renderizado via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 5. Credenciamento & Entrega de Material -->
+        <div class="tab-pane fade" id="pane-freq-material" role="tabpanel">
+          <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <div>
+              <h6 class="fw-bold mb-0 text-primary">Participantes que Receberam Material no Credenciamento</h6>
+              <small class="text-muted">Controle da entrega presencial de crachás, pastas e kits aos participantes.</small>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <input type="text" id="searchCredenciamento" class="form-control form-control-sm" placeholder="Buscar participante..." style="max-width: 200px;">
+              <button type="button" class="btn btn-outline-success btn-sm fw-semibold text-nowrap" id="btnExportCredenciamentoMaterialCsv">
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i> Exportar Material (CSV)
+              </button>
+            </div>
+          </div>
+
+          <!-- Resumo de Entrega de Material -->
+          <div class="row g-2 mb-3">
+            <div class="col-12 col-sm-4">
+              <div class="p-2 border rounded bg-light text-center">
+                <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.7rem;">Inscritos Presenciais</small>
+                <h5 class="fw-bold m-0 text-primary">{{ frequencia_kpis.total_inscritos_presenciais|default:0 }}</h5>
+              </div>
+            </div>
+            <div class="col-12 col-sm-4">
+              <div class="p-2 border rounded bg-light text-center">
+                <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.7rem;">Receberam Material</small>
+                <h5 class="fw-bold m-0 text-success">{{ frequencia_kpis.total_credenciados|default:0 }} ({{ frequencia_kpis.taxa_credenciamento|default:"0.0" }}%)</h5>
+              </div>
+            </div>
+            <div class="col-12 col-sm-4">
+              <div class="p-2 border rounded bg-light text-center">
+                <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.7rem;">Pendentes de Retirada</small>
+                <h5 class="fw-bold m-0 text-warning">{{ frequencia_kpis.total_credenciamento_pendente|default:0 }}</h5>
+              </div>
+            </div>
+          </div>
+
+          <div class="table-responsive" style="max-height: 420px; overflow-y: auto;">
+            <table class="table table-sm table-hover align-middle mb-0">
+              <thead class="table-light sticky-top">
+                <tr>
+                  <th style="width: 50px;">#</th>
+                  <th>Participante</th>
+                  <th style="width: 140px;">CPF</th>
+                  <th>Município / UF</th>
+                  <th class="text-center" style="width: 160px;">Recebeu Material?</th>
+                  <th style="width: 160px;">Data do Credenciamento</th>
+                  <th style="width: 120px;">Método</th>
+                </tr>
+              </thead>
+              <tbody id="tableCredenciamentoBody">
+                <!-- Renderizado via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Seção Inferior: Tabela Detalhada com Filtros Avançados, Paginação e Exportação CSV -->
   <div class="card chart-card shadow-sm mb-4">
     <!-- Cabeçalho do Card com Abas de Visualização e Menu de Exportação -->
@@ -554,15 +1176,61 @@
                 <button class="dropdown-item py-2 fw-semibold" id="btnExportFullCsv">
                   <i class="bi bi-file-earmark-spreadsheet text-success me-2 fs-5"></i>
                   <div>
-                    <div>Exportar Participantes (CSV Completo)</div>
-                    <small class="text-muted font-normal">Exporta Nome, CPF, E-mail, Município, Escola, Função, etc. com filtros aplicados.</small>
+                    <div>Exportar Participantes (CSV Completo com Presenças)</div>
+                    <small class="text-muted font-normal">Exporta Nome, CPF, E-mail, Município, Escola, Presenças, etc. com filtros aplicados.</small>
+                  </div>
+                </button>
+              </li>
+              <li><hr class="dropdown-divider"></li>
+              <li>
+                <button class="dropdown-item py-2 fw-semibold" id="btnMenuExportFreqEstado">
+                  <i class="bi bi-geo-alt-fill text-primary me-2 fs-5"></i>
+                  <div>
+                    <div>Exportar Presença por Estado (CSV)</div>
+                    <small class="text-muted font-normal">Total de participantes presentes por UF (Presencial, On-line e Total).</small>
+                  </div>
+                </button>
+              </li>
+              <li>
+                <button class="dropdown-item py-2 fw-semibold" id="btnMenuExportFreqCidade">
+                  <i class="bi bi-buildings-fill text-info me-2 fs-5"></i>
+                  <div>
+                    <div>Exportar Presença por Cidade (CSV)</div>
+                    <small class="text-muted font-normal">Total de participantes presentes por Município (Presencial, On-line e Total).</small>
+                  </div>
+                </button>
+              </li>
+              <li>
+                <button class="dropdown-item py-2 fw-semibold" id="btnMenuExportFreqSalaP">
+                  <i class="bi bi-door-open-fill text-primary me-2 fs-5"></i>
+                  <div>
+                    <div>Exportar Presença por Salas Presenciais (CSV)</div>
+                    <small class="text-muted font-normal">Total de participantes presentes em cada sala física.</small>
+                  </div>
+                </button>
+              </li>
+              <li>
+                <button class="dropdown-item py-2 fw-semibold" id="btnMenuExportFreqSalaO">
+                  <i class="bi bi-laptop text-info me-2 fs-5"></i>
+                  <div>
+                    <div>Exportar Presença por Salas On-line (CSV)</div>
+                    <small class="text-muted font-normal">Total de participantes presentes em cada sala virtual.</small>
+                  </div>
+                </button>
+              </li>
+              <li>
+                <button class="dropdown-item py-2 fw-semibold" id="btnMenuExportCredenciamentoMaterial">
+                  <i class="bi bi-box-seam text-warning me-2 fs-5"></i>
+                  <div>
+                    <div>Exportar Credenciamento & Material (CSV)</div>
+                    <small class="text-muted font-normal">Participantes presenciais e confirmação de recebimento de material.</small>
                   </div>
                 </button>
               </li>
               <li><hr class="dropdown-divider"></li>
               <li>
                 <button class="dropdown-item py-2 fw-semibold" id="btnExportSummaryCsv">
-                  <i class="bi bi-pie-chart-fill text-primary me-2 fs-5"></i>
+                  <i class="bi bi-pie-chart-fill text-secondary me-2 fs-5"></i>
                   <div>
                     <div>Exportar Resumo Agrupado (CSV Estatístico)</div>
                     <small class="text-muted font-normal">Exporta totais e percentuais agregados da dimensão selecionada.</small>
@@ -574,107 +1242,156 @@
         </div>
       </div>
 
-      <!-- Barra de Filtros Específicos para a Tabela de Participantes -->
-      <div id="participantFiltersContainer" class="bg-body-tertiary p-3 rounded-3 border">
-        <div class="row g-2 align-items-center mb-2">
-          <div class="col-12 col-sm-6 col-lg">
-            <label for="filterEstado" class="form-label mb-1 small fw-semibold text-muted">🗺️ Estado:</label>
-            <select id="filterEstado" class="form-select form-select-sm">
+      <!-- Barra de Filtros Refatorada (Dark Dashboard UI) -->
+      <div id="participantFiltersContainer" class="dark-dashboard-filter-panel mb-0">
+        
+        <!-- Topo: Título e Contador Total -->
+        <div class="dark-filter-header">
+          <h5 class="dark-filter-title">Filtros de participantes</h5>
+          <span class="dark-filter-top-badge" id="filteredTopBadge">
+            0 participantes
+          </span>
+        </div>
+
+        <!-- Grupo 1 – Localização -->
+        <div class="dark-filter-group-header">LOCALIZAÇÃO</div>
+        <div class="grid-filter-localizacao">
+          <div class="dark-filter-field">
+            <label for="filterEstado" class="dark-filter-label">🗺️ Estado</label>
+            <select id="filterEstado" class="dark-filter-select">
               <option value="">Todos os Estados</option>
             </select>
           </div>
 
-          <div class="col-12 col-sm-6 col-lg">
-            <label for="filterMunicipio" class="form-label mb-1 small fw-semibold text-muted">🏙️ Município:</label>
-            <select id="filterMunicipio" class="form-select form-select-sm">
+          <div class="dark-filter-field">
+            <label for="filterMunicipio" class="dark-filter-label">🏙️ Município</label>
+            <select id="filterMunicipio" class="dark-filter-select">
               <option value="">Todos os Municípios</option>
             </select>
           </div>
+        </div>
 
-          <div class="col-12 col-sm-6 col-lg">
-            <label for="filterModalidade" class="form-label mb-1 small fw-semibold text-muted">💻 Modalidade:</label>
-            <select id="filterModalidade" class="form-select form-select-sm">
-              <option value="">Todas as Modalidades</option>
+        <div class="dark-filter-divider"></div>
+
+        <!-- Grupo 2 – Dados do Participante -->
+        <div class="dark-filter-group-header">DADOS DO PARTICIPANTE</div>
+        <div class="grid-filter-participante">
+          <div class="dark-filter-field">
+            <label for="filterModalidade" class="dark-filter-label">💻 Modalidade</label>
+            <select id="filterModalidade" class="dark-filter-select">
+              <option value="">Todos</option>
               <option value="presencial">Presencial</option>
               <option value="online">Remoto (On-line)</option>
             </select>
           </div>
 
-          <div class="col-12 col-sm-6 col-lg">
-            <label for="filterRepresentante" class="form-label mb-1 small fw-semibold text-muted">🏛️ Rep. Undime/Consed (autodeclaração):</label>
-            <select id="filterRepresentante" class="form-select form-select-sm">
+          <div class="dark-filter-field">
+            <label for="filterRepresentante" class="dark-filter-label" title="Você é representante do Estado pela Undime ou pelo Consed?">🏛️ Rep. Undime/Consed (autodeclaração)</label>
+            <select id="filterRepresentante" class="dark-filter-select" title="Você é representante do Estado pela Undime ou pelo Consed?">
               <option value="">Todos</option>
               <option value="Sim">Sim</option>
               <option value="Não">Não</option>
             </select>
           </div>
 
-          <div class="col-12 col-sm-6 col-lg">
-            <label for="filterConfirmacaoUndime" class="form-label mb-1 small fw-semibold text-muted">Undime (decisão administrativa):</label>
-            <select id="filterConfirmacaoUndime" class="form-select form-select-sm">
-              <option value="">Todas as decisões</option>
+          <div class="dark-filter-field">
+            <label for="filterConfirmacaoUndime" class="dark-filter-label" title="Decisão administrativa Undime">🏛️ Undime (decisão administrativa)</label>
+            <select id="filterConfirmacaoUndime" class="dark-filter-select" title="Decisão administrativa Undime">
+              <option value="">Todos</option>
               <option value="sim">Sim — vínculo aprovado</option>
               <option value="nao">Não — vínculo não aprovado</option>
               <option value="pendente">Sem avaliação administrativa</option>
             </select>
           </div>
 
-          <div class="col-12 col-sm-6 col-lg">
-            <label for="filterApresentacao" class="form-label mb-1 small fw-semibold text-muted">Apresentação de trabalho:</label>
-            <select id="filterApresentacao" class="form-select form-select-sm">
+          <div class="dark-filter-field">
+            <label for="filterApresentacao" class="dark-filter-label" title="Apresentação de trabalho">📝 Apresentação de trabalho</label>
+            <select id="filterApresentacao" class="dark-filter-select" title="Apresentação de trabalho">
               <option value="">Todos</option>
               <option value="sim">Sim</option>
               <option value="nao">Não</option>
             </select>
           </div>
 
-          <div class="col-12 col-sm-6 col-lg">
-            <label for="filterGenero" class="form-label mb-1 small fw-semibold text-muted">👤 Gênero:</label>
-            <select id="filterGenero" class="form-select form-select-sm">
-              <option value="">Todos os Gêneros</option>
+          <div class="dark-filter-field">
+            <label for="filterGenero" class="dark-filter-label">👤 Gênero</label>
+            <select id="filterGenero" class="dark-filter-select">
+              <option value="">Todos</option>
+            </select>
+          </div>
+
+          <div class="dark-filter-field">
+            <label for="filterPresenca" class="dark-filter-label">✅ Presença no evento</label>
+            <select id="filterPresenca" class="dark-filter-select">
+              <option value="">Todos</option>
+              <option value="presente">Apenas Presentes</option>
+              <option value="ausente">Apenas Ausentes</option>
+              <option value="presencial">Presente no Presencial</option>
+              <option value="online">Presente no On-line</option>
+              <option value="material_sim">Recebeu Material</option>
+              <option value="material_nao">Material Pendente</option>
             </select>
           </div>
         </div>
 
-        <div class="row g-2 mb-2">
-          <div class="col-12 col-lg-4">
-            <label for="filterDataAtividade" class="form-label mb-1 small fw-semibold text-muted">Datas disponíveis por atividade:</label>
-            <select id="filterDataAtividade" class="form-select form-select-sm">
-              <option value="">Todas as datas</option>
-            </select>
-          </div>
-          <div class="col-12 col-lg-4">
-            <label for="filterProgramacao" class="form-label mb-1 small fw-semibold text-muted">Programação:</label>
-            <select id="filterProgramacao" class="form-select form-select-sm">
-              <option value="">Todas as programações</option>
-            </select>
-          </div>
-          <div class="col-12 col-lg-4">
-            <label for="filterRefeicao" class="form-label mb-1 small fw-semibold text-muted">Escolha das refeições:</label>
-            <select id="filterRefeicao" class="form-select form-select-sm" disabled aria-describedby="filterRefeicaoHelp">
-              <option value="">Todas as refeições</option>
-            </select>
-            <small id="filterRefeicaoHelp" class="text-muted">Disponível para atividade presencial ou modalidade presencial em atividade mista.</small>
-          </div>
-        </div>
-        <div class="row g-2 align-items-center">
-          <div class="col-12 col-md-8">
-            <div class="input-group input-group-sm">
-              <span class="input-group-text bg-transparent"><i class="bi bi-search text-muted"></i></span>
-              <input type="text" id="participantSearchInput" class="form-control" placeholder="Buscar por nome, CPF, e-mail, telefone, escola, município ou estado...">
+        <div class="dark-filter-divider"></div>
+
+        <!-- Grupo 3 – Atividades -->
+        <div id="filterGroupAtividades">
+          <div class="dark-filter-group-header">ATIVIDADES</div>
+          <div class="grid-filter-atividades">
+            <div class="dark-filter-field">
+              <label for="filterDataAtividade" class="dark-filter-label">📅 Datas disponíveis por atividade</label>
+              <select id="filterDataAtividade" class="dark-filter-select">
+                <option value="">Todas</option>
+              </select>
+            </div>
+
+            <div class="dark-filter-field">
+              <label for="filterProgramacao" class="dark-filter-label">🕒 Programação</label>
+              <select id="filterProgramacao" class="dark-filter-select">
+                <option value="">Todas</option>
+              </select>
+            </div>
+
+            <div class="dark-filter-field">
+              <label for="filterRefeicao" class="dark-filter-label">🍽️ Escolha das refeições</label>
+              <select id="filterRefeicao" class="dark-filter-select" disabled aria-describedby="filterRefeicaoHelp">
+                <option value="">Todas</option>
+              </select>
+              <small id="filterRefeicaoHelp" class="mt-1" style="color: #6B7280; font-size: 0.73rem;">
+                Disponível para atividade presencial ou modalidade presencial em atividade mista.
+              </small>
             </div>
           </div>
-          <div class="col-12 col-md-2">
-            <button id="btnClearFilters" class="btn btn-sm btn-outline-secondary w-100 fw-semibold">
-              <i class="bi bi-x-circle me-1"></i> Limpar Filtros
-            </button>
-          </div>
-          <div class="col-12 col-md-2 text-md-end">
-            <span class="badge bg-primary-subtle text-primary fw-bold px-3 py-2" id="filteredCountBadge">
-              Total: 0 participantes
-            </span>
-          </div>
         </div>
+
+        <div class="dark-filter-divider"></div>
+
+        <!-- Parte Inferior: Busca e Ações -->
+        <div class="dark-filter-actions-row">
+          <div class="dark-filter-search-box">
+            <i class="bi bi-search dark-filter-search-icon"></i>
+            <input type="text" id="participantSearchInput" class="dark-filter-search-input" placeholder="Buscar participante..." aria-label="Buscar participante" title="Buscar por nome, CPF, e-mail, telefone, escola, município ou estado...">
+          </div>
+          <button type="button" id="btnClearFilters" class="dark-filter-btn-reset" title="Limpar todos os filtros" aria-label="Limpar filtros">
+            <i class="bi bi-arrow-counterclockwise fs-5"></i>
+          </button>
+        </div>
+
+        <!-- Rodapé do Card: Contador e Link/Chips -->
+        <div class="dark-filter-footer-info">
+          <span class="dark-filter-counter-text" id="filteredCountBadge">
+            0 registros encontrados
+          </span>
+          <button type="button" class="dark-filter-advanced-link" id="btnToggleAdvancedFilters">
+            Filtros avançados
+          </button>
+        </div>
+
+        <!-- Container para Chips de Filtros Ativos -->
+        <div id="activeFilterChipsContainer" class="dark-filter-chips-container d-none"></div>
+
       </div>
     </div>
 
@@ -698,6 +1415,7 @@
               <th>Gênero, cor/raça e estado civil</th>
               <th>Refeições</th>
               <th>Apresentação de trabalho</th>
+              <th class="text-center" style="min-width: 140px;">Presença</th>
             </tr>
           </thead>
           <tbody id="tableParticipantsBody">
@@ -765,6 +1483,11 @@
 {{ funcao_dados|json_script:"role-data" }}
 {{ escolaridade_dados|json_script:"education-level-data" }}
 {{ tempo_dados|json_script:"experience-time-data" }}
+{{ frequencia_kpis|json_script:"frequencia-kpis-data" }}
+{{ frequencia_estado_dados|json_script:"frequencia-estado-data" }}
+{{ frequencia_cidade_dados|json_script:"frequencia-cidade-data" }}
+{{ frequencia_sala_presencial_dados|json_script:"frequencia-sala-presencial-data" }}
+{{ frequencia_sala_online_dados|json_script:"frequencia-sala-online-data" }}
 <script>
   // Dataset de Participantes Detalhados
   const readJsonData = (elementId) => JSON.parse(document.getElementById(elementId).textContent);
@@ -840,7 +1563,11 @@
     cor: { title: "Distribuição por Cor / Raça", data: readJsonData("race-color-data") },
     funcao: { title: "Distribuição por Função", data: readJsonData("role-data") },
     escolaridade: { title: "Distribuição por Escolaridade", data: readJsonData("education-level-data") },
-    tempo: { title: "Distribuição por Escolaridade", data: readJsonData("education-level-data") }
+    tempo: { title: "Distribuição por Escolaridade", data: readJsonData("education-level-data") },
+    frequencia_estado: { title: "Presença por Estado (Total de Presentes)", data: readJsonData("frequencia-estado-data") },
+    frequencia_cidade: { title: "Presença por Cidade (Total de Presentes)", data: readJsonData("frequencia-cidade-data") },
+    frequencia_sala_presencial: { title: "Presença por Sala — Presencial", data: readJsonData("frequencia-sala-presencial-data") },
+    frequencia_sala_online: { title: "Presença por Sala — On-line", data: readJsonData("frequencia-sala-online-data") }
   };
 
   let mainChartInstance = null;
@@ -1342,7 +2069,7 @@
         }
       });
     });
-    select.replaceChildren(new Option(options.size ? 'Todas as programações' : 'Nenhuma programação disponível', ''));
+    select.replaceChildren(new Option(options.size ? 'Todas' : 'Nenhuma programação disponível', ''));
     options.forEach((label, id) => select.appendChild(new Option(label, id)));
     if (options.has(previousValue)) select.value = previousValue;
   }
@@ -1356,7 +2083,7 @@
     const selectedDate = dateValue ? dateValue.split('|')[1] : '';
     const previousMeal = mealSelect.value;
     const availableMeals = (activity?.refeicoes || []).filter(meal => !selectedDate || meal.data === selectedDate);
-    mealSelect.replaceChildren(new Option(availableMeals.length ? 'Todas as refeições' : 'Nenhuma refeição cadastrada', ''));
+    mealSelect.replaceChildren(new Option(availableMeals.length ? 'Todas' : 'Nenhuma refeição cadastrada', ''));
     availableMeals.forEach(meal => {
       mealSelect.appendChild(new Option(meal.label, String(meal.id)));
     });
@@ -1379,6 +2106,7 @@
     const filterModalidadeEl = document.getElementById('filterModalidade');
     const filterRepEl = document.getElementById('filterRepresentante');
     const filterGeneroEl = document.getElementById('filterGenero');
+    const filterPresencaEl = document.getElementById('filterPresenca');
     const searchInputEl = document.getElementById('participantSearchInput');
 
     const estado = filterEstadoEl ? filterEstadoEl.value : '';
@@ -1388,9 +2116,16 @@
     const confirmacaoUndime = document.getElementById('filterConfirmacaoUndime')?.value || '';
     const apresentacao = document.getElementById('filterApresentacao')?.value || '';
     const genero = filterGeneroEl ? filterGeneroEl.value : '';
+    const presenca = filterPresencaEl ? filterPresencaEl.value : '';
     const searchTerm = searchInputEl ? searchInputEl.value.toLowerCase().trim() : '';
 
     currentFilteredParticipants = participantsData.filter(p => {
+      if (presenca === 'presente' && !p.presente) return false;
+      if (presenca === 'ausente' && p.presente) return false;
+      if (presenca === 'presencial' && !p.presente_presencial) return false;
+      if (presenca === 'online' && !p.presente_online) return false;
+      if (presenca === 'material_sim' && !p.credenciado) return false;
+      if (presenca === 'material_nao' && (p.credenciado || p.recebeu_material === 'Não se aplica (On-line)')) return false;
       if (apresentacao && !apresentacoesDoParticipante(p).some(a => a.vai_apresentar_trabalho === (apresentacao === 'sim'))) return false;
       if (programacaoValue && !(p.programacoes_ids || []).some(id => String(id) === programacaoValue)) return false;
       if (dateValue) {
@@ -1455,7 +2190,103 @@
     });
 
     renderParticipantsTable();
+    updateActiveFilterChips();
   }
+
+  // Atualiza os chips de filtros ativos
+  function updateActiveFilterChips() {
+    const container = document.getElementById('activeFilterChipsContainer');
+    if (!container) return;
+
+    const chips = [];
+    const getVal = (id) => document.getElementById(id)?.value || '';
+
+    const estado = getVal('filterEstado');
+    if (estado) chips.push({ label: `Estado: ${estado}`, id: 'filterEstado' });
+
+    const municipio = getVal('filterMunicipio');
+    if (municipio) chips.push({ label: `Município: ${municipio}`, id: 'filterMunicipio' });
+
+    const modalidade = getVal('filterModalidade');
+    if (modalidade) {
+      const text = modalidade === 'presencial' ? 'Presencial' : 'On-line';
+      chips.push({ label: `Modalidade: ${text}`, id: 'filterModalidade' });
+    }
+
+    const rep = getVal('filterRepresentante');
+    if (rep) chips.push({ label: `Rep. Undime/Consed: ${rep}`, id: 'filterRepresentante' });
+
+    const undime = getVal('filterConfirmacaoUndime');
+    if (undime) {
+      const text = undime === 'sim' ? 'Undime: Aprovado' : (undime === 'nao' ? 'Undime: Não Aprovado' : 'Undime: Pendente');
+      chips.push({ label: text, id: 'filterConfirmacaoUndime' });
+    }
+
+    const apres = getVal('filterApresentacao');
+    if (apres) chips.push({ label: `Apresentação: ${apres === 'sim' ? 'Sim' : 'Não'}`, id: 'filterApresentacao' });
+
+    const genero = getVal('filterGenero');
+    if (genero) chips.push({ label: `Gênero: ${genero}`, id: 'filterGenero' });
+
+    const presenca = getVal('filterPresenca');
+    if (presenca) {
+      let pText = presenca;
+      if (presenca === 'presente') pText = 'Presentes';
+      else if (presenca === 'ausente') pText = 'Ausentes';
+      else if (presenca === 'presencial') pText = 'Presente Presencial';
+      else if (presenca === 'online') pText = 'Presente On-line';
+      else if (presenca === 'material_sim') pText = 'Recebeu Material';
+      else if (presenca === 'material_nao') pText = 'Material Pendente';
+      chips.push({ label: `Presença: ${pText}`, id: 'filterPresenca' });
+    }
+
+    const dataAtiv = getVal('filterDataAtividade');
+    if (dataAtiv) {
+      const dateOnly = dataAtiv.split('|')[1] || dataAtiv;
+      chips.push({ label: `Data: ${dateOnly.split('-').reverse().join('/')}`, id: 'filterDataAtividade' });
+    }
+
+    const prog = getVal('filterProgramacao');
+    if (prog) {
+      const progEl = document.getElementById('filterProgramacao');
+      const text = progEl?.options[progEl.selectedIndex]?.text || prog;
+      chips.push({ label: `Prog: ${text}`, id: 'filterProgramacao' });
+    }
+
+    const meal = getVal('filterRefeicao');
+    if (meal) {
+      const mealEl = document.getElementById('filterRefeicao');
+      const text = mealEl?.options[mealEl.selectedIndex]?.text || meal;
+      chips.push({ label: `Refeição: ${text}`, id: 'filterRefeicao' });
+    }
+
+    const search = getVal('participantSearchInput');
+    if (search) chips.push({ label: `Busca: "${search}"`, id: 'participantSearchInput' });
+
+    if (chips.length === 0) {
+      container.classList.add('d-none');
+      container.innerHTML = '';
+      return;
+    }
+
+    container.classList.remove('d-none');
+    container.innerHTML = `
+      <span class="small me-1 align-self-center fw-semibold" style="color: #6B7280; font-size: 0.73rem;">Filtros aplicados:</span>
+      ${chips.map(c => `
+        <span class="dark-filter-chip">
+          <span>${escapeHTML(c.label)}</span>
+          <span class="dark-filter-chip-remove" onclick="removeFilterField('${c.id}')" title="Remover filtro">&times;</span>
+        </span>
+      `).join('')}
+    `;
+  }
+
+  window.removeFilterField = function(elementId) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    el.value = '';
+    applyParticipantFilters();
+  };
 
   // Helper para formatar badges de atividades na tabela
   function renderAtividadesBadges(atividades, programacoes = []) {
@@ -1505,11 +2336,14 @@
     const endIdx = Math.min(startIdx + pageSize, totalItems);
     const pagedItems = list.slice(startIdx, endIdx);
 
-    document.getElementById('filteredCountBadge').innerText = `Total: ${totalItems} participante(s)`;
+    const countBadge = document.getElementById('filteredCountBadge');
+    if (countBadge) countBadge.innerText = `${totalItems} registros encontrados`;
+    const topBadge = document.getElementById('filteredTopBadge');
+    if (topBadge) topBadge.innerText = `${totalItems} participantes`;
 
     if (totalItems === 0) {
       paginationInfo.innerText = 'Exibindo 0 registros';
-      tBody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted"><i class="bi bi-inbox fs-3 d-block mb-1"></i>Nenhum participante encontrado com os filtros selecionados.</td></tr>';
+      tBody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted"><i class="bi bi-inbox fs-3 d-block mb-1"></i>Nenhum participante encontrado com os filtros selecionados.</td></tr>';
       renderPaginationControls(0, 1);
       return;
     }
@@ -1563,6 +2397,38 @@
         repBadge = '<span class="badge bg-light text-muted border">Não informado</span>';
       }
 
+      let materialBadge = '';
+      if (p.recebeu_material === 'Sim') {
+        materialBadge = `<span class="badge bg-success-subtle text-success border border-success-subtle d-inline-block mt-1" style="font-size: 0.68rem;" title="Credenciamento realizado: material entregue"><i class="bi bi-box-seam me-1"></i>Material entregue</span>`;
+      } else if (p.recebeu_material && p.recebeu_material.includes('Pendente')) {
+        materialBadge = `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle d-inline-block mt-1" style="font-size: 0.68rem;" title="Credenciamento pendente"><i class="bi bi-clock-history me-1"></i>Material pendente</span>`;
+      }
+
+      let presencaBadge = '';
+      if (p.presente) {
+        let salasTooltip = [];
+        if (p.salas_presente_presencial) salasTooltip.push(`Presencial: ${p.salas_presente_presencial}`);
+        if (p.salas_presente_online) salasTooltip.push(`On-line: ${p.salas_presente_online}`);
+        const tooltipText = escapeHTML(salasTooltip.join(' | ') || 'Presença confirmada');
+        presencaBadge = `
+          <div class="text-center">
+            <span class="badge bg-success px-2 py-1" title="${tooltipText}">
+              <i class="bi bi-check-circle-fill me-1"></i>Presente (${p.total_frequencias})
+            </span>
+            ${p.total_frequencias_presencial ? `<small class="d-block text-success fw-semibold mt-1" style="font-size: 0.72rem;"><i class="bi bi-building me-1"></i>${p.total_frequencias_presencial} presencial</small>` : ''}
+            ${p.total_frequencias_online ? `<small class="d-block text-info fw-semibold mt-1" style="font-size: 0.72rem;"><i class="bi bi-camera-video me-1"></i>${p.total_frequencias_online} on-line</small>` : ''}
+            ${materialBadge}
+          </div>
+        `;
+      } else {
+        presencaBadge = `
+          <div class="text-center">
+            <span class="badge bg-light text-secondary border"><i class="bi bi-x-circle me-1"></i>Ausente</span>
+            ${materialBadge}
+          </div>
+        `;
+      }
+
       const refeicoes = selectedActivityId ? (p.refeicoes_inscrito_atual || []) : (p.refeicoes || []);
       const formacoesHtml = (p.formacoes_academicas || ['N\u00e3o informado'])
         .map(item => `<span class="badge bg-secondary-subtle text-secondary-emphasis d-block text-start mb-1">${item.split(' — ').map(parte => `<span class="d-block">${escapeHTML(parte)}</span>`).join('')}</span>`)
@@ -1595,6 +2461,7 @@
         </td>
         <td>${refeicoesHtml}</td>
         <td>${apresentacoesDoParticipante(p).map(a => `<div class="mb-1">${selectedActivityId ? '' : `<small class="d-block">${escapeHTML(a.titulo)}</small>`}<span class="badge ${a.vai_apresentar_trabalho ? 'text-bg-success' : 'text-bg-secondary'}">${a.vai_apresentar_trabalho ? 'Sim' : 'Não'}</span></div>`).join('') || '—'}</td>
+        <td>${presencaBadge}</td>
       `;
       tBody.appendChild(tr);
     });
@@ -1875,6 +2742,13 @@
         selectedActivityId ? (currentActivity?.titulo || '') : (p.atividades || []).map(item => item.titulo).join(', '),
         selectedActivityId ? p.modalidade_inscrito_atual : (p.modalidades_inscricao || []).join(', '),
         programas[0] || 'Nenhuma', refeicoes, textoApresentacao(p), dataInscricao,
+        p.status_presenca || 'Ausente',
+        p.total_frequencias_presencial || 0,
+        p.total_frequencias_online || 0,
+        p.salas_presente_presencial || '',
+        p.salas_presente_online || '',
+        p.recebeu_material || 'Não informado',
+        p.credenciado_em || ''
       ];
       const rows = [base];
       programas.slice(1).forEach(programa => {
@@ -1890,6 +2764,8 @@
       'Representante Undime/Consed', 'Escola', 'Fun\u00e7\u00e3o na EJA', 'Tempo de atua\u00e7\u00e3o',
       'Forma\u00e7\u00e3o acad\u00eamica', 'Atividade(s)', 'Modalidade de participa\u00e7\u00e3o',
       'Programa\u00e7\u00f5es/salas', 'Refei\u00e7\u00f5es', 'Apresentação de trabalho', 'Data(s) da inscri\u00e7\u00e3o',
+      'Presença no evento', 'Presenças presenciais', 'Presenças on-line', 'Salas com presença presencial', 'Salas com presença on-line',
+      'Recebeu material no credenciamento', 'Data do credenciamento'
     ];
     csvContent = '\uFEFF' + headers.map(cleanField).join(';') + '\n';
     dataToExport.forEach(p => {
@@ -1936,6 +2812,319 @@
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  }
+
+  // Helper comum para download de CSV
+  function downloadCSV(csvContent, filename) {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  // Exportação CSV de Presença e Ausência por Estado
+  function exportFreqEstadoCSV() {
+    const data = readJsonData("frequencia-estado-data") || [];
+    if (!data.length) {
+      alert("Nenhum dado de presença por estado disponível para exportar.");
+      return;
+    }
+    let csv = "\uFEFFPosicao;Estado;Sigla;Inscritos;Presentes Presencial;Presentes Online;Total Presentes;Ausentes Presencial;Ausentes Online;Total Ausentes;Taxa Presenca (%);Taxa Ausencia (%)\n";
+    data.forEach((d, i) => {
+      csv += `${i + 1};"${(d.label || '').replace(/"/g, '""')}";"${d.sigla || ''}";${d.total_inscritos || 0};${d.presencial || 0};${d.online || 0};${d.qtd || 0};${d.presencial_ausentes || 0};${d.online_ausentes || 0};${d.total_ausentes || 0};${d.taxa_presenca || 0};${d.taxa_ausencia || 0}\n`;
+    });
+    downloadCSV(csv, `presenca_e_ausencia_por_estado_pacto_eja_${new Date().toISOString().slice(0,10)}.csv`);
+  }
+
+  // Exportação CSV de Presença e Ausência por Cidade
+  function exportFreqCidadeCSV() {
+    const data = readJsonData("frequencia-cidade-data") || [];
+    if (!data.length) {
+      alert("Nenhum dado de presença por cidade disponível para exportar.");
+      return;
+    }
+    let csv = "\uFEFFPosicao;Cidade;Sigla UF;Inscritos;Presentes Presencial;Presentes Online;Total Presentes;Ausentes Presencial;Ausentes Online;Total Ausentes;Taxa Presenca (%);Taxa Ausencia (%)\n";
+    data.forEach((d, i) => {
+      csv += `${i + 1};"${(d.label || '').replace(/"/g, '""')}";"${d.sigla || ''}";${d.total_inscritos || 0};${d.presencial || 0};${d.online || 0};${d.qtd || 0};${d.presencial_ausentes || 0};${d.online_ausentes || 0};${d.total_ausentes || 0};${d.taxa_presenca || 0};${d.taxa_ausencia || 0}\n`;
+    });
+    downloadCSV(csv, `presenca_e_ausencia_por_cidade_pacto_eja_${new Date().toISOString().slice(0,10)}.csv`);
+  }
+
+  // Exportação CSV de Presença e Ausência por Salas Presenciais
+  function exportFreqSalaPresencialCSV() {
+    const data = readJsonData("frequencia-sala-presencial-data") || [];
+    if (!data.length) {
+      alert("Nenhum dado de presença por sala presencial disponível para exportar.");
+      return;
+    }
+    let csv = "\uFEFFPosicao;Sala Fisica;Capacidade;Inscritos;Presentes;Ausentes;Taxa Presenca (%);Taxa Ausencia (%)\n";
+    data.forEach((d, i) => {
+      csv += `${i + 1};"${(d.label || '').replace(/"/g, '""')}";${d.vagas || 0};${d.inscritos || 0};${d.presentes || 0};${d.ausentes || 0};${d.taxa_presenca || 0};${d.taxa_ausencia || 0}\n`;
+    });
+    downloadCSV(csv, `presenca_e_ausencia_salas_presenciais_pacto_eja_${new Date().toISOString().slice(0,10)}.csv`);
+  }
+
+  // Exportação CSV de Presença e Ausência por Salas On-line
+  function exportFreqSalaOnlineCSV() {
+    const data = readJsonData("frequencia-sala-online-data") || [];
+    if (!data.length) {
+      alert("Nenhum dado de presença por sala on-line disponível para exportar.");
+      return;
+    }
+    let csv = "\uFEFFPosicao;Sala Virtual (On-line);Capacidade;Inscritos;Presentes;Ausentes;Taxa Presenca (%);Taxa Ausencia (%)\n";
+    data.forEach((d, i) => {
+      csv += `${i + 1};"${(d.label || '').replace(/"/g, '""')}";${d.vagas || 0};${d.inscritos || 0};${d.presentes || 0};${d.ausentes || 0};${d.taxa_presenca || 0};${d.taxa_ausencia || 0}\n`;
+    });
+    downloadCSV(csv, `presenca_e_ausencia_salas_online_pacto_eja_${new Date().toISOString().slice(0,10)}.csv`);
+  }
+
+  // Exportação CSV de Credenciamento & Entrega de Material
+  function exportCredenciamentoMaterialCSV() {
+    const presencialParts = (participantsData || []).filter(p => {
+      return (p.modalidade_inscrito_atual || '').toLowerCase() === 'presencial' ||
+        (p.atividades_modalidades || []).some(m => (m || '').toLowerCase() === 'presencial') ||
+        p.credenciado;
+    });
+
+    if (!presencialParts.length) {
+      alert("Nenhum participante presencial encontrado para exportação de credenciamento.");
+      return;
+    }
+
+    let csv = "\uFEFFPosicao;Nome;CPF;Email;Municipio;UF;Recebeu Material;Data Credenciamento;Metodo\n";
+    presencialParts.forEach((p, i) => {
+      csv += `${i + 1};"${(p.nome || '').replace(/"/g, '""')}";"${formatCpfCsv(p.cpf)}";"${(p.email || '').replace(/"/g, '""')}";"${(p.municipio || '').replace(/"/g, '""')}";"${p.sigla_uf || ''}";"${p.recebeu_material || 'Pendente'}";"${p.credenciado_em || ''}";"${p.credenciado_metodo || ''}"\n`;
+    });
+    downloadCSV(csv, `credenciamento_entrega_material_pacto_eja_${new Date().toISOString().slice(0,10)}.csv`);
+  }
+
+  // Renderiza as Tabelas de Frequência, Presença e Credenciamento
+  function renderFrequenciaTables() {
+    const freqEstadoData = readJsonData("frequencia-estado-data") || [];
+    const freqCidadeData = readJsonData("frequencia-cidade-data") || [];
+    const freqSalaPData = readJsonData("frequencia-sala-presencial-data") || [];
+    const freqSalaOData = readJsonData("frequencia-sala-online-data") || [];
+
+    // 1. Tabela Estado
+    const tbodyEstado = document.getElementById("tableFreqEstadoBody");
+    if (tbodyEstado) {
+      if (!freqEstadoData.length) {
+        tbodyEstado.innerHTML = '<tr><td colspan="7" class="text-center py-3 text-muted">Nenhum registro de frequência por estado registrado até o momento.</td></tr>';
+      } else {
+        tbodyEstado.innerHTML = freqEstadoData.map((d, i) => `
+          <tr>
+            <td class="text-muted fw-bold">${i + 1}</td>
+            <td class="fw-semibold text-dark">${escapeHTML(d.label)} ${d.sigla ? `<span class="badge bg-secondary-subtle text-secondary ms-1">${d.sigla}</span>` : ''}</td>
+            <td class="text-center"><span class="badge bg-light text-dark border px-2 py-1">${d.total_inscritos}</span></td>
+            <td class="text-center">
+              <span class="badge bg-success-subtle text-success px-2 py-1 fs-6 fw-bold">${d.qtd}</span>
+              <div class="small text-muted mt-1" style="font-size: 0.72rem;">
+                <span class="text-primary fw-semibold">P: ${d.presencial}</span> &bull; <span class="text-info fw-semibold">O: ${d.online}</span>
+              </div>
+            </td>
+            <td class="text-center">
+              <span class="badge bg-danger-subtle text-danger px-2 py-1 fs-6 fw-bold">${d.total_ausentes}</span>
+              <div class="small text-muted mt-1" style="font-size: 0.72rem;">
+                <span class="text-secondary fw-semibold">P: ${d.presencial_ausentes}</span> &bull; <span class="text-secondary fw-semibold">O: ${d.online_ausentes}</span>
+              </div>
+            </td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <div class="progress flex-grow-1" style="height: 6px;">
+                  <div class="progress-bar bg-success" role="progressbar" style="width: ${d.taxa_presenca}%"></div>
+                </div>
+                <small class="text-success fw-bold" style="min-width: 45px;">${d.taxa_presenca}%</small>
+              </div>
+            </td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <div class="progress flex-grow-1" style="height: 6px;">
+                  <div class="progress-bar bg-danger" role="progressbar" style="width: ${d.taxa_ausencia}%"></div>
+                </div>
+                <small class="text-danger fw-bold" style="min-width: 45px;">${d.taxa_ausencia}%</small>
+              </div>
+            </td>
+          </tr>
+        `).join('');
+      }
+    }
+
+    // 2. Tabela Cidade
+    const renderCidadeRows = (filter = '') => {
+      const tbodyCidade = document.getElementById("tableFreqCidadeBody");
+      if (!tbodyCidade) return;
+      const term = (filter || '').toLowerCase().trim();
+      const filtered = freqCidadeData.filter(d => !term || (d.label || '').toLowerCase().includes(term) || (d.sigla || '').toLowerCase().includes(term));
+      if (!filtered.length) {
+        tbodyCidade.innerHTML = '<tr><td colspan="8" class="text-center py-3 text-muted">Nenhum registro de frequência por cidade encontrado.</td></tr>';
+        return;
+      }
+      tbodyCidade.innerHTML = filtered.map((d, i) => `
+        <tr>
+          <td class="text-muted fw-bold">${i + 1}</td>
+          <td class="fw-semibold text-dark">${escapeHTML(d.label)}</td>
+          <td class="text-center"><span class="badge bg-light text-dark border">${d.sigla || '—'}</span></td>
+          <td class="text-center"><span class="badge bg-light text-dark border px-2 py-1">${d.total_inscritos}</span></td>
+          <td class="text-center">
+            <span class="badge bg-success-subtle text-success px-2 py-1 fs-6 fw-bold">${d.qtd}</span>
+            <div class="small text-muted mt-1" style="font-size: 0.72rem;">
+              <span class="text-primary fw-semibold">P: ${d.presencial}</span> &bull; <span class="text-info fw-semibold">O: ${d.online}</span>
+            </div>
+          </td>
+          <td class="text-center">
+            <span class="badge bg-danger-subtle text-danger px-2 py-1 fs-6 fw-bold">${d.total_ausentes}</span>
+            <div class="small text-muted mt-1" style="font-size: 0.72rem;">
+              <span class="text-secondary fw-semibold">P: ${d.presencial_ausentes}</span> &bull; <span class="text-secondary fw-semibold">O: ${d.online_ausentes}</span>
+            </div>
+          </td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="progress flex-grow-1" style="height: 6px;">
+                <div class="progress-bar bg-success" role="progressbar" style="width: ${d.taxa_presenca}%"></div>
+              </div>
+              <small class="text-success fw-bold" style="min-width: 45px;">${d.taxa_presenca}%</small>
+            </div>
+          </td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="progress flex-grow-1" style="height: 6px;">
+                <div class="progress-bar bg-danger" role="progressbar" style="width: ${d.taxa_ausencia}%"></div>
+              </div>
+              <small class="text-danger fw-bold" style="min-width: 45px;">${d.taxa_ausencia}%</small>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    };
+    renderCidadeRows();
+    const searchCidadeInput = document.getElementById("searchFreqCidade");
+    if (searchCidadeInput) {
+      searchCidadeInput.addEventListener("input", (e) => renderCidadeRows(e.target.value));
+    }
+
+    // 3. Tabela Sala Presencial
+    const tbodySalaP = document.getElementById("tableFreqSalaPresencialBody");
+    if (tbodySalaP) {
+      if (!freqSalaPData.length) {
+        tbodySalaP.innerHTML = '<tr><td colspan="8" class="text-center py-3 text-muted">Nenhuma sala presencial cadastrada.</td></tr>';
+      } else {
+        tbodySalaP.innerHTML = freqSalaPData.map((d, i) => `
+          <tr>
+            <td class="text-muted fw-bold">${i + 1}</td>
+            <td class="fw-semibold text-dark"><i class="bi bi-door-open-fill me-1 text-primary"></i>${escapeHTML(d.label)}</td>
+            <td class="text-center"><span class="badge bg-light text-dark border px-2 py-1">${d.vagas}</span></td>
+            <td class="text-center"><span class="badge bg-light text-dark border px-2 py-1">${d.inscritos}</span></td>
+            <td class="text-center fw-bold"><span class="badge bg-primary px-3 py-1 fs-6">${d.presentes}</span></td>
+            <td class="text-center fw-bold"><span class="badge bg-danger-subtle text-danger px-3 py-1 fs-6">${d.ausentes}</span></td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <div class="progress flex-grow-1" style="height: 6px;">
+                  <div class="progress-bar bg-primary" role="progressbar" style="width: ${d.taxa_presenca}%"></div>
+                </div>
+                <small class="text-primary fw-bold" style="min-width: 45px;">${d.taxa_presenca}%</small>
+              </div>
+            </td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <div class="progress flex-grow-1" style="height: 6px;">
+                  <div class="progress-bar bg-danger" role="progressbar" style="width: ${d.taxa_ausencia}%"></div>
+                </div>
+                <small class="text-danger fw-bold" style="min-width: 45px;">${d.taxa_ausencia}%</small>
+              </div>
+            </td>
+          </tr>
+        `).join('');
+      }
+    }
+
+    // 4. Tabela Sala On-line
+    const tbodySalaO = document.getElementById("tableFreqSalaOnlineBody");
+    if (tbodySalaO) {
+      if (!freqSalaOData.length) {
+        tbodySalaO.innerHTML = '<tr><td colspan="8" class="text-center py-3 text-muted">Nenhuma sala on-line cadastrada.</td></tr>';
+      } else {
+        tbodySalaO.innerHTML = freqSalaOData.map((d, i) => `
+          <tr>
+            <td class="text-muted fw-bold">${i + 1}</td>
+            <td class="fw-semibold text-dark"><i class="bi bi-laptop me-1 text-info"></i>${escapeHTML(d.label)}</td>
+            <td class="text-center"><span class="badge bg-light text-dark border px-2 py-1">${d.vagas}</span></td>
+            <td class="text-center"><span class="badge bg-light text-dark border px-2 py-1">${d.inscritos}</span></td>
+            <td class="text-center fw-bold"><span class="badge bg-info text-dark px-3 py-1 fs-6">${d.presentes}</span></td>
+            <td class="text-center fw-bold"><span class="badge bg-danger-subtle text-danger px-3 py-1 fs-6">${d.ausentes}</span></td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <div class="progress flex-grow-1" style="height: 6px;">
+                  <div class="progress-bar bg-info" role="progressbar" style="width: ${d.taxa_presenca}%"></div>
+                </div>
+                <small class="text-info fw-bold" style="min-width: 45px;">${d.taxa_presenca}%</small>
+              </div>
+            </td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <div class="progress flex-grow-1" style="height: 6px;">
+                  <div class="progress-bar bg-danger" role="progressbar" style="width: ${d.taxa_ausencia}%"></div>
+                </div>
+                <small class="text-danger fw-bold" style="min-width: 45px;">${d.taxa_ausencia}%</small>
+              </div>
+            </td>
+          </tr>
+        `).join('');
+      }
+    }
+
+    // 5. Tabela Credenciamento & Material
+    const renderCredenciamentoRows = (filter = '') => {
+      const tbodyMat = document.getElementById("tableCredenciamentoBody");
+      if (!tbodyMat) return;
+      const term = (filter || '').toLowerCase().trim();
+      const presencialParts = (participantsData || []).filter(p => {
+        return (p.modalidade_inscrito_atual || '').toLowerCase() === 'presencial' ||
+          (p.atividades_modalidades || []).some(m => (m || '').toLowerCase() === 'presencial') ||
+          p.credenciado;
+      });
+      const filtered = presencialParts.filter(p => {
+        if (!term) return true;
+        const matchName = (p.nome || '').toLowerCase().includes(term);
+        const matchCpf = (p.cpf || '').toString().includes(term);
+        const matchEmail = (p.email || '').toLowerCase().includes(term);
+        const matchCity = (p.municipio || '').toLowerCase().includes(term);
+        return matchName || matchCpf || matchEmail || matchCity;
+      });
+
+      if (!filtered.length) {
+        tbodyMat.innerHTML = '<tr><td colspan="7" class="text-center py-3 text-muted">Nenhum participante presencial encontrado para os critérios informados.</td></tr>';
+        return;
+      }
+
+      tbodyMat.innerHTML = filtered.map((p, i) => `
+        <tr>
+          <td class="text-muted fw-bold">${i + 1}</td>
+          <td>
+            <div class="fw-bold text-dark">${escapeHTML(p.nome || 'Não informado')}</div>
+            <small class="text-muted">${escapeHTML(p.email || '')}</small>
+          </td>
+          <td><code>${formatCPF(p.cpf)}</code></td>
+          <td>${escapeHTML(p.municipio || '—')} / ${escapeHTML(p.sigla_uf || '—')}</td>
+          <td class="text-center">
+            ${p.credenciado
+              ? '<span class="badge bg-success px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i>Sim (Entregue)</span>'
+              : '<span class="badge bg-warning text-dark px-2 py-1"><i class="bi bi-clock-fill me-1"></i>Pendente</span>'
+            }
+          </td>
+          <td>${p.credenciado_em ? `<small class="text-dark fw-semibold"><i class="bi bi-calendar-check me-1 text-success"></i>${escapeHTML(p.credenciado_em)}</small>` : '<span class="text-muted">—</span>'}</td>
+          <td>${p.credenciado_metodo ? `<span class="badge bg-secondary-subtle text-secondary">${escapeHTML(p.credenciado_metodo)}</span>` : '<span class="text-muted">—</span>'}</td>
+        </tr>
+      `).join('');
+    };
+    renderCredenciamentoRows();
+    const searchCredInput = document.getElementById("searchCredenciamento");
+    if (searchCredInput) {
+      searchCredInput.addEventListener("input", (e) => renderCredenciamentoRows(e.target.value));
+    }
   }
 
   // Renderiza Gráficos Secundários Fixos (Demográficos)
@@ -2051,6 +3240,9 @@
   const filterGenero = document.getElementById('filterGenero');
   if (filterGenero) filterGenero.addEventListener('change', applyParticipantFilters);
 
+  const filterPresenca = document.getElementById('filterPresenca');
+  if (filterPresenca) filterPresenca.addEventListener('change', applyParticipantFilters);
+
   const participantSearchInput = document.getElementById('participantSearchInput');
   if (participantSearchInput) participantSearchInput.addEventListener('input', applyParticipantFilters);
 
@@ -2063,21 +3255,36 @@
     });
   }
 
-  const btnClearFilters = document.getElementById('btnClearFilters');
-  if (btnClearFilters) {
-    btnClearFilters.addEventListener('click', () => {
-      if (document.getElementById('filterEstado')) document.getElementById('filterEstado').value = '';
-      if (document.getElementById('filterMunicipio')) document.getElementById('filterMunicipio').value = '';
-      if (document.getElementById('filterModalidade')) document.getElementById('filterModalidade').value = '';
-      if (document.getElementById('filterConfirmacaoUndime')) document.getElementById('filterConfirmacaoUndime').value = '';
-      document.getElementById('filterApresentacao').value = '';
-      if (document.getElementById('filterRepresentante')) document.getElementById('filterRepresentante').value = '';
-      if (document.getElementById('filterGenero')) document.getElementById('filterGenero').value = '';
-      if (document.getElementById('filterDataAtividade')) document.getElementById('filterDataAtividade').value = '';
-      if (document.getElementById('filterRefeicao')) document.getElementById('filterRefeicao').value = '';
-      if (document.getElementById('filterProgramacao')) document.getElementById('filterProgramacao').value = '';
-      if (document.getElementById('participantSearchInput')) document.getElementById('participantSearchInput').value = '';
-      applyParticipantFilters();
+  function resetAllParticipantFilters() {
+    if (document.getElementById('filterEstado')) document.getElementById('filterEstado').value = '';
+    if (document.getElementById('filterMunicipio')) document.getElementById('filterMunicipio').value = '';
+    if (document.getElementById('filterModalidade')) document.getElementById('filterModalidade').value = '';
+    if (document.getElementById('filterConfirmacaoUndime')) document.getElementById('filterConfirmacaoUndime').value = '';
+    if (document.getElementById('filterApresentacao')) document.getElementById('filterApresentacao').value = '';
+    if (document.getElementById('filterRepresentante')) document.getElementById('filterRepresentante').value = '';
+    if (document.getElementById('filterGenero')) document.getElementById('filterGenero').value = '';
+    if (document.getElementById('filterPresenca')) document.getElementById('filterPresenca').value = '';
+    if (document.getElementById('filterDataAtividade')) document.getElementById('filterDataAtividade').value = '';
+    if (document.getElementById('filterRefeicao')) document.getElementById('filterRefeicao').value = '';
+    if (document.getElementById('filterProgramacao')) document.getElementById('filterProgramacao').value = '';
+    if (document.getElementById('participantSearchInput')) document.getElementById('participantSearchInput').value = '';
+    applyParticipantFilters();
+  }
+
+  document.getElementById('btnClearFilters')?.addEventListener('click', resetAllParticipantFilters);
+
+  const btnToggleAdv = document.getElementById('btnToggleAdvancedFilters');
+  if (btnToggleAdv) {
+    btnToggleAdv.addEventListener('click', () => {
+      const groupAtiv = document.getElementById('filterGroupAtividades');
+      if (!groupAtiv) return;
+      if (groupAtiv.classList.contains('d-none')) {
+        groupAtiv.classList.remove('d-none');
+        btnToggleAdv.innerText = 'Ocultar filtros avançados';
+      } else {
+        groupAtiv.classList.add('d-none');
+        btnToggleAdv.innerText = 'Filtros avançados';
+      }
     });
   }
 
@@ -2114,6 +3321,20 @@
   const btnExportSummaryCsv = document.getElementById('btnExportSummaryCsv');
   if (btnExportSummaryCsv) btnExportSummaryCsv.addEventListener('click', exportSummaryCSV);
 
+  // Botões de Exportação CSV das Tabelas de Frequência & Presença
+  document.getElementById('btnExportFreqEstadoCsv')?.addEventListener('click', exportFreqEstadoCSV);
+  document.getElementById('btnExportFreqCidadeCsv')?.addEventListener('click', exportFreqCidadeCSV);
+  document.getElementById('btnExportFreqSalaPresencialCsv')?.addEventListener('click', exportFreqSalaPresencialCSV);
+  document.getElementById('btnExportFreqSalaOnlineCsv')?.addEventListener('click', exportFreqSalaOnlineCSV);
+  document.getElementById('btnExportCredenciamentoMaterialCsv')?.addEventListener('click', exportCredenciamentoMaterialCSV);
+
+  // Itens do Menu Dropdown de Exportação
+  document.getElementById('btnMenuExportFreqEstado')?.addEventListener('click', exportFreqEstadoCSV);
+  document.getElementById('btnMenuExportFreqCidade')?.addEventListener('click', exportFreqCidadeCSV);
+  document.getElementById('btnMenuExportFreqSalaP')?.addEventListener('click', exportFreqSalaPresencialCSV);
+  document.getElementById('btnMenuExportFreqSalaO')?.addEventListener('click', exportFreqSalaOnlineCSV);
+  document.getElementById('btnMenuExportCredenciamentoMaterial')?.addEventListener('click', exportCredenciamentoMaterialCSV);
+
   // Event Listeners do Gráfico Principal
   const filterSelect = document.getElementById('filterSelect');
   if (filterSelect) filterSelect.addEventListener('change', renderMainChart);
@@ -2133,6 +3354,9 @@
       populateFilterDropdowns();
       populateActivityFilters();
       applyParticipantFilters();
+    }
+    if (document.getElementById('sectionFrequenciaReports')) {
+      renderFrequenciaTables();
     }
     if (document.getElementById('mainChart')) {
       renderMainChart();

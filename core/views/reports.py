@@ -4,7 +4,16 @@ from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView
 
-from core.models import Atividade, Educador, EducadorEscola, Inscricao, ProgramacaoSala
+from core.models import (
+    Atividade,
+    Credenciamento,
+    Educador,
+    EducadorEscola,
+    Frequencia,
+    Inscricao,
+    ProgramacaoSala,
+    Sala,
+)
 
 
 ROTULOS_TEMPO_ATUACAO = {
@@ -232,6 +241,11 @@ def listar_participantes_detalhados(educadores_qs=None, atividade_selecionada_id
         "usuario__inscricoes_atividades__programacoes__sala",
         "usuario__inscricoes_atividades__programacoes__tematica",
         "usuario__inscricoes_atividades__refeicoes",
+        Prefetch(
+            "usuario__inscricoes_atividades__frequencias",
+            queryset=Frequencia.objects.select_related("programacao__sala"),
+        ),
+        "usuario__inscricoes_atividades__credenciamento",
     )
     participantes = []
     status_por_atividade = {}
@@ -254,6 +268,8 @@ def listar_participantes_detalhados(educadores_qs=None, atividade_selecionada_id
         data_inscricao_atividade_atual = ""
         data_alteracao_atividade_atual = ""
         refeicoes_inscrito_atividade_atual = []
+        frequencias_atividade_atual = []
+        todas_frequencias = []
 
         for insc in inscricoes:
             atividade = insc.atividade
@@ -295,9 +311,13 @@ def listar_participantes_detalhados(educadores_qs=None, atividade_selecionada_id
             insc_refeicoes = [str(refeicao) for refeicao in insc.refeicoes.all()]
             refeicoes_labels.extend(f"{atividade.titulo}: {refeicao}" for refeicao in insc_refeicoes)
 
+            insc_freqs = list(insc.frequencias.all())
+            todas_frequencias.extend(insc_freqs)
+
             if atividade_selecionada_id and atividade.id == atividade_selecionada_id:
                 modalidade_inscrito_atividade_atual = insc.get_modalidade_display()
                 refeicoes_inscrito_atividade_atual = insc_refeicoes
+                frequencias_atividade_atual.extend(insc_freqs)
                 data_inscricao_atividade_atual = (
                     timezone.localtime(insc.inscrito_em).strftime("%d/%m/%Y %H:%M")
                     if insc.inscrito_em
@@ -358,8 +378,60 @@ def listar_participantes_detalhados(educadores_qs=None, atividade_selecionada_id
             for funcao_educador in educador.funcoes.all()
             if getattr(funcao_educador, "educador_escola", None)
         ]
+
+        freqs_relevantes = frequencias_atividade_atual if atividade_selecionada_id else todas_frequencias
+        freq_presenciais = [f for f in freqs_relevantes if f.programacao.modalidade == "presencial"]
+        freq_online = [f for f in freqs_relevantes if f.programacao.modalidade == "online"]
+        salas_presencial = sorted(list({f.programacao.sala.nome for f in freq_presenciais}))
+        salas_online = sorted(list({f.programacao.sala.nome for f in freq_online}))
+        presente = len(freqs_relevantes) > 0
+
+        # Credenciamento e entrega de material
+        credenciado = False
+        credenciado_em = ""
+        credenciado_metodo = ""
+        for insc in inscricoes:
+            if not atividade_selecionada_id or insc.atividade_id == atividade_selecionada_id:
+                if hasattr(insc, "credenciamento") and insc.credenciamento is not None:
+                    credenciado = True
+                    credenciado_em = (
+                        timezone.localtime(insc.credenciamento.registrado_em).strftime("%d/%m/%Y %H:%M")
+                        if insc.credenciamento.registrado_em
+                        else ""
+                    )
+                    credenciado_metodo = insc.credenciamento.get_metodo_display()
+                    break
+
+        is_presencial = (
+            modalidade_inscrito_atividade_atual.lower() == "presencial"
+            or any(m == "presencial" for m in atividades_modalidades)
+        )
+        if credenciado:
+            recebeu_material = "Sim"
+        elif is_presencial:
+            recebeu_material = "Não (Pendente)"
+        else:
+            recebeu_material = "Não se aplica (On-line)"
+
+        dados_frequencia = {
+            "presente": presente,
+            "presente_presencial": len(freq_presenciais) > 0,
+            "presente_online": len(freq_online) > 0,
+            "total_frequencias": len(freqs_relevantes),
+            "total_frequencias_presencial": len(freq_presenciais),
+            "total_frequencias_online": len(freq_online),
+            "salas_presente_presencial": ", ".join(salas_presencial) if salas_presencial else "",
+            "salas_presente_online": ", ".join(salas_online) if salas_online else "",
+            "status_presenca": "Presente" if presente else "Ausente",
+            "credenciado": credenciado,
+            "credenciado_em": credenciado_em,
+            "credenciado_metodo": credenciado_metodo,
+            "recebeu_material": recebeu_material,
+        }
+
         reg = registro_participante(educador, vinculos)
         reg.update(dados_atividades)
+        reg.update(dados_frequencia)
         participantes.append(reg)
 
     return participantes
@@ -608,6 +680,304 @@ class ReportsView(TemplateView):
                 "tematica": prog.tematica.nome if prog.tematica else "",
             })
 
+        # =========================================================================
+        # Indicadores e Relatórios de Frequência & Presença / Ausência
+        # =========================================================================
+        total_inscritos = len(participantes_detalhados)
+        total_presentes = sum(1 for p in participantes_detalhados if p.get("presente"))
+        total_presentes_presencial = sum(1 for p in participantes_detalhados if p.get("presente_presencial"))
+        total_presentes_online = sum(1 for p in participantes_detalhados if p.get("presente_online"))
+        total_ausentes = total_inscritos - total_presentes
+
+        total_ausentes_presencial = sum(
+            1 for p in participantes_detalhados
+            if (p.get("modalidade_inscrito_atual", "").lower() == "presencial" or
+                "presencial" in [m.lower() for m in p.get("atividades_modalidades", [])])
+            and not p.get("presente_presencial")
+        )
+        total_ausentes_online = sum(
+            1 for p in participantes_detalhados
+            if ("online" in p.get("modalidade_inscrito_atual", "").lower() or
+                "remoto" in p.get("modalidade_inscrito_atual", "").lower() or
+                any("online" in m.lower() for m in p.get("atividades_modalidades", [])))
+            and not p.get("presente_online")
+        )
+        taxa_presenca = round((total_presentes / total_inscritos * 100), 1) if total_inscritos else 0.0
+        taxa_ausencia = round((total_ausentes / total_inscritos * 100), 1) if total_inscritos else 0.0
+
+        # Credenciamento e entrega de material no evento
+        total_credenciados = sum(1 for p in participantes_detalhados if p.get("credenciado"))
+        total_inscritos_presenciais = sum(
+            1 for p in participantes_detalhados
+            if (p.get("modalidade_inscrito_atual", "").lower() == "presencial" or
+                "presencial" in [m.lower() for m in p.get("atividades_modalidades", [])])
+        )
+        taxa_credenciamento = (
+            round((total_credenciados / total_inscritos_presenciais * 100), 1)
+            if total_inscritos_presenciais
+            else 0.0
+        )
+        total_credenciamento_pendente = max(0, total_inscritos_presenciais - total_credenciados)
+
+        frequencia_kpis = {
+            "total_inscritos": total_inscritos,
+            "total_presentes": total_presentes,
+            "total_presentes_presencial": total_presentes_presencial,
+            "total_presentes_online": total_presentes_online,
+            "total_ausentes": total_ausentes,
+            "total_ausentes_presencial": total_ausentes_presencial,
+            "total_ausentes_online": total_ausentes_online,
+            "taxa_presenca": taxa_presenca,
+            "taxa_ausencia": taxa_ausencia,
+            "total_credenciados": total_credenciados,
+            "total_inscritos_presenciais": total_inscritos_presenciais,
+            "total_credenciamento_pendente": total_credenciamento_pendente,
+            "taxa_credenciamento": taxa_credenciamento,
+        }
+
+        # 1. Presença e Ausência por Estado (online e presencial)
+        estados_map = {}
+        for p in participantes_detalhados:
+            est = p.get("estado") or "Não informado"
+            sigla = p.get("sigla_uf") or ""
+            uid = p.get("educador_id")
+            is_p = (
+                p.get("modalidade_inscrito_atual", "").lower() == "presencial" or
+                "presencial" in [m.lower() for m in p.get("atividades_modalidades", [])]
+            )
+            is_o = (
+                "online" in p.get("modalidade_inscrito_atual", "").lower() or
+                "remoto" in p.get("modalidade_inscrito_atual", "").lower() or
+                any("online" in m.lower() for m in p.get("atividades_modalidades", []))
+            )
+            pres_p = p.get("presente_presencial", False)
+            pres_o = p.get("presente_online", False)
+            pres_any = p.get("presente", False)
+
+            if est not in estados_map:
+                estados_map[est] = {
+                    "label": est,
+                    "sigla": sigla,
+                    "_users_all": set(),
+                    "_users_p_insc": set(),
+                    "_users_o_insc": set(),
+                    "_users_p_pres": set(),
+                    "_users_o_pres": set(),
+                    "_users_all_pres": set(),
+                }
+            estados_map[est]["_users_all"].add(uid)
+            if is_p:
+                estados_map[est]["_users_p_insc"].add(uid)
+            if is_o:
+                estados_map[est]["_users_o_insc"].add(uid)
+            if pres_p:
+                estados_map[est]["_users_p_pres"].add(uid)
+            if pres_o:
+                estados_map[est]["_users_o_pres"].add(uid)
+            if pres_any:
+                estados_map[est]["_users_all_pres"].add(uid)
+
+        frequencia_estado_dados = []
+        for d in estados_map.values():
+            tot_insc = len(d["_users_all"])
+            pres_p = len(d["_users_p_pres"])
+            pres_o = len(d["_users_o_pres"])
+            pres_tot = len(d["_users_all_pres"])
+            aus_p = len(d["_users_p_insc"] - d["_users_p_pres"])
+            aus_o = len(d["_users_o_insc"] - d["_users_o_pres"])
+            aus_tot = len(d["_users_all"] - d["_users_all_pres"])
+            tx_p = round(pres_tot / tot_insc * 100, 1) if tot_insc else 0.0
+            tx_a = round(aus_tot / tot_insc * 100, 1) if tot_insc else 0.0
+            frequencia_estado_dados.append({
+                "label": d["label"],
+                "sigla": d["sigla"],
+                "total_inscritos": tot_insc,
+                "presencial": pres_p,
+                "online": pres_o,
+                "qtd": pres_tot,
+                "presencial_ausentes": aus_p,
+                "online_ausentes": aus_o,
+                "total_ausentes": aus_tot,
+                "taxa_presenca": tx_p,
+                "taxa_ausencia": tx_a,
+            })
+        frequencia_estado_dados.sort(key=lambda x: x["qtd"], reverse=True)
+
+        # 2. Presença e Ausência por Cidade (online e presencial)
+        cidades_map = {}
+        for p in participantes_detalhados:
+            cid = p.get("municipio") or "Não informado"
+            sigla = p.get("sigla_uf") or ""
+            uid = p.get("educador_id")
+            chave = (cid, sigla)
+            is_p = (
+                p.get("modalidade_inscrito_atual", "").lower() == "presencial" or
+                "presencial" in [m.lower() for m in p.get("atividades_modalidades", [])]
+            )
+            is_o = (
+                "online" in p.get("modalidade_inscrito_atual", "").lower() or
+                "remoto" in p.get("modalidade_inscrito_atual", "").lower() or
+                any("online" in m.lower() for m in p.get("atividades_modalidades", []))
+            )
+            pres_p = p.get("presente_presencial", False)
+            pres_o = p.get("presente_online", False)
+            pres_any = p.get("presente", False)
+
+            if chave not in cidades_map:
+                cidades_map[chave] = {
+                    "label": cid,
+                    "sigla": sigla,
+                    "_users_all": set(),
+                    "_users_p_insc": set(),
+                    "_users_o_insc": set(),
+                    "_users_p_pres": set(),
+                    "_users_o_pres": set(),
+                    "_users_all_pres": set(),
+                }
+            cidades_map[chave]["_users_all"].add(uid)
+            if is_p:
+                cidades_map[chave]["_users_p_insc"].add(uid)
+            if is_o:
+                cidades_map[chave]["_users_o_insc"].add(uid)
+            if pres_p:
+                cidades_map[chave]["_users_p_pres"].add(uid)
+            if pres_o:
+                cidades_map[chave]["_users_o_pres"].add(uid)
+            if pres_any:
+                cidades_map[chave]["_users_all_pres"].add(uid)
+
+        frequencia_cidade_dados = []
+        for d in cidades_map.values():
+            tot_insc = len(d["_users_all"])
+            pres_p = len(d["_users_p_pres"])
+            pres_o = len(d["_users_o_pres"])
+            pres_tot = len(d["_users_all_pres"])
+            aus_p = len(d["_users_p_insc"] - d["_users_p_pres"])
+            aus_o = len(d["_users_o_insc"] - d["_users_o_pres"])
+            aus_tot = len(d["_users_all"] - d["_users_all_pres"])
+            tx_p = round(pres_tot / tot_insc * 100, 1) if tot_insc else 0.0
+            tx_a = round(aus_tot / tot_insc * 100, 1) if tot_insc else 0.0
+            frequencia_cidade_dados.append({
+                "label": d["label"],
+                "sigla": d["sigla"],
+                "total_inscritos": tot_insc,
+                "presencial": pres_p,
+                "online": pres_o,
+                "qtd": pres_tot,
+                "presencial_ausentes": aus_p,
+                "online_ausentes": aus_o,
+                "total_ausentes": aus_tot,
+                "taxa_presenca": tx_p,
+                "taxa_ausencia": tx_a,
+            })
+        frequencia_cidade_dados.sort(key=lambda x: x["qtd"], reverse=True)
+
+        # 3. Presença e Ausência por Sala (Presencial)
+        salas_presenciais_qs = ProgramacaoSala.objects.filter(modalidade="presencial")
+        if atividade_selecionada:
+            salas_presenciais_qs = salas_presenciais_qs.filter(atividades=atividade_selecionada)
+        else:
+            salas_presenciais_qs = salas_presenciais_qs.filter(atividades__isnull=False).distinct()
+        salas_presenciais_qs = salas_presenciais_qs.select_related("sala")
+
+        salas_p_map = {}
+        for prog in salas_presenciais_qs:
+            s_nome = prog.sala.nome
+            if s_nome not in salas_p_map:
+                salas_p_map[s_nome] = {
+                    "label": s_nome,
+                    "vagas": 0,
+                    "_users_inscritos": set(),
+                    "_users_presentes": set(),
+                }
+            salas_p_map[s_nome]["vagas"] += prog.quantidade_max_participantes
+            salas_p_map[s_nome]["_users_inscritos"].update(
+                prog.inscricoes.values_list("usuario_id", flat=True)
+            )
+
+        freq_presencial_qs = Frequencia.objects.filter(programacao__in=salas_presenciais_qs).select_related(
+            "programacao__sala", "inscricao"
+        )
+        if atividade_selecionada:
+            freq_presencial_qs = freq_presencial_qs.filter(inscricao__atividade=atividade_selecionada)
+
+        for f in freq_presencial_qs:
+            s_nome = f.programacao.sala.nome
+            if s_nome in salas_p_map:
+                salas_p_map[s_nome]["_users_presentes"].add(f.inscricao.usuario_id)
+
+        frequencia_sala_presencial_dados = []
+        for s_nome, d in salas_p_map.items():
+            insc = len(d["_users_inscritos"])
+            pres = len(d["_users_presentes"])
+            aus = max(0, insc - pres)
+            tx_p = round(pres / insc * 100, 1) if insc else 0.0
+            tx_a = round(aus / insc * 100, 1) if insc else 0.0
+            frequencia_sala_presencial_dados.append({
+                "label": s_nome,
+                "vagas": d["vagas"],
+                "inscritos": insc,
+                "qtd": pres,
+                "presentes": pres,
+                "ausentes": aus,
+                "taxa_presenca": tx_p,
+                "taxa_ausencia": tx_a,
+            })
+        frequencia_sala_presencial_dados.sort(key=lambda x: x["qtd"], reverse=True)
+
+        # 4. Presença e Ausência por Sala (On-line)
+        salas_online_qs = ProgramacaoSala.objects.filter(modalidade="online")
+        if atividade_selecionada:
+            salas_online_qs = salas_online_qs.filter(atividades=atividade_selecionada)
+        else:
+            salas_online_qs = salas_online_qs.filter(atividades__isnull=False).distinct()
+        salas_online_qs = salas_online_qs.select_related("sala")
+
+        salas_o_map = {}
+        for prog in salas_online_qs:
+            s_nome = prog.sala.nome
+            if s_nome not in salas_o_map:
+                salas_o_map[s_nome] = {
+                    "label": s_nome,
+                    "vagas": 0,
+                    "_users_inscritos": set(),
+                    "_users_presentes": set(),
+                }
+            salas_o_map[s_nome]["vagas"] += prog.quantidade_max_participantes
+            salas_o_map[s_nome]["_users_inscritos"].update(
+                prog.inscricoes.values_list("usuario_id", flat=True)
+            )
+
+        freq_online_qs = Frequencia.objects.filter(programacao__in=salas_online_qs).select_related(
+            "programacao__sala", "inscricao"
+        )
+        if atividade_selecionada:
+            freq_online_qs = freq_online_qs.filter(inscricao__atividade=atividade_selecionada)
+
+        for f in freq_online_qs:
+            s_nome = f.programacao.sala.nome
+            if s_nome in salas_o_map:
+                salas_o_map[s_nome]["_users_presentes"].add(f.inscricao.usuario_id)
+
+        frequencia_sala_online_dados = []
+        for s_nome, d in salas_o_map.items():
+            insc = len(d["_users_inscritos"])
+            pres = len(d["_users_presentes"])
+            aus = max(0, insc - pres)
+            tx_p = round(pres / insc * 100, 1) if insc else 0.0
+            tx_a = round(aus / insc * 100, 1) if insc else 0.0
+            frequencia_sala_online_dados.append({
+                "label": s_nome,
+                "vagas": d["vagas"],
+                "inscritos": insc,
+                "qtd": pres,
+                "presentes": pres,
+                "ausentes": aus,
+                "taxa_presenca": tx_p,
+                "taxa_ausencia": tx_a,
+            })
+        frequencia_sala_online_dados.sort(key=lambda x: x["qtd"], reverse=True)
+
         context.update(
             exibir_dashboard=exibir_dashboard,
             visao_geral=visao_geral,
@@ -651,6 +1021,11 @@ class ReportsView(TemplateView):
                 ROTULOS_TEMPO_ATUACAO,
             ),
             escolaridade_dados=escolaridade_dados,
+            frequencia_kpis=frequencia_kpis,
+            frequencia_estado_dados=frequencia_estado_dados,
+            frequencia_cidade_dados=frequencia_cidade_dados,
+            frequencia_sala_presencial_dados=frequencia_sala_presencial_dados,
+            frequencia_sala_online_dados=frequencia_sala_online_dados,
         )
         return context
 
