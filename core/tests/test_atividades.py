@@ -158,8 +158,8 @@ class AtividadeFlowTests(TestCase):
         self.assertContains(response, "Inscrever-se")
         self.assertContains(response, "google.com/maps/search/")
         self.assertContains(response, "Local do evento:")
-        self.assertContains(response, "Acessar evento on-line")
-        self.assertContains(response, self.atividade.link)
+        self.assertNotContains(response, "Acessar evento on-line")
+        self.assertNotContains(response, self.atividade.link)
 
     def test_academic_work_uses_updated_proposal_fields(self):
         response = self.client.get(reverse("atividade_inscricao", args=[self.atividade.pk]))
