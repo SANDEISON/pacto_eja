@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
@@ -26,7 +28,9 @@ class ProgramacaoSala(models.Model):
         related_name="programacoes",
         on_delete=models.CASCADE,
     )
-    data = models.DateTimeField("data e hora")
+    data = models.DateField("data")
+    hora_inicio = models.TimeField("hora de início", null=True, blank=True)
+    hora_fim = models.TimeField("hora de fim", null=True, blank=True)
     responsavel = models.ForeignKey(
         settings.AUTH_USER_MODEL, verbose_name="responsável pela frequência",
         on_delete=models.SET_NULL, null=True, blank=True,
@@ -110,7 +114,14 @@ class ProgramacaoSala(models.Model):
 
     @property
     def dia(self):
-        return timezone.localdate(self.data)
+        return self.data
+
+    def acesso_online_liberado(self, agora):
+        if self.hora_inicio is None:
+            return False
+        if timezone.is_aware(agora):
+            agora = timezone.localtime(agora)
+        return agora.replace(tzinfo=None) >= datetime.combine(self.data, self.hora_inicio)
 
     @property
     def vagas_disponiveis(self):

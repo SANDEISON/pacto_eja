@@ -1841,7 +1841,9 @@ class AtividadeManagementTests(TestCase):
             ),
             payload
             | {
-                "programacao-data": f"{data_programacao}T21:30",
+                "programacao-data": data_programacao,
+                "programacao-hora_inicio": "21:30",
+                "programacao-hora_fim": "22:30",
                 "programacao-turno": ProgramacaoSala.Turno.NOITE,
                 "programacao-descricao": "Oficina atualizada.",
                 "programacao-mediador": "Maria Santos",
@@ -1852,12 +1854,11 @@ class AtividadeManagementTests(TestCase):
         self.assertEqual(edit_response.json()["vagas_online"], 100)
         nova_programacao.refresh_from_db()
         self.assertEqual(
-            edit_response.json()["programacao"]["data_iso"], f"{data_programacao}T21:30"
+            edit_response.json()["programacao"]["data_iso"], data_programacao.isoformat()
         )
-        self.assertEqual(
-            timezone.localtime(nova_programacao.data).strftime("%Y-%m-%dT%H:%M"),
-            f"{data_programacao}T21:30",
-        )
+        self.assertEqual(nova_programacao.data, data_programacao)
+        self.assertEqual(nova_programacao.hora_inicio.strftime("%H:%M"), "21:30")
+        self.assertEqual(nova_programacao.hora_fim.strftime("%H:%M"), "22:30")
         self.assertEqual(nova_programacao.turno, ProgramacaoSala.Turno.NOITE)
         self.assertEqual(nova_programacao.mediador, "Maria Santos")
         self.assertEqual(nova_programacao.quantidade_max_participantes, 55)

@@ -18,6 +18,8 @@ class ProgramacaoSalaAdmin(admin.ModelAdmin):
         "id",
         "sala",
         "data",
+        "hora_inicio",
+        "hora_fim",
         "turno",
         "modalidade",
         "link",

@@ -66,12 +66,13 @@ def _ocultar_link_publico(link):
 
 @login_required
 def salas_online_publicas(request, pk):
+    agora = timezone.now()
     atividade = get_object_or_404(
-        atividades_visiveis_no_painel(request.user, timezone.now()), pk=pk
+        atividades_visiveis_no_painel(request.user, agora), pk=pk
     )
     programacoes = list(
         atividade.programacoes.filter(publica=True, modalidade=ProgramacaoSala.Modalidade.ONLINE)
-        .select_related("sala", "tematica")
+        .select_related("sala", "tematica").order_by("data", "hora_inicio", "sala__nome")
     )
     datas = {programacao.dia.isoformat(): programacao.dia for programacao in programacoes}
     data_selecionada = datas.get(request.GET.get("data"))
@@ -87,6 +88,7 @@ def salas_online_publicas(request, pk):
         registro.programacao_id for inscricao in inscricoes for registro in inscricao.frequencias.all()
     }
     for programacao in programacoes:
+        programacao.acesso_liberado = programacao.acesso_online_liberado(agora)
         programacao.ocultar_link_publico = _ocultar_link_publico(programacao.link)
         programacao.presenca_confirmada = programacao.pk in presencas
     return render(request, "atividades/salas_online_publicas.html", {
@@ -95,6 +97,7 @@ def salas_online_publicas(request, pk):
         "inscricoes": inscricoes,
         "datas": datas.values(),
         "data_selecionada": data_selecionada,
+        "exibir_horarios_online": True,
     })
 
 
@@ -102,14 +105,15 @@ def salas_online_publicas(request, pk):
 @require_POST
 @transaction.atomic
 def acessar_sala_online_publica(request, pk, programacao_pk):
+    agora = timezone.now()
     atividade = get_object_or_404(
-        Atividade.objects.select_for_update(), pk=pk, ativo=True, data_fim__gte=timezone.now(),
+        Atividade.objects.select_for_update(), pk=pk, ativo=True, data_fim__gte=agora,
     )
     programacao = get_object_or_404(
         atividade.programacoes.select_for_update(),
         pk=programacao_pk, publica=True, modalidade=ProgramacaoSala.Modalidade.ONLINE,
     )
-    if not programacao.link or _ocultar_link_publico(programacao.link):
+    if not programacao.link or _ocultar_link_publico(programacao.link) or not programacao.acesso_online_liberado(agora):
         raise Http404
 
     inscricao, _ = Inscricao.objects.get_or_create(

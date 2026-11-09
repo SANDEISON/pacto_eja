@@ -11,6 +11,8 @@ class ProgramacaoSalaInlineForm(BootstrapFormMixin, forms.ModelForm):
         model = ProgramacaoSala
         fields = (
             "data",
+            "hora_inicio",
+            "hora_fim",
             "turno",
             "modalidade",
             "link",
@@ -22,7 +24,9 @@ class ProgramacaoSalaInlineForm(BootstrapFormMixin, forms.ModelForm):
             "quantidade_max_participantes",
         )
         widgets = {
-            "data": forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"),
+            "data": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+            "hora_inicio": forms.TimeInput(attrs={"type": "time"}, format="%H:%M"),
+            "hora_fim": forms.TimeInput(attrs={"type": "time"}, format="%H:%M"),
             "descricao": forms.Textarea(attrs={"rows": 3}),
             "link": forms.URLInput(attrs={"placeholder": "https://..."}),
         }

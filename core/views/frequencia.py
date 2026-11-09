@@ -181,7 +181,10 @@ def frequencia_online(request, pk, programacao_pk):
     inscricao = get_object_or_404(Inscricao, atividade_id=pk, usuario=request.user, modalidade="online", programacoes__pk=programacao_pk)
     programacao = get_object_or_404(inscricao.atividade.programacoes, pk=programacao_pk, modalidade="online")
     erro = ""
+    acesso_liberado = programacao.acesso_online_liberado(timezone.now())
     if request.method == "POST":
+        if not acesso_liberado:
+            raise PermissionDenied
         try:
             _, criada = registrar_direto(inscricao, programacao, request.user, Frequencia.Metodo.ONLINE)
             return render(request, "frequencia/online.html", {
@@ -191,4 +194,4 @@ def frequencia_online(request, pk, programacao_pk):
             })
         except ValidationError as exc:
             erro = " ".join(exc.messages)
-    return render(request, "frequencia/online.html", {"inscricao": inscricao, "programacao": programacao, "erro": erro})
+    return render(request, "frequencia/online.html", {"inscricao": inscricao, "programacao": programacao, "erro": erro, "acesso_liberado": acesso_liberado})

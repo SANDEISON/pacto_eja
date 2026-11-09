@@ -76,6 +76,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // Os data attributes permitem reabrir o formulário sem uma nova consulta.
     schedule.dataset.programId = String(program.id);
     schedule.dataset.date = program.data_iso;
+    schedule.dataset.startTime = program.hora_inicio;
+    schedule.dataset.endTime = program.hora_fim;
     schedule.dataset.shift = program.turno_value;
     schedule.dataset.modality = program.modalidade_value;
     schedule.dataset.link = program.link || "";
@@ -92,7 +94,7 @@ document.addEventListener("DOMContentLoaded", () => {
     theme.textContent = program.tematica;
     const meta = document.createElement("div");
     [
-      ["bi bi-calendar3", program.data],
+      ["bi bi-calendar3", program.data + (program.hora_inicio ? ` · ${program.hora_inicio}` : "") + (program.hora_fim ? ` até ${program.hora_fim}` : "")],
       ["bi bi-clock", program.turno],
       ["bi bi-person-check", `Responsável: ${program.responsavel}`],
       ["bi bi-person", `Mediador: ${program.mediador || "Não definido"}`],
@@ -183,6 +185,8 @@ document.addEventListener("DOMContentLoaded", () => {
       || button.closest("[data-activity-linked-room]").querySelector("header strong").textContent;
     if (schedule) {
       scheduleField("data").value = schedule.dataset.date;
+      scheduleField("hora_inicio").value = schedule.dataset.startTime;
+      scheduleField("hora_fim").value = schedule.dataset.endTime;
       scheduleField("turno").value = schedule.dataset.shift;
       scheduleField("modalidade").value = schedule.dataset.modality;
       scheduleField("link").value = schedule.dataset.link;

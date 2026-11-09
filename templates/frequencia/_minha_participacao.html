@@ -18,12 +18,19 @@
             <li class="participation-schedule">
               <div class="participation-schedule-top"><strong>{{ programacao.sala }}</strong><span class="participation-mode{% if programacao.modalidade == 'online' %} participation-mode-online{% endif %}">{{ programacao.get_modalidade_display }}</span></div>
               <p class="participation-meta">{{ programacao.data|date:"d/m/Y" }} <span aria-hidden="true">·</span> {{ programacao.get_turno_display }}</p>
+              {% if exibir_horarios_online %}
+                <p class="participation-meta">{% include "atividades/_horarios_programacao.html" %}</p>
+              {% endif %}
               {% include "frequencia/_vagas_programacao.html" %}
               {% if programacao.modalidade == 'online' and inscricao.modalidade == 'online' %}
+              {% if programacao.acesso_liberado %}
               <form method="post" action="{% url 'frequencia_online' inscricao.atividade_id programacao.pk %}">
                 {% csrf_token %}
                 <button class="btn btn-primary participation-confirm" type="submit"><i class="bi bi-check2-circle" aria-hidden="true"></i> {% if programacao.presenca_confirmada %}Acessar evento on-line{% else %}Confirmar presença e acessar evento{% endif %}</button>
               </form>
+              {% else %}
+              <button class="btn btn-primary participation-confirm" type="button" disabled>{% include "atividades/_texto_acesso_programado.html" %}</button>
+              {% endif %}
               {% endif %}
             </li>
             {% empty %}<li class="participation-note">Nenhuma programação vinculada à sua inscrição.</li>{% endfor %}

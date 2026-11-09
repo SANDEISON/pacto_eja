@@ -84,11 +84,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function updateSummary(editor) {
     const summary = findSummary(editor.dataset.formIndex) || createSummary(editor);
-    const [day, time] = value(editor, "data").split("T");
+    const day = value(editor, "data");
     const [year, month, dateOfMonth] = day.split("-");
-    const date = time ? `${dateOfMonth}/${month}/${year} ${time}` : "—";
+    const date = day ? `${dateOfMonth}/${month}/${year}` : "—";
     summary.querySelector("[data-summary-theme]").textContent = selectedText(editor, "tematica");
-    setMeta(summary.querySelector("[data-summary-date]"), "bi bi-calendar3", date);
+    const startTime = value(editor, "hora_inicio");
+    const endTime = value(editor, "hora_fim");
+    const schedule = date + (startTime ? ` · ${startTime}` : "") + (endTime ? ` até ${endTime}` : "");
+    setMeta(summary.querySelector("[data-summary-date]"), "bi bi-calendar3", schedule);
     setMeta(summary.querySelector("[data-summary-shift]"), "bi bi-clock", selectedText(editor, "turno"));
     setMeta(summary.querySelector("[data-summary-modality]"), "bi bi-broadcast", selectedText(editor, "modalidade"));
     setMeta(summary.querySelector("[data-summary-capacity]"), "bi bi-people", `${value(editor, "quantidade_max_participantes")} vagas`);

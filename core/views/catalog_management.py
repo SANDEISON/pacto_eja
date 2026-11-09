@@ -8,7 +8,7 @@ from django.http import Http404, HttpResponseRedirect
 from django.urls import reverse
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
-from ..forms import SalaProgramacaoFormSet
+from ..forms import ProgramacaoSalaInlineForm, SalaProgramacaoFormSet
 from ..forms.user_name_choice_field import UserNameChoiceField
 from ..models import (
     Cidade,
@@ -161,6 +161,8 @@ CATALOGS = {
         "fields": (
             "sala",
             "data",
+            "hora_inicio",
+            "hora_fim",
             "turno",
             "modalidade",
             "link",
@@ -182,7 +184,9 @@ CATALOGS = {
         ),
         "columns": (
             ("Sala", "sala"),
-            ("Data e hora", "data"),
+            ("Data", "data"),
+            ("Início", "hora_inicio"),
+            ("Fim", "hora_fim"),
             ("Turno", "get_turno_display"),
             ("Modalidade", "get_modalidade_display"),
             ("Link", "link"),
@@ -318,7 +322,9 @@ class CatalogFormMixin(CatalogMixin):
 
     def get_form_class(self):
         """Cria o ModelForm a partir dos campos declarados no catálogo."""
-        widgets = {"data": forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M")} if self.model is ProgramacaoSala else None
+        widgets = None
+        if self.model is ProgramacaoSala:
+            widgets = ProgramacaoSalaInlineForm.Meta.widgets
         return modelform_factory(self.model, fields=self.catalog["fields"], widgets=widgets)
 
     def get_form(self, form_class=None):

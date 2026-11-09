@@ -19,9 +19,11 @@ def inscricoes_com_presencas(inscricoes):
         Prefetch("programacoes", queryset=programacoes),
         "frequencias__programacao__sala",
     )
+    agora = timezone.now()
     for inscricao in inscricoes:
         confirmadas = {frequencia.programacao_id for frequencia in inscricao.frequencias.all()}
         for programacao in inscricao.programacoes.all():
+            programacao.acesso_liberado = programacao.acesso_online_liberado(agora)
             programacao.presenca_confirmada = programacao.pk in confirmadas
     return inscricoes
 

@@ -1,4 +1,5 @@
-from datetime import timedelta
+from datetime import time, timedelta
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -20,7 +21,7 @@ class FrequenciaTests(TestCase):
         self.atividade = Atividade.objects.create(titulo="Evento", descricao="Teste", modalidade="ambas", local="Auditório", data_inicio=agora, data_fim=agora + timedelta(hours=8), inscricoes_fim=agora)
         tematica = TematicaSala.objects.create(nome="Tema")
         self.presencial = ProgramacaoSala.objects.create(sala=Sala.objects.create(nome="Sala 1"), tematica=tematica, data=timezone.localdate(), turno="manha", modalidade="presencial", quantidade_max_participantes=50, responsavel=self.responsavel)
-        self.online = ProgramacaoSala.objects.create(sala=Sala.objects.create(nome="Sala virtual"), tematica=tematica, data=timezone.localdate(), turno="tarde", modalidade="online", quantidade_max_participantes=50, responsavel=self.responsavel)
+        self.online = ProgramacaoSala.objects.create(sala=Sala.objects.create(nome="Sala virtual"), tematica=tematica, data=timezone.localdate(), hora_inicio=time.min, turno="tarde", modalidade="online", quantidade_max_participantes=50, responsavel=self.responsavel)
         self.atividade.programacoes.add(self.presencial, self.online)
         self.inscricao = Inscricao.objects.create(usuario=self.participante, atividade=self.atividade)
         self.inscricao.programacoes.add(self.presencial)
@@ -258,6 +259,7 @@ class FrequenciaTests(TestCase):
             sala=Sala.objects.create(nome="Sala da transmissão pública"),
             tematica=self.online.tematica,
             data=self.online.data,
+            hora_inicio=self.online.hora_inicio,
             turno=self.online.turno,
             modalidade="online",
             publica=True,
@@ -300,6 +302,39 @@ class FrequenciaTests(TestCase):
         resposta = self.client.get(pagina_url)
         self.assertNotContains(resposta, "Minha participação")
         self.assertNotContains(resposta, confirmar_url)
+
+    def test_salas_online_liberam_acesso_no_inicio_da_programacao(self):
+        inicio = timezone.localtime(timezone.now()).replace(second=0, microsecond=0)
+        self.online.data = inicio.date()
+        self.online.hora_inicio = inicio.time()
+        self.online.hora_fim = time(23, 59)
+        self.online.publica = True
+        self.online.link = "https://example.com/sala"
+        self.online.save()
+        self.inscricao.modalidade = "online"
+        self.inscricao.save(update_fields=["modalidade"])
+        self.inscricao.programacoes.set([self.online])
+        self.client.force_login(self.participante)
+        args = [self.atividade.pk, self.online.pk]
+        pagina = reverse("atividade_salas_online_publicas", args=args[:1])
+        acesso = reverse("atividade_acessar_sala_online_publica", args=args)
+        confirmar = reverse("frequencia_online", args=args)
+
+        with patch("django.utils.timezone.now", return_value=inicio - timedelta(seconds=1)):
+            resposta = self.client.get(pagina)
+            self.assertContains(resposta, 'type="button" disabled')
+            self.assertContains(resposta, inicio.strftime("%d/%m/%Y"))
+            self.assertContains(resposta, inicio.strftime("%H:%M"))
+            self.assertContains(resposta, "23:59")
+            self.assertNotContains(resposta, acesso)
+            self.assertNotContains(resposta, confirmar)
+            self.assertEqual(self.client.post(acesso).status_code, 404)
+            self.assertEqual(self.client.post(confirmar).status_code, 403)
+            self.assertFalse(self.inscricao.frequencias.exists())
+
+        with patch("django.utils.timezone.now", return_value=inicio):
+            self.assertContains(self.client.get(pagina), f'action="{acesso}"')
+        self.assertRedirects(self.client.post(acesso), self.online.link, fetch_redirect_response=False)
 
     def test_acesso_publico_cria_ou_reutiliza_inscricao_e_registra_presenca_uma_vez(self):
         self.online.publica = True

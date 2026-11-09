@@ -14,6 +14,8 @@
     {% else %}
       <p>O link de acesso on-line ainda não foi cadastrado. Sua presença foi confirmada.</p>
     {% endif %}
+  {% elif not acesso_liberado %}
+    <button class="btn btn-primary" type="button" disabled>{% include "atividades/_texto_acesso_programado.html" %}</button>
   {% else %}
     {% if erro %}<div class="alert alert-danger" role="alert">{{ erro }}</div>{% endif %}
     <p>Confirme sua presença para acessar esta programação.</p>
