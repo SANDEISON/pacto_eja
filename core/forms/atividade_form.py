@@ -33,8 +33,8 @@ class ProgramacaoSalaCheckboxSelectMultiple(forms.CheckboxSelectMultiple):
         if programacao is not None:
             option["attrs"]["data-modalidade"] = programacao.modalidade
             option["attrs"]["data-tematica"] = str(programacao.tematica_id)
-            option["attrs"]["data-data"] = programacao.data.isoformat()
-            option["attrs"]["data-data-label"] = programacao.data.strftime("%d/%m/%Y")
+            option["attrs"]["data-data"] = programacao.dia.isoformat()
+            option["attrs"]["data-data-label"] = programacao.dia.strftime("%d/%m/%Y")
             option["attrs"]["data-turno"] = programacao.turno
             option["attrs"]["data-turno-label"] = programacao.get_turno_display()
             option["attrs"]["data-descricao"] = programacao.descricao
@@ -73,7 +73,7 @@ class ProgramacaoSalaMultipleChoiceField(forms.ModelMultipleChoiceField):
             programacao.sala,
             programacao.modalidade,
             programacao.get_modalidade_display(),
-            programacao.data.strftime("%d/%m/%Y"),
+            programacao.dia.strftime("%d/%m/%Y"),
             programacao.get_turno_display(),
             (
                 "Sem vagas"
@@ -663,9 +663,7 @@ class DadosPessoaisInscricaoForm(BootstrapFormMixin, forms.ModelForm):
             .values_list("tematica_id", "tematica__nome")
             .distinct()
         )
-        self.programacoes_datas = list(
-            programacoes.order_by("data").values_list("data", flat=True).distinct()
-        )
+        self.programacoes_datas = list(programacoes.dates("data", "day"))
         if atividade.aceita_modalidade(Inscricao.Modalidade.PRESENCIAL):
             self.fields["refeicoes"].queryset = atividade.refeicoes.order_by(
                 "data", "horario", "tipo"
@@ -722,11 +720,11 @@ class DadosPessoaisInscricaoForm(BootstrapFormMixin, forms.ModelForm):
                     self.add_error(
                         "programacoes",
                         f"A sala {programacao.sala} ({programacao.get_turno_display()} "
-                        f"de {programacao.data:%d/%m/%Y}) está sem vagas. Escolha outra sala.",
+                        f"de {programacao.dia:%d/%m/%Y}) está sem vagas. Escolha outra sala.",
                     )
             horarios = set()
             for programacao in programacoes:
-                horario = (programacao.data, programacao.turno)
+                horario = (programacao.dia, programacao.turno)
                 if horario in horarios:
                     self.add_error(
                         "programacoes",

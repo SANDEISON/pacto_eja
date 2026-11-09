@@ -84,8 +84,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function updateSummary(editor) {
     const summary = findSummary(editor.dataset.formIndex) || createSummary(editor);
-    const rawDate = value(editor, "data").split("-");
-    const date = rawDate.length === 3 ? `${rawDate[2]}/${rawDate[1]}/${rawDate[0]}` : "—";
+    const [day, time] = value(editor, "data").split("T");
+    const [year, month, dateOfMonth] = day.split("-");
+    const date = time ? `${dateOfMonth}/${month}/${year} ${time}` : "—";
     summary.querySelector("[data-summary-theme]").textContent = selectedText(editor, "tematica");
     setMeta(summary.querySelector("[data-summary-date]"), "bi bi-calendar3", date);
     setMeta(summary.querySelector("[data-summary-shift]"), "bi bi-clock", selectedText(editor, "turno"));

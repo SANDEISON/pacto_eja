@@ -58,6 +58,22 @@ class ListaInscritosTests(TestCase):
                 self.assertEqual(list(gerar.call_args.args[3]), esperados)
                 resposta.close()
 
+    def test_pdf_online_inclui_inscrito_presencial_que_acessou_sala_publica(self):
+        self.online.publica = True
+        self.online.link = "https://example.com/sala"
+        self.online.save(update_fields=["publica", "link"])
+        self.client.force_login(self.participante)
+        acesso = reverse("atividade_acessar_sala_online_publica", args=[self.atividade.pk, self.online.pk])
+        self.assertRedirects(self.client.post(acesso), self.online.link, fetch_redirect_response=False)
+        self.client.force_login(self.responsavel)
+
+        from core.services.lista_inscritos import gerar_lista_inscritos
+
+        with patch("core.views.frequencia.gerar_lista_inscritos", wraps=gerar_lista_inscritos) as gerar:
+            resposta = self.client.get(self.pdf_url("online", self.online))
+            self.assertEqual(list(gerar.call_args.args[3]), [self.inscricao])
+            resposta.close()
+
     def test_ordena_nomes_com_acentos_e_escapa_marcacao(self):
         from types import SimpleNamespace
         from core.services.lista_inscritos import gerar_lista_inscritos

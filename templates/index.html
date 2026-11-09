@@ -54,9 +54,11 @@
             {% if atividade.inscricao_usuario %}
               <div class="activity-registration-panel">
                 <div class="activity-registration-status"><span class="registration-ok"><i class="bi bi-check-circle-fill"></i> Inscrição confirmada</span></div>
+                {% comment %}
                 {% if atividade.inscricao_usuario.modalidade == 'online' and atividade.acesso_evento_disponivel %}
                   <a class="btn btn-primary w-100" href="{% url 'frequencia_index' %}#participacao-{{ atividade.pk }}"><i class="bi bi-camera-video" aria-hidden="true"></i> Confirmar presença e acessar evento</a>
                 {% endif %}
+                {% endcomment %}
                 <div class="activity-registration-actions">
                   <a class="btn btn-sm activity-action activity-action-receipt" href="{% url 'inscricao_comprovante' atividade.pk %}"><i class="bi bi-file-earmark-check"></i><span>Emitir comprovante de inscrição</span></a>
                   {% if atividade.periodo_inscricoes_aberto %}

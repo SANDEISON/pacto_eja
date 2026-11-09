@@ -241,7 +241,7 @@ def gerar_comprovante_inscricao(inscricao):
             descricao = programacao.descricao.strip()
             itens.append(
                 Paragraph(
-                    f"- {programacao.data:%d/%m/%Y} - "
+                    f"- {programacao.dia:%d/%m/%Y} - "
                     f"{_texto(programacao.tematica.nome)} "
                     f"({_texto(programacao.get_turno_display())}, {_texto(programacao.sala.nome)})",
                     estilos["titulo_programacao"],

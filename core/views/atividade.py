@@ -253,11 +253,12 @@ def _serializar_sala_atividade(atividade, sala):
 
 def _serializar_programacao_atividade(atividade, programacao):
     """Converte uma programação e suas URLs no contrato JSON da interface."""
+    data_local = timezone.localtime(programacao.data)
     return {
         "id": programacao.pk,
         "label": str(programacao),
-        "data": programacao.data.strftime("%d/%m/%Y"),
-        "data_iso": programacao.data.isoformat(),
+        "data": data_local.strftime("%d/%m/%Y %H:%M"),
+        "data_iso": data_local.strftime("%Y-%m-%dT%H:%M"),
         "turno": programacao.get_turno_display(),
         "turno_value": programacao.turno,
         "modalidade": programacao.get_modalidade_display(),
@@ -692,7 +693,9 @@ def _salvar_inscricao(atividade, formularios):
     )
     campos_alterados = []
     programacoes = list(formularios.dados_pessoais.cleaned_data["programacoes"])
-    programacoes.extend(inscricao.programacoes.filter(publica=True, modalidade=modalidade))
+    programacoes.extend(
+        inscricao.programacoes.filter(publica=True, modalidade__in=[modalidade, Inscricao.Modalidade.ONLINE])
+    )
     refeicoes = list(refeicoes)
     selecoes_alteradas = (
         set(inscricao.refeicoes.values_list("pk", flat=True)) != {r.pk for r in refeicoes}

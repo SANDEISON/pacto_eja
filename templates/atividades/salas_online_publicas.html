@@ -1,16 +1,22 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Salas on-line — {{ atividade.titulo }} | Pacto EJA{% endblock %}
 {% block page_title %}Salas on-line{% endblock %}
 {% block breadcrumb %}<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Início</a></li><li class="breadcrumb-item active">Salas on-line</li>{% endblock %}
 
+{% block page_css %}<link rel="stylesheet" href="{% static 'css/frequencia.css' %}?v=20261104-1">{% endblock %}
+
 {% block content %}
 <div>
+  {% if inscricoes %}
+    {% include "frequencia/_minha_participacao.html" %}
+  {% endif %}
   <section class="registration-programs" aria-labelledby="public-programs-title">
     <div class="registration-programs-heading">
       <div>
         <h4 id="public-programs-title"><i class="bi bi-calendar2-week" aria-hidden="true"></i> Programação pública</h4>
-        <p>Filtre por data para encontrar as salas e acessar a programação on-line.</p>
+        <p>Filtre por data para consultar a programação das salas on-line.</p>
       </div>
     </div>
     {% if datas %}
@@ -30,7 +36,7 @@
       </form>
     {% endif %}
 
-    {% regroup programacoes by data as dias %}
+    {% regroup programacoes by dia as dias %}
     <div class="certificate-options">
       {% for dia in dias %}
         <div class="registration-program-day">
@@ -47,16 +53,24 @@
                   {% if programacao.mediador %}<span><i class="bi bi-person" aria-hidden="true"></i> Mediação: {{ programacao.mediador }}</span>{% endif %}
                 </div>
                 <div class="program-card-theme"><i class="bi bi-bookmark" aria-hidden="true"></i> {{ programacao.tematica }}</div>
+                {% if programacao.presenca_confirmada %}
+                  <span class="text-success"><i class="bi bi-check-circle" aria-hidden="true"></i> Presença registrada</span>
+                {% endif %}
                 {% if programacao.descricao %}<p class="program-details-description mb-0">{{ programacao.descricao }}</p>{% endif %}
+                {% if not programacao.ocultar_link_publico %}
                 <div class="align-self-end">
                   {% if programacao.link %}
-                    <a class="btn btn-primary btn-sm" href="{{ programacao.link }}" target="_blank" rel="noopener noreferrer">
-                      Acessar sala on-line <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i><span class="visually-hidden"> (abre em nova aba)</span>
-                    </a>
+                    <form method="post" action="{% url 'atividade_acessar_sala_online_publica' atividade.pk programacao.pk %}" target="_blank" rel="noopener">
+                      {% csrf_token %}
+                      <button class="btn btn-primary btn-sm" type="submit">
+                        Acessar sala on-line <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i><span class="visually-hidden"> (abre em nova aba)</span>
+                      </button>
+                    </form>
                   {% else %}
                     <span class="text-body-secondary small">Link de acesso ainda indisponível.</span>
                   {% endif %}
                 </div>
+                {% endif %}
               </article>
             {% endfor %}
           </div>

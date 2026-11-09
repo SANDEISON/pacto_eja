@@ -24,7 +24,7 @@ ROTULOS_TEMPO_ATUACAO = {
 
 
 def datas_disponiveis_atividade(atividade):
-    datas = sorted({p.data for p in atividade.programacoes.all()})
+    datas = sorted({p.dia for p in atividade.programacoes.all()})
     if not datas:
         inicio = timezone.localtime(atividade.data_inicio).date()
         fim = timezone.localtime(atividade.data_fim).date()
@@ -289,7 +289,7 @@ def listar_participantes_detalhados(educadores_qs=None, atividade_selecionada_id
 
             insc_progs = []
             for p_sala in insc.programacoes.all():
-                prog_label = f"{p_sala.sala.nome} — {p_sala.get_turno_display()} ({p_sala.data.strftime('%d/%m/%Y')})"
+                prog_label = f"{p_sala.sala.nome} — {p_sala.get_turno_display()} ({p_sala.dia.strftime('%d/%m/%Y')})"
                 if p_sala.tematica:
                     prog_label += f" ({p_sala.tematica.nome})"
 
@@ -301,7 +301,7 @@ def listar_participantes_detalhados(educadores_qs=None, atividade_selecionada_id
                         "label": prog_label,
                         "sala": p_sala.sala.nome,
                         "turno": p_sala.get_turno_display(),
-                        "data": p_sala.data.strftime("%d/%m/%Y"),
+                        "data": p_sala.dia.strftime("%d/%m/%Y"),
                         "modalidade": p_sala.get_modalidade_display(),
                         "tematica": p_sala.tematica.nome if p_sala.tematica else "",
                         "atividade_id": atividade.id,
@@ -342,7 +342,7 @@ def listar_participantes_detalhados(educadores_qs=None, atividade_selecionada_id
                 "refeicoes": insc_refeicoes,
                 "refeicoes_ids": [r.id for r in insc.refeicoes.all()],
                 "datas": (
-                    sorted({p.data.isoformat() for p in insc.programacoes.all()})
+                    sorted({p.dia.isoformat() for p in insc.programacoes.all()})
                     if atividade.programacoes.all()
                     else datas_disponiveis_atividade(atividade)
                 ),
@@ -475,7 +475,7 @@ class ReportsView(TemplateView):
             progs_disponiveis = []
             progs_ids = []
             for p in a.programacoes.all():
-                p_label = f"{p.sala.nome} — {p.get_turno_display()} ({p.data.strftime('%d/%m/%Y')})"
+                p_label = f"{p.sala.nome} — {p.get_turno_display()} ({p.dia.strftime('%d/%m/%Y')})"
                 if p.tematica:
                     p_label += f" ({p.tematica.nome})"
                 progs_disponiveis.append({
@@ -483,7 +483,7 @@ class ReportsView(TemplateView):
                     "label": p_label,
                     "sala": p.sala.nome,
                     "turno": p.get_turno_display(),
-                    "data": p.data.strftime("%d/%m/%Y"),
+                    "data": p.dia.strftime("%d/%m/%Y"),
                     "modalidade": p.get_modalidade_display(),
                     "tematica": p.tematica.nome if p.tematica else "",
                 })
@@ -667,7 +667,7 @@ class ReportsView(TemplateView):
             )
 
         for prog in progs_qs:
-            prog_label = f"{prog.sala.nome} — {prog.get_turno_display()} ({prog.data.strftime('%d/%m/%Y')})"
+            prog_label = f"{prog.sala.nome} — {prog.get_turno_display()} ({prog.dia.strftime('%d/%m/%Y')})"
             if prog.tematica:
                 prog_label += f" ({prog.tematica.nome})"
             programacoes_catalogo.append({
@@ -675,7 +675,7 @@ class ReportsView(TemplateView):
                 "label": prog_label,
                 "sala": prog.sala.nome,
                 "turno": prog.get_turno_display(),
-                "data": prog.data.strftime("%d/%m/%Y"),
+                "data": prog.dia.strftime("%d/%m/%Y"),
                 "modalidade": prog.get_modalidade_display(),
                 "tematica": prog.tematica.nome if prog.tematica else "",
             })

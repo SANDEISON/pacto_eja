@@ -4,10 +4,26 @@ from datetime import datetime, time, timedelta
 from django.core import signing
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.db.models import Count, Prefetch
 from django.urls import reverse
 from django.utils import timezone
 
 from ..models import ChamadaFrequencia, Frequencia, ProgramacaoSala
+
+
+def inscricoes_com_presencas(inscricoes):
+    programacoes = ProgramacaoSala.objects.select_related("sala").annotate(
+        _total_inscritos=Count("inscricoes", distinct=True)
+    )
+    inscricoes = inscricoes.select_related("atividade").prefetch_related(
+        Prefetch("programacoes", queryset=programacoes),
+        "frequencias__programacao__sala",
+    )
+    for inscricao in inscricoes:
+        confirmadas = {frequencia.programacao_id for frequencia in inscricao.frequencias.all()}
+        for programacao in inscricao.programacoes.all():
+            programacao.presenca_confirmada = programacao.pk in confirmadas
+    return inscricoes
 
 
 @transaction.atomic
@@ -66,7 +82,10 @@ def registrar(inscricao, chamada, usuario, metodo, codigo=None):
         raise ValidationError("Esta programação não pertence mais ao evento.")
     if inscricao.atividade_id != chamada.atividade_id or not inscricao.programacoes.filter(pk=programacao.pk).exists():
         raise ValidationError("O participante não está inscrito nesta programação.")
-    if inscricao.modalidade != programacao.modalidade:
+    acesso_online_publico = (
+        metodo == Frequencia.Metodo.ONLINE and programacao.modalidade == "online" and programacao.publica
+    )
+    if inscricao.modalidade != programacao.modalidade and not acesso_online_publico:
         raise ValidationError("A modalidade da inscrição não corresponde à sala.")
     if metodo == Frequencia.Metodo.ONLINE:
         if programacao.modalidade != "online" or usuario.pk != inscricao.usuario_id:

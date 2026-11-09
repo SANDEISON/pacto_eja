@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
@@ -91,30 +91,14 @@ class FrequenciaTests(TestCase):
         self.client.force_login(self.participante)
         self.assertNotContains(self.client.get(reverse("dashboard")), "Gerenciar frequência")
 
-    def test_dashboard_frequencia_online_apenas_para_inscrito_durante_evento(self):
+    def test_dashboard_oculta_botao_de_frequencia_online(self):
         self.client.force_login(self.participante)
-        url = reverse("frequencia_online", args=[self.atividade.pk, self.online.pk])
-        self.assertNotContains(self.client.get(reverse("dashboard")), f'href="{url}"')
         self.inscricao.modalidade = "online"
         self.inscricao.save(update_fields=["modalidade"])
         self.inscricao.programacoes.set([self.online])
-        self.assertContains(self.client.get(reverse("dashboard")), f'href="{url}"')
-        self.assertEqual(self.client.get(url).status_code, 200)
-        agora = timezone.now()
-        for inicio, fim in (
-            (agora + timedelta(hours=1), agora + timedelta(hours=2)),
-            (agora - timedelta(hours=2), agora - timedelta(hours=1)),
-        ):
-            with self.subTest(inicio=inicio):
-                self.atividade.data_inicio = inicio
-                self.atividade.data_fim = fim
-                self.atividade.save(update_fields=["data_inicio", "data_fim"])
-                self.assertNotContains(self.client.get(reverse("dashboard")), f'href="{url}"')
-        self.atividade.data_inicio = agora - timedelta(hours=1)
-        self.atividade.data_fim = agora + timedelta(hours=1)
-        self.atividade.save(update_fields=["data_inicio", "data_fim"])
-        self.client.force_login(self.outro)
-        self.assertNotContains(self.client.get(reverse("dashboard")), f'href="{url}"')
+        resposta = self.client.get(reverse("dashboard"))
+        self.assertContains(resposta, "Acessar salas on-line")
+        self.assertNotContains(resposta, "Confirmar presença e acessar evento")
 
     def test_index_exibe_capacidade_e_saldo_para_responsavel_e_participante(self):
         self.client.force_login(self.responsavel)
@@ -265,6 +249,122 @@ class FrequenciaTests(TestCase):
         self.assertEqual(registro.registrada_por, self.participante)
         self.assertEqual(ChamadaFrequencia.objects.count(), 1)
         self.assertFalse(registro.chamada.codigo)
+
+    def test_salas_online_mostram_participacao_e_ocultam_link_do_canal(self):
+        self.inscricao.modalidade = "online"
+        self.inscricao.save(update_fields=["modalidade"])
+        self.inscricao.programacoes.set([self.online])
+        sala_publica = ProgramacaoSala.objects.create(
+            sala=Sala.objects.create(nome="Sala da transmissão pública"),
+            tematica=self.online.tematica,
+            data=self.online.data,
+            turno=self.online.turno,
+            modalidade="online",
+            publica=True,
+            quantidade_max_participantes=50,
+            link="https://example.com/transmissao",
+        )
+        self.atividade.programacoes.add(sala_publica)
+        pagina_url = reverse("atividade_salas_online_publicas", args=[self.atividade.pk])
+        confirmar_url = reverse("frequencia_online", args=[self.atividade.pk, self.online.pk])
+
+        self.client.force_login(self.participante)
+        resposta = self.client.get(pagina_url)
+        self.assertContains(resposta, f'action="{confirmar_url}"')
+        self.assertContains(resposta, "Confirmar presença e acessar evento")
+        self.assertContains(resposta, sala_publica.sala.nome)
+        acesso_url = reverse("atividade_acessar_sala_online_publica", args=[self.atividade.pk, sala_publica.pk])
+        self.assertContains(resposta, f'action="{acesso_url}" target="_blank" rel="noopener"')
+        html = resposta.content.decode()
+        self.assertLess(html.index("Minha participação"), html.index("Programação pública"))
+
+        sala_publica.link = "https://www.youtube.com/@C%C3%81TEDRAUNESCODEEJA"
+        sala_publica.save(update_fields=["link"])
+        resposta = self.client.get(pagina_url)
+        self.assertContains(resposta, sala_publica.sala.nome)
+        self.assertNotContains(resposta, acesso_url)
+        self.assertEqual(self.client.post(acesso_url).status_code, 404)
+
+        self.client.post(confirmar_url)
+        self.assertContains(self.client.get(pagina_url), "Acessar evento on-line")
+
+        self.client.force_login(self.responsavel)
+        resposta = self.client.get(pagina_url)
+        self.assertNotContains(resposta, "Minha participação")
+        self.assertNotContains(resposta, confirmar_url)
+
+        self.inscricao.modalidade = "presencial"
+        self.inscricao.save(update_fields=["modalidade"])
+        self.inscricao.programacoes.set([self.presencial])
+        self.client.force_login(self.participante)
+        resposta = self.client.get(pagina_url)
+        self.assertNotContains(resposta, "Minha participação")
+        self.assertNotContains(resposta, confirmar_url)
+
+    def test_acesso_publico_cria_ou_reutiliza_inscricao_e_registra_presenca_uma_vez(self):
+        self.online.publica = True
+        self.online.link = "https://example.com/sala"
+        self.online.save(update_fields=["publica", "link"])
+        args = [self.atividade.pk, self.online.pk]
+        url = reverse("atividade_acessar_sala_online_publica", args=args)
+        pagina = reverse("atividade_salas_online_publicas", args=args[:1])
+        self.assertEqual(self.client.post(url).status_code, 302)
+        self.assertEqual(Inscricao.objects.count(), 1)
+        Inscricao.objects.create(atividade=self.atividade, usuario=self.responsavel, modalidade="online")
+
+        for usuario, modalidade in (
+            (self.outro, "online"), (self.participante, "presencial"), (self.responsavel, "online"),
+        ):
+            with self.subTest(modalidade=modalidade):
+                self.client.force_login(usuario)
+                self.assertContains(self.client.get(pagina), f'action="{url}"')
+                self.assertEqual(self.client.get(url).status_code, 405)
+                self.assertFalse(Frequencia.objects.filter(inscricao__usuario=usuario).exists())
+                for _ in range(2):
+                    self.assertRedirects(self.client.post(url), self.online.link, fetch_redirect_response=False)
+                inscricao = Inscricao.objects.get(atividade=self.atividade, usuario=usuario)
+                self.assertEqual(inscricao.modalidade, modalidade)
+                self.assertTrue(inscricao.programacoes.filter(pk=self.online.pk).exists())
+                self.assertEqual(inscricao.frequencias.filter(programacao=self.online, metodo="online").count(), 1)
+                resposta = self.client.get(pagina)
+                self.assertContains(resposta, "Minha participação")
+                self.assertContains(resposta, "Presença registrada")
+
+        self.assertTrue(self.inscricao.programacoes.filter(pk=self.presencial.pk).exists())
+        self.client.force_login(self.responsavel)
+        chamada = self.client.get(self.sala_url(self.online))
+        self.assertEqual(len(chamada.context["participantes"]), 3)
+        self.assertContains(chamada, "Registros de frequência (3)")
+
+    def test_acesso_publico_aceita_post_https_com_csrf_e_referer_da_programacao(self):
+        self.online.publica = True
+        self.online.link = "https://example.com/sala"
+        self.online.save(update_fields=["publica", "link"])
+        pagina = reverse("atividade_salas_online_publicas", args=[self.atividade.pk])
+        acesso = reverse("atividade_acessar_sala_online_publica", args=[self.atividade.pk, self.online.pk])
+        cliente = Client(enforce_csrf_checks=True)
+        cliente.force_login(self.outro)
+        resposta = cliente.get(pagina, secure=True)
+        referer = resposta.wsgi_request.build_absolute_uri()
+        dados = {"csrfmiddlewaretoken": cliente.cookies["csrftoken"].value}
+
+        self.assertEqual(cliente.post(acesso, dados, secure=True).status_code, 403)
+        self.assertFalse(Inscricao.objects.filter(usuario=self.outro).exists())
+        resposta = cliente.post(acesso, dados, secure=True, HTTP_REFERER=referer)
+        self.assertRedirects(resposta, self.online.link, fetch_redirect_response=False)
+        self.assertTrue(Frequencia.objects.filter(inscricao__usuario=self.outro, programacao=self.online).exists())
+
+    def test_acesso_publico_rejeita_sala_privada_ou_sem_link(self):
+        self.client.force_login(self.outro)
+        url = reverse("atividade_acessar_sala_online_publica", args=[self.atividade.pk, self.online.pk])
+        self.online.link = "https://example.com/sala"
+        self.online.save(update_fields=["link"])
+        self.assertEqual(self.client.post(url).status_code, 404)
+        self.online.publica = True
+        self.online.link = ""
+        self.online.save(update_fields=["publica", "link"])
+        self.assertEqual(self.client.post(url).status_code, 404)
+        self.assertFalse(Inscricao.objects.filter(usuario=self.outro).exists())
 
     def test_acesso_online_prioriza_link_da_programacao_e_atualiza_botao(self):
         self.inscricao.modalidade = "online"

@@ -2,6 +2,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.utils import timezone
 
 from .sala import Sala
 from .tematica_sala import TematicaSala
@@ -25,7 +26,7 @@ class ProgramacaoSala(models.Model):
         related_name="programacoes",
         on_delete=models.CASCADE,
     )
-    data = models.DateField("data")
+    data = models.DateTimeField("data e hora")
     responsavel = models.ForeignKey(
         settings.AUTH_USER_MODEL, verbose_name="responsável pela frequência",
         on_delete=models.SET_NULL, null=True, blank=True,
@@ -103,9 +104,13 @@ class ProgramacaoSala(models.Model):
     def __str__(self):
         """Resume sala, turno, data e modalidade em seletores e relatórios."""
         return (
-            f"{self.sala} — {self.get_turno_display()} de {self.data:%d/%m/%Y} "
+            f"{self.sala} — {self.get_turno_display()} de {self.dia:%d/%m/%Y} "
             f"({self.get_modalidade_display()})"
         )
+
+    @property
+    def dia(self):
+        return timezone.localdate(self.data)
 
     @property
     def vagas_disponiveis(self):

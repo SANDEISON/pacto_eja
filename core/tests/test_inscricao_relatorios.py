@@ -1,7 +1,6 @@
 import csv
 import io
-from datetime import timedelta
-from datetime import time
+from datetime import datetime, time, timedelta
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
@@ -37,7 +36,8 @@ class InscricaoRelatoriosTests(TestCase):
         cls.programacao = ProgramacaoSala.objects.create(
             sala=Sala.objects.create(nome="Sala dos filtros"),
             tematica=TematicaSala.objects.create(nome="Educação"),
-            data=data, turno="manha", modalidade="presencial", quantidade_max_participantes=50,
+            data=timezone.make_aware(datetime.combine(data, time(22, 30))),
+            turno="noite", modalidade="presencial", quantidade_max_participantes=50,
         )
         cls.atividade.programacoes.add(cls.programacao)
         cls.inscricao.programacoes.add(cls.programacao)
@@ -55,7 +55,7 @@ class InscricaoRelatoriosTests(TestCase):
         response = self.client.get(self.url, {
             "modalidade": "presencial", "representante": "Sim", "undime": "sim",
             "q": "82988887777", "programacao": self.programacao.pk,
-            "refeicao": self.refeicao.pk, "data": self.programacao.data.isoformat(),
+            "refeicao": self.refeicao.pk, "data": self.refeicao.data.isoformat(),
         })
         self.assertEqual(response.status_code, 200)
         self.assertEqual(list(response.context["inscricoes"]), [self.inscricao])

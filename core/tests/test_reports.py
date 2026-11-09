@@ -42,7 +42,7 @@ class ReportsQueryCountTests(TestCase):
         tematica = TematicaSala.objects.create(nome="Temática de teste")
         for turno in ("manha", "tarde"):
             atividade.programacoes.add(ProgramacaoSala.objects.create(
-                sala=sala, tematica=tematica, data=agora.date(), turno=turno,
+                sala=sala, tematica=tematica, data=agora, turno=turno,
                 modalidade="presencial",
                 quantidade_max_participantes=100,
             ))
@@ -280,7 +280,7 @@ class ReportsViewTests(TestCase):
         prog = ProgramacaoSala.objects.create(
             sala=sala,
             tematica=tematica,
-            data=(agora + timezone.timedelta(days=10)).date(),
+            data=agora + timezone.timedelta(days=10),
             turno=ProgramacaoSala.Turno.MANHA,
             modalidade=ProgramacaoSala.Modalidade.PRESENCIAL,
             quantidade_max_participantes=50,
@@ -307,7 +307,7 @@ class ReportsViewTests(TestCase):
         )
         inscricao.programacoes.add(prog)
         refeicao = Refeicao.objects.create(
-            atividade=atividade, tipo="almoco", data=prog.data, horario="12:00",
+            atividade=atividade, tipo="almoco", data=prog.dia, horario="12:00",
         )
         inscricao.refeicoes.add(refeicao)
 
@@ -326,9 +326,9 @@ class ReportsViewTests(TestCase):
         self.assertIn(prog.id, participantes[0]["programacoes_ids"])
         self.assertEqual(len(participantes[0]["programacoes"]), 1)
         self.assertEqual(participantes[0]["programacoes"][0]["id"], prog.id)
-        self.assertEqual(participantes[0]["atividades"][0]["datas"], [prog.data.isoformat()])
+        self.assertEqual(participantes[0]["atividades"][0]["datas"], [prog.dia.isoformat()])
         self.assertEqual(participantes[0]["atividades"][0]["refeicoes_ids"], [refeicao.id])
-        self.assertEqual(response.context["atividade_selecionada"]["datas"], [prog.data.isoformat()])
+        self.assertEqual(response.context["atividade_selecionada"]["datas"], [prog.dia.isoformat()])
         self.assertEqual(response.context["atividade_selecionada"]["refeicoes"][0]["id"], refeicao.id)
         vagas = response.context["atividade_selecionada"]
         self.assertEqual(vagas["vagas_totais"], 50)
@@ -432,11 +432,11 @@ class ReportsViewTests(TestCase):
         sala_p = Sala.objects.create(nome="Sala Presencial Alfa")
         sala_o = Sala.objects.create(nome="Sala Virtual Beta")
         prog_p = ProgramacaoSala.objects.create(
-            sala=sala_p, tematica=tematica, data=agora.date(), turno="manha",
+            sala=sala_p, tematica=tematica, data=agora, turno="manha",
             modalidade="presencial", quantidade_max_participantes=50,
         )
         prog_o = ProgramacaoSala.objects.create(
-            sala=sala_o, tematica=tematica, data=agora.date(), turno="tarde",
+            sala=sala_o, tematica=tematica, data=agora, turno="tarde",
             modalidade="online", quantidade_max_participantes=50,
         )
         atividade.programacoes.add(prog_p, prog_o)

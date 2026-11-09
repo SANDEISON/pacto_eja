@@ -182,7 +182,7 @@ CATALOGS = {
         ),
         "columns": (
             ("Sala", "sala"),
-            ("Data", "data"),
+            ("Data e hora", "data"),
             ("Turno", "get_turno_display"),
             ("Modalidade", "get_modalidade_display"),
             ("Link", "link"),
@@ -318,7 +318,8 @@ class CatalogFormMixin(CatalogMixin):
 
     def get_form_class(self):
         """Cria o ModelForm a partir dos campos declarados no catálogo."""
-        return modelform_factory(self.model, fields=self.catalog["fields"])
+        widgets = {"data": forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M")} if self.model is ProgramacaoSala else None
+        return modelform_factory(self.model, fields=self.catalog["fields"], widgets=widgets)
 
     def get_form(self, form_class=None):
         """Ajusta widgets e protege o identificador imutável de escolas."""
@@ -361,7 +362,7 @@ class CatalogFormMixin(CatalogMixin):
             widget.attrs["class"] = f'{widget.attrs.get("class", "")} {css_class}'.strip()
         if "data_nascimento" in form.fields:
             form.fields["data_nascimento"].widget.input_type = "date"
-        if "data" in form.fields:
+        if "data" in form.fields and self.model is not ProgramacaoSala:
             form.fields["data"].widget.input_type = "date"
         if self.model is Escola and self.object and self.object.pk:
             form.fields["id_escola"].disabled = True

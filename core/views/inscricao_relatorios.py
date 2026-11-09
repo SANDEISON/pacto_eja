@@ -139,7 +139,7 @@ class InscricaoRelatoriosMixin:
         context.update(filtros_form=self.filtros_form, filtros_query=parametros.urlencode())
         context["filtros_catalogo"] = {
             "modalidade": self.atividade.modalidade,
-            "programacoes": {str(p.pk): p.data.isoformat() for p in self.atividade.programacoes.all()},
+            "programacoes": {str(p.pk): p.dia.isoformat() for p in self.atividade.programacoes.all()},
             "refeicoes": {str(r.pk): r.data.isoformat() for r in self.atividade.refeicoes.all()},
         }
         return context

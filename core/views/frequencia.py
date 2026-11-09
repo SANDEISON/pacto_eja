@@ -3,7 +3,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core import signing
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db.models import Count, Prefetch, Q, Value
+from django.db.models import Count, Q, Value
 from django.db.models.functions import Concat
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
@@ -12,7 +12,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 
 from ..models import Atividade, Frequencia, Inscricao, ProgramacaoSala
-from ..services.frequencia import cancelar_presenca, pode_operar, registrar_direto
+from ..services.frequencia import cancelar_presenca, inscricoes_com_presencas, pode_operar, registrar_direto
 from ..services.lista_inscritos import gerar_lista_inscritos
 from ..services.frequencia_qr_pdf import gerar_frequencia_qr_pdf
 
@@ -87,9 +87,12 @@ def frequencia_inscritos_pdf(request, pk, programacao_pk, modalidade):
     )
     if not pode_operar(request.user, programacao):
         raise PermissionDenied
+    filtro_modalidade = Q(modalidade=modalidade)
+    if programacao.publica and programacao.modalidade == modalidade == Inscricao.Modalidade.ONLINE:
+        filtro_modalidade |= Q(frequencias__programacao=programacao)
     inscricoes = Inscricao.objects.filter(
-        atividade=atividade, programacoes=programacao, modalidade=modalidade,
-    ).select_related("usuario")
+        filtro_modalidade, atividade=atividade, programacoes=programacao,
+    ).select_related("usuario").distinct()
     return FileResponse(
         gerar_lista_inscritos(atividade, programacao, modalidade, inscricoes),
         as_attachment=True,
@@ -104,14 +107,7 @@ def frequencia_index(request):
     if not request.user.has_perm("core.add_frequencia"):
         programacoes = programacoes.filter(responsavel=request.user)
     pares = [(atividade, p) for p in programacoes for atividade in p.atividades.all()]
-    inscricoes = Inscricao.objects.filter(usuario=request.user).select_related("atividade").prefetch_related(
-        Prefetch("programacoes", queryset=ProgramacaoSala.objects.select_related("sala").annotate(_total_inscritos=Count("inscricoes", distinct=True))),
-        "frequencias__programacao__sala",
-    )
-    for inscricao in inscricoes:
-        confirmadas = {f.programacao_id for f in inscricao.frequencias.all()}
-        for programacao in inscricao.programacoes.all():
-            programacao.presenca_confirmada = programacao.pk in confirmadas
+    inscricoes = inscricoes_com_presencas(Inscricao.objects.filter(usuario=request.user))
     return render(request, "frequencia/index.html", {"pares": pares, "inscricoes": inscricoes})
 
 

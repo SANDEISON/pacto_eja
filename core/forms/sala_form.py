@@ -22,15 +22,13 @@ class ProgramacaoSalaInlineForm(BootstrapFormMixin, forms.ModelForm):
             "quantidade_max_participantes",
         )
         widgets = {
-            "data": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+            "data": forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"),
             "descricao": forms.Textarea(attrs={"rows": 3}),
             "link": forms.URLInput(attrs={"placeholder": "https://..."}),
         }
 
     def __init__(self, *args, **kwargs):
-        """Configura o formato de data aceito pelo campo HTML5."""
         super().__init__(*args, **kwargs)
-        self.fields["data"].input_formats = ["%Y-%m-%d"]
         original = self.fields["responsavel"]
         self.fields["responsavel"] = UserNameChoiceField(
             queryset=original.queryset.order_by("first_name", "last_name", "pk"),

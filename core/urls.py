@@ -4,7 +4,7 @@ from django.views.generic import RedirectView
 from . import views
 from .views.atividade_inscricao_pdf import atividade_inscricao_pdf, atividade_programacao_pdf
 from .views.credenciamento import atividade_credenciamento, atividade_credenciamento_pdf
-from .views.dashboard import baixar_programacao_atividade, baixar_programacao_publica, salas_online_publicas
+from .views.dashboard import acessar_sala_online_publica, baixar_programacao_atividade, baixar_programacao_publica, salas_online_publicas
 from .views import frequencia as frequencia_views
 
 
@@ -34,6 +34,7 @@ urlpatterns = [
     path("atividades/programacao/<str:token>/", baixar_programacao_publica, name="atividade_programacao_publica"),
     path("atividades/<int:pk>/inscricao/", views.inscricao_atividade, name="atividade_inscricao"),
     path("atividades/<int:pk>/salas-online/", salas_online_publicas, name="atividade_salas_online_publicas"),
+    path("atividades/<int:pk>/salas-online/<int:programacao_pk>/acessar/", acessar_sala_online_publica, name="atividade_acessar_sala_online_publica"),
     path("atividades/<int:pk>/inscricao/comprovante/", views.comprovante_inscricao, name="inscricao_comprovante"),
     path("atividades/<int:pk>/inscricao/cancelar/", views.cancelar_inscricao_atividade, name="atividade_inscricao_cancelar"),
     path("atividades/api/coautores/", views.buscar_coautores, name="buscar_coautores"),

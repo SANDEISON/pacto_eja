@@ -1,11 +1,19 @@
+from urllib.parse import unquote
+
 from django.contrib.auth.decorators import login_required
 from django.core.signing import BadSignature, Signer
+from django.db import transaction
 from django.db.models import Count, Prefetch, Q
 from django.http import FileResponse, Http404
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
-from ..models import Atividade, ProgramacaoSala, RascunhoInscricao
+from ..models import Atividade, Frequencia, Inscricao, ProgramacaoSala, RascunhoInscricao
+from ..services.frequencia import inscricoes_com_presencas, registrar_direto
+
+
+CANAL_YOUTUBE_CATEDRA = "https://www.youtube.com/@cátedraunescodeeja"
 
 
 def atividades_visiveis_no_painel(usuario, horario_atual):
@@ -19,6 +27,7 @@ def atividades_visiveis_no_painel(usuario, horario_atual):
             )
             | Q(inscricoes__usuario=usuario)
             | Q(programacoes__responsavel=usuario)
+            | Q(programacoes__publica=True, programacoes__modalidade=ProgramacaoSala.Modalidade.ONLINE)
         )
         .distinct()
     )
@@ -51,6 +60,10 @@ def _resposta_programacao(atividade):
     return FileResponse(arquivo, as_attachment=True)
 
 
+def _ocultar_link_publico(link):
+    return unquote(link).rstrip("/").casefold() == CANAL_YOUTUBE_CATEDRA
+
+
 @login_required
 def salas_online_publicas(request, pk):
     atividade = get_object_or_404(
@@ -60,16 +73,53 @@ def salas_online_publicas(request, pk):
         atividade.programacoes.filter(publica=True, modalidade=ProgramacaoSala.Modalidade.ONLINE)
         .select_related("sala", "tematica")
     )
-    datas = {programacao.data.isoformat(): programacao.data for programacao in programacoes}
+    datas = {programacao.dia.isoformat(): programacao.dia for programacao in programacoes}
     data_selecionada = datas.get(request.GET.get("data"))
     if data_selecionada:
-        programacoes = [programacao for programacao in programacoes if programacao.data == data_selecionada]
+        programacoes = [programacao for programacao in programacoes if programacao.dia == data_selecionada]
+    inscricoes = inscricoes_com_presencas(
+        atividade.inscricoes.filter(usuario=request.user).filter(
+            Q(modalidade=Inscricao.Modalidade.ONLINE)
+            | Q(frequencias__programacao__publica=True, frequencias__programacao__modalidade=ProgramacaoSala.Modalidade.ONLINE)
+        ).distinct()
+    )
+    presencas = {
+        registro.programacao_id for inscricao in inscricoes for registro in inscricao.frequencias.all()
+    }
+    for programacao in programacoes:
+        programacao.ocultar_link_publico = _ocultar_link_publico(programacao.link)
+        programacao.presenca_confirmada = programacao.pk in presencas
     return render(request, "atividades/salas_online_publicas.html", {
         "atividade": atividade,
         "programacoes": programacoes,
+        "inscricoes": inscricoes,
         "datas": datas.values(),
         "data_selecionada": data_selecionada,
     })
+
+
+@login_required
+@require_POST
+@transaction.atomic
+def acessar_sala_online_publica(request, pk, programacao_pk):
+    atividade = get_object_or_404(
+        Atividade.objects.select_for_update(), pk=pk, ativo=True, data_fim__gte=timezone.now(),
+    )
+    programacao = get_object_or_404(
+        atividade.programacoes.select_for_update(),
+        pk=programacao_pk, publica=True, modalidade=ProgramacaoSala.Modalidade.ONLINE,
+    )
+    if not programacao.link or _ocultar_link_publico(programacao.link):
+        raise Http404
+
+    inscricao, _ = Inscricao.objects.get_or_create(
+        atividade=atividade,
+        usuario=request.user,
+        defaults={"modalidade": Inscricao.Modalidade.ONLINE},
+    )
+    inscricao.programacoes.add(programacao)
+    registrar_direto(inscricao, programacao, request.user, Frequencia.Metodo.ONLINE)
+    return redirect(programacao.link)
 
 
 @login_required
