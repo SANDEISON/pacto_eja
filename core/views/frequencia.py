@@ -103,7 +103,7 @@ def frequencia_inscritos_pdf(request, pk, programacao_pk, modalidade):
 
 @login_required
 def frequencia_index(request):
-    programacoes = ProgramacaoSala.objects.select_related("sala", "responsavel").prefetch_related("atividades").filter(atividades__isnull=False).annotate(_total_inscritos=Count("inscricoes", distinct=True)).distinct()
+    programacoes = ProgramacaoSala.objects.select_related("sala", "responsavel", "tematica").prefetch_related("atividades").filter(atividades__isnull=False).annotate(_total_inscritos=Count("inscricoes", distinct=True)).distinct()
     if not request.user.has_perm("core.add_frequencia"):
         programacoes = programacoes.filter(responsavel=request.user)
     pares = [(atividade, p) for p in programacoes for atividade in p.atividades.all()]
