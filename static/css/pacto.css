@@ -134,7 +134,7 @@ body { font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; col
   .credenciamento-busca, .credenciamento-status, .credenciamento-acoes, .credenciamento-download { flex-basis: 100%; }
 }
 
-.btn.activity-schedule-download {
+.btn.activity-online-access {
   --bs-btn-color: #402000;
   --bs-btn-bg: #ffb547;
   --bs-btn-border-color: #d97706;
