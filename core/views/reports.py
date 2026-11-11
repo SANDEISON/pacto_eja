@@ -4,6 +4,7 @@ from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView
 
+from core.menu import can_view_reports
 from core.models import (
     Atividade,
     Credenciamento,
@@ -32,12 +33,7 @@ def datas_disponiveis_atividade(atividade):
     return [data.isoformat() for data in datas]
 
 
-def usuario_e_staff(usuario):
-    """Restringe os relatórios a usuários autenticados da equipe."""
-    return usuario.is_authenticated and usuario.is_staff
-
-
-staff_required = user_passes_test(usuario_e_staff)
+reports_required = user_passes_test(can_view_reports)
 
 
 def normalizar_distribuicao(
@@ -437,7 +433,7 @@ def listar_participantes_detalhados(educadores_qs=None, atividade_selecionada_id
     return participantes
 
 
-@method_decorator(staff_required, name="dispatch")
+@method_decorator(reports_required, name="dispatch")
 class ReportsView(TemplateView):
     """Apresenta indicadores agregados e a relação detalhada de participantes."""
 

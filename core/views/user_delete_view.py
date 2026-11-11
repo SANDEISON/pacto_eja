@@ -19,7 +19,7 @@ class UserDeleteView(ManagementPermissionMixin, DeleteView):
         """Impede autoexclusão e protege superusuários de operadores comuns."""
         usuario = super().get_object(queryset)
         if usuario == self.request.user or (
-            usuario.is_superuser and not self.request.user.is_superuser
+            (usuario.is_staff or usuario.is_superuser) and not self.request.user.is_superuser
         ):
             raise PermissionDenied
         return usuario

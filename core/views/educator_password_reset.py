@@ -6,6 +6,7 @@ from django.views.decorators.http import require_POST
 
 from accounts.constants import SENHA_INICIAL
 
+from ..access_profiles import can_reset_educator_password
 from ..models import Educador
 
 
@@ -16,7 +17,7 @@ def educator_password_reset(request, pk):
     """Redefine a senha da conta vinculada ao educador selecionado."""
     educador = get_object_or_404(Educador.objects.select_related("usuario"), pk=pk)
     usuario = educador.usuario
-    if (usuario.is_staff or usuario.is_superuser) and not request.user.is_superuser:
+    if not can_reset_educator_password(request.user, usuario):
         raise PermissionDenied
 
     usuario.set_password(SENHA_INICIAL)

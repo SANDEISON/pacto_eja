@@ -7,13 +7,20 @@ def staff_only(request):
     return bool(user and user.is_authenticated and user.is_staff)
 
 
+def can_view_reports(user):
+    return user.is_authenticated and (user.is_staff or user.has_perm("core.view_relatorios"))
+
+
+def reports_access(request):
+    return can_view_reports(request.user)
+
+
 def activity_management_access(request):
     """Exibe atividades para a equipe que pode consultá-las ou alterá-las."""
     user = getattr(request, "user", None)
     return bool(
         user
         and user.is_authenticated
-        and user.is_staff
         and (user.has_perm("core.view_atividade") or user.has_perm("core.change_atividade"))
     )
 
@@ -24,7 +31,6 @@ def educator_management_access(request):
     return bool(
         user
         and user.is_authenticated
-        and user.is_staff
         and user.has_perm("core.view_educadorescola")
     )
 
@@ -65,7 +71,6 @@ def review_management_access(request):
     return bool(
         user
         and user.is_authenticated
-        and user.is_staff
         and any(
             user.has_perm(permission)
             for permission in (
@@ -84,10 +89,11 @@ def management_access(request):
     return bool(
         user
         and user.is_authenticated
-        and user.is_staff
         and any(
             user.has_perm(permission)
             for permission in (
+                "auth.view_user",
+                "auth.view_group",
                 "core.view_cidade",
                 "core.view_corraca",
                 "core.view_educador",

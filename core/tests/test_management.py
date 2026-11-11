@@ -35,6 +35,7 @@ class ManagementAccessTests(TestCase):
         self.assertEqual(
             [item["text"] for item in administer["submenu"]],
             [
+                "Perfis de acesso",
                 "Cidades",
                 "Cores/raças",
                 "Cursos para certificados",

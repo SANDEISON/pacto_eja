@@ -24,7 +24,7 @@
         {% include "management/_field.html" with field=form.first_name column="col-12 col-lg-6" %}
         {% include "management/_field.html" with field=form.last_name column="col-12 col-lg-6" %}
         {% include "management/_field.html" with field=form.groups column="col-12" %}
-        <div class="col-12 d-flex flex-wrap gap-4">{% include "management/_checkbox.html" with field=form.is_active %}{% include "management/_checkbox.html" with field=form.is_staff %}</div>
+        <div class="col-12 d-flex flex-wrap gap-4">{% include "management/_checkbox.html" with field=form.is_active %}</div>
       </div>
     </div>
     <footer class="form-actions"><a class="btn btn-light" href="{% url 'user_list' %}">Cancelar</a><button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Salvar</button></footer>

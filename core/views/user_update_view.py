@@ -17,9 +17,9 @@ class UserUpdateView(ManagementPermissionMixin, UpdateView):
     success_url = reverse_lazy("user_list")
 
     def get_object(self, queryset=None):
-        """Permite editar superusuários somente a outro superusuário."""
+        """Protege contas com acesso ao Django Admin."""
         usuario = super().get_object(queryset)
-        if usuario.is_superuser and not self.request.user.is_superuser:
+        if (usuario.is_staff or usuario.is_superuser) and not self.request.user.is_superuser:
             raise PermissionDenied
         return usuario
 

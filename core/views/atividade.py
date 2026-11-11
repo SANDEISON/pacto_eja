@@ -419,7 +419,7 @@ class InscricaoListView(ManagementPermissionMixin, InscricaoRelatoriosMixin, Sea
 
     def post(self, request, *args, **kwargs):
         """Registra as decisões administrativas sobre os inscritos nesta atividade."""
-        if not request.user.is_staff:
+        if not (request.user.is_staff or request.user.has_perm("core.change_inscricao")):
             raise PermissionDenied
         if request.POST.get("acao") == "definir_apresentacao":
             if not request.user.has_perm("core.change_inscricao"):

@@ -4,6 +4,7 @@ from django.contrib.auth.models import Group
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 
+from ..access_profiles import default_educator_group
 from ..validators import validate_cpf
 from .bootstrap_form_mixin import BootstrapFormMixin
 
@@ -26,15 +27,14 @@ class ManagedUserForm(BootstrapFormMixin, forms.ModelForm):
 
     class Meta:
         model = get_user_model()
-        fields = ("username", "first_name", "last_name", "email", "is_active", "is_staff", "groups")
+        fields = ("username", "first_name", "last_name", "email", "is_active", "groups")
         labels = {
             "username": "CPF",
             "first_name": "Nome",
             "last_name": "Sobrenome",
             "email": "E-mail",
             "is_active": "Ativo",
-            "is_staff": "Acesso à administração",
-            "groups": "Grupos",
+            "groups": "Perfis de acesso",
         }
         widgets = {
             "username": forms.TextInput(attrs={"inputmode": "numeric", "placeholder": "000.000.000-00"}),
@@ -46,9 +46,16 @@ class ManagedUserForm(BootstrapFormMixin, forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["groups"].queryset = Group.objects.order_by("name")
         if not self.instance.pk:
+            self.initial.setdefault("groups", default_educator_group())
             self.fields["password1"].required = True
             self.fields["password2"].required = True
         self._apply_bootstrap_classes()
+
+    def clean_groups(self):
+        groups = self.cleaned_data["groups"]
+        if not groups and not (self.instance.is_staff or self.instance.is_superuser):
+            return default_educator_group()
+        return groups
 
     def clean_username(self):
         """Valida o CPF usado como nome de usuário e o salva sem máscara."""

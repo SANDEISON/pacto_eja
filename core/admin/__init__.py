@@ -1,3 +1,4 @@
+from . import auth_admin
 from .atividade_admin import AtividadeAdmin
 from .frequencia_admin import FrequenciaAdmin, ChamadaFrequenciaAdmin
 from .cidade_admin import CidadeAdmin

@@ -49,7 +49,7 @@ class DashboardTests(TestCase):
         menu_texts = [item.get("text") or item.get("header") for item in response.context["adminlte_menu_sidebar"]]
         self.assertEqual(
             menu_texts,
-            ["Início", "GESTÃO", "Formações", "Educadores", "Relatórios", "Meu perfil", "Sair"],
+            ["Início", "GESTÃO", "Formações", "Relatórios", "Meu perfil", "Sair"],
         )
         self.assertNotContains(response, "PAINEL DE ACOMPANHAMENTO")
         self.assertNotContains(response, "Acompanhe em um só lugar os principais indicadores do Pacto EJA.")

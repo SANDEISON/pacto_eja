@@ -4,6 +4,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError, transaction
 
+from ..access_profiles import default_educator_group
 from ..models import (
     Cidade,
     CorRaca,
@@ -368,6 +369,7 @@ class EducadorEscolaCadastroForm(BootstrapFormMixin, forms.Form):
                 first_name=primeiro_nome,
                 last_name=sobrenome,
             )
+            usuario.groups.add(*default_educator_group())
         else:
             usuario = User.objects.select_for_update().get(pk=usuario.pk)
         educador, _ = Educador.objects.get_or_create(usuario=usuario)

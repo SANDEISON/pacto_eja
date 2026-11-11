@@ -6,13 +6,13 @@ from dotenv import load_dotenv
 
 from core.menu import (
     activity_management_access,
-    educator_management_access,
     evaluator_opportunities_access,
     evaluator_portal_access,
     evaluator_section_access,
     management_access,
     review_management_access,
     staff_only,
+    reports_access,
 )
 
 
@@ -195,18 +195,18 @@ ADMINLTE = {
         {"header": "AVALIAÇÃO", "can": evaluator_section_access},
         {"text": "Chamadas para avaliadores", "route": "chamadas_avaliadores", "icon": "bi bi-megaphone-fill", "can": evaluator_opportunities_access},
         {"text": "Meus trabalhos para avaliar", "route": "minhas_avaliacoes", "icon": "bi bi-clipboard2-check-fill", "can": evaluator_portal_access},
-        {"header": "GESTÃO", "can": staff_only},
+        {"header": "GESTÃO", "can": reports_access},
         {"text": "Formações", "url": "#formacoes", "icon": "bi bi-mortarboard-fill", "can": staff_only},
         {"text": "Eventos e atividades", "route": "atividade_list", "icon": "bi bi-calendar2-event-fill", "can": activity_management_access},
         {"text": "Chamadas e avaliações", "route": "chamada_avaliadores_list", "icon": "bi bi-person-check-fill", "can": review_management_access},
-        {"text": "Educadores", "route": "educator_list", "icon": "bi bi-people-fill", "can": educator_management_access},
+        # {"text": "Educadores", "route": "educator_list", "icon": "bi bi-people-fill", "can": educator_management_access},
         {
             "text": "Relatórios",
             "icon": "bi bi-bar-chart-fill",
-            "can": staff_only,
+            "can": reports_access,
             "submenu": [
-                {"text": "Atividades", "route": "reports", "icon": "bi bi-calendar2-check", "can": staff_only},
-                {"text": "Certificados", "route": "reports_certificados", "icon": "bi bi-award", "can": staff_only},
+                {"text": "Atividades", "route": "reports", "icon": "bi bi-calendar2-check", "can": reports_access},
+                {"text": "Certificados", "route": "reports_certificados", "icon": "bi bi-award", "can": reports_access},
             ],
         },
         {"header": "SISTEMA", "can": management_access},
@@ -216,7 +216,7 @@ ADMINLTE = {
             "can": management_access,
             "submenu": [
                 # {"text": "Usuários", "route": "user_list", "icon": "bi bi-people", "can": "auth.view_user"},
-                # {"text": "Grupos", "route": "group_list", "icon": "bi bi-collection", "can": "auth.view_group"},
+                {"text": "Perfis de acesso", "route": "group_list", "icon": "bi bi-collection", "can": "auth.view_group"},
                 {"text": "Cidades", "route": "city_list", "icon": "bi bi-buildings", "can": "core.view_cidade"},
                 {"text": "Cores/raças", "route": "race_color_list", "icon": "bi bi-palette", "can": "core.view_corraca"},
                 {"text": "Cursos para certificados", "route": "certificate_course_list", "icon": "bi bi-award", "can": ["core.view_cursocertificado", "core.change_cursocertificado"]},

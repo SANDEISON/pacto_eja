@@ -75,6 +75,7 @@ class Atividade(models.Model):
         verbose_name = "atividade"
         verbose_name_plural = "atividades"
         ordering = ("data_inicio", "titulo")
+        permissions = (("view_relatorios", "Pode consultar relatórios"),)
 
     def __str__(self):
         return self.titulo
@@ -95,8 +96,9 @@ class Atividade(models.Model):
             errors["data_fim"] = "O término deve ocorrer depois do início."
         if self.inscricoes_inicio and self.inscricoes_fim and self.inscricoes_fim < self.inscricoes_inicio:
             errors["inscricoes_fim"] = "O fim das inscrições deve ocorrer depois do início."
-        if self.inscricoes_fim and self.data_inicio and self.inscricoes_fim > self.data_inicio:
-            errors["inscricoes_fim"] = "As inscrições devem terminar até o início da atividade."
+        # Permite manter as inscrições abertas durante a atividade.
+        # if self.inscricoes_fim and self.data_inicio and self.inscricoes_fim > self.data_inicio:
+        #     errors["inscricoes_fim"] = "As inscrições devem terminar até o início da atividade."
         if self.permite_submissao and not self.submissoes_fim:
             errors["submissoes_fim"] = "Informe o prazo para submissão de trabalhos."
         if self.submissoes_fim and self.inscricoes_inicio and self.submissoes_fim < self.inscricoes_inicio:

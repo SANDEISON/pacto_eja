@@ -1,13 +1,17 @@
 from django import forms
 from django.contrib import messages
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
+from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models.deletion import ProtectedError
 from django.forms import modelform_factory
-from django.http import Http404, HttpResponseRedirect
+from django.http import Http404, HttpResponseBadRequest, HttpResponseRedirect
+from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
+from ..access_profiles import can_change_educator_groups, can_reset_educator_password, default_educator_group
 from ..forms import ProgramacaoSalaInlineForm, SalaProgramacaoFormSet
 from ..forms.user_name_choice_field import UserNameChoiceField
 from ..models import (
@@ -86,7 +90,7 @@ CATALOGS = {
         "singular": "educador",
         "fields": ("usuario", "nome_completo", "nome_social", "cpf", "data_nascimento", "genero", "telefone", "estado_civil", "cor_raca"),
         "search_fields": ("nome_completo", "nome_social", "cpf", "usuario__username", "usuario__email"),
-        "columns": (("Nome", "nome_completo"), ("Usuário", "usuario"), ("CPF", "cpf"), ("Gênero", "genero"), ("Cor/raça", "cor_raca")),
+        "columns": (("Nome", "nome_completo"), ("Usuário", "usuario"), ("CPF", "cpf"), ("Gênero", "genero")),
         "select_related": ("usuario", "genero", "estado_civil", "cor_raca"),
         "list_url_name": "educator_model_list",
         "allow_add": False,
@@ -291,6 +295,8 @@ class CatalogListView(CatalogMixin, SearchableListMixin, ListView):
         queryset = super().get_queryset()
         if self.catalog.get("select_related"):
             queryset = queryset.select_related(*self.catalog["select_related"])
+        if self.catalog_key == "cadastros-educadores":
+            queryset = queryset.prefetch_related("usuario__groups")
         return queryset
 
     def get_context_data(self, **kwargs):
@@ -307,6 +313,22 @@ class CatalogListView(CatalogMixin, SearchableListMixin, ListView):
             }
             for registro in context["objects"]
         ]
+        if self.catalog_key == "cadastros-educadores":
+            context["table_columns"].append("Perfis de acesso")
+            access_options = None
+            for row in context["table_rows"]:
+                usuario = row["object"].usuario
+                groups = list(usuario.groups.all())
+                row["can_reset_password"] = (
+                    self.request.user.has_perm("core.change_educador")
+                    and can_reset_educator_password(self.request.user, usuario)
+                )
+                row["access_profiles"] = sorted(group.name for group in groups)
+                if can_change_educator_groups(self.request.user, usuario):
+                    if access_options is None:
+                        access_options = list(Group.objects.order_by("name"))
+                    row["access_options"] = access_options
+                    row["access_profile_ids"] = {group.pk for group in groups}
         opts = self.model._meta
         context.update(
             can_add=self.catalog.get("allow_add", True) and self.request.user.has_perm(f"{opts.app_label}.add_{opts.model_name}"),
@@ -314,6 +336,39 @@ class CatalogListView(CatalogMixin, SearchableListMixin, ListView):
             can_delete=self.request.user.has_perm(f"{opts.app_label}.delete_{opts.model_name}"),
         )
         return context
+
+    @transaction.atomic
+    def post(self, request, *args, **kwargs):
+        if self.catalog_key != "cadastros-educadores":
+            return self.http_method_not_allowed(request, *args, **kwargs)
+        if not request.user.has_perms(("core.change_educador", "auth.change_user")):
+            raise PermissionDenied
+
+        selected = request.POST.get("selected")
+        if selected not in ("0", "1"):
+            return HttpResponseBadRequest("Seleção de perfil inválida.")
+        try:
+            educator_id = int(request.POST.get("educator", ""))
+            group_id = int(request.POST.get("group", ""))
+        except ValueError:
+            return HttpResponseBadRequest("Educador ou perfil inválido.")
+
+        educator = get_object_or_404(Educador, pk=educator_id)
+        usuario = get_object_or_404(
+            get_user_model().objects.select_for_update(), pk=educator.usuario_id
+        )
+        if not can_change_educator_groups(request.user, usuario):
+            raise PermissionDenied
+        group = get_object_or_404(Group, pk=group_id)
+        if selected == "1":
+            usuario.groups.add(group)
+        else:
+            usuario.groups.remove(group)
+            if not (usuario.is_staff or usuario.is_superuser) and not usuario.groups.exists():
+                usuario.groups.add(*default_educator_group())
+
+        messages.success(request, "Perfis de acesso atualizados.")
+        return HttpResponseRedirect(reverse("educator_model_list", query=request.GET))
 
 
 class CatalogFormMixin(CatalogMixin):
@@ -362,6 +417,8 @@ class CatalogFormMixin(CatalogMixin):
                     }
                 ),
             )
+        if self.model is Educador and not self.request.user.has_perm("auth.change_user"):
+            form.fields.pop("usuario", None)
         for field in form.fields.values():
             widget = field.widget
             css_class = bootstrap_widget_class(widget)

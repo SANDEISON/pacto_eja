@@ -18,7 +18,7 @@
     </header>
     <div class="table-responsive">
       <table class="table management-table align-middle mb-0">
-        <thead><tr><th>Usuário</th><th>Nome</th><th>E-mail</th><th>Grupos</th><th>Status</th><th class="text-end">Ações</th></tr></thead>
+        <thead><tr><th>Usuário</th><th>Nome</th><th>E-mail</th><th>Perfis de acesso</th><th>Status</th><th class="text-end">Ações</th></tr></thead>
         <tbody>
         {% for managed_user in users %}
           <tr>
@@ -28,8 +28,10 @@
             <td>{% for group in managed_user.groups.all %}<span class="badge management-badge">{{ group.name }}</span>{% empty %}—{% endfor %}</td>
             <td>{% if managed_user.is_active %}<span class="status-pill status-active">Ativo</span>{% else %}<span class="status-pill status-inactive">Inativo</span>{% endif %}</td>
             <td class="text-end text-nowrap">
+              {% if request.user.is_superuser or not managed_user.is_staff and not managed_user.is_superuser %}
               {% if perms.auth.change_user %}<a class="btn btn-sm btn-outline-primary" href="{% url 'user_update' managed_user.pk %}" title="Editar {{ managed_user.username }}"><i class="bi bi-pencil"></i><span class="visually-hidden">Editar</span></a>{% endif %}
               {% if perms.auth.delete_user and managed_user != request.user %}<a class="btn btn-sm btn-outline-danger" href="{% url 'user_delete' managed_user.pk %}" title="Excluir {{ managed_user.username }}"><i class="bi bi-trash"></i><span class="visually-hidden">Excluir</span></a>{% endif %}
+              {% endif %}
             </td>
           </tr>
         {% empty %}<tr><td colspan="6" class="empty-state">Nenhum usuário encontrado.</td></tr>{% endfor %}

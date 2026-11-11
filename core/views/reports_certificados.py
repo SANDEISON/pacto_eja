@@ -10,6 +10,7 @@ from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView
 
+from core.menu import can_view_reports
 from core.models import (
     CursoCertificado,
     Educador,
@@ -26,12 +27,7 @@ ROTULOS_TEMPO_ATUACAO = {
 }
 
 
-def usuario_e_staff(usuario):
-    """Restringe os relatórios a usuários autenticados da equipe administrativa."""
-    return bool(usuario and usuario.is_authenticated and usuario.is_staff)
-
-
-staff_required = user_passes_test(usuario_e_staff)
+reports_required = user_passes_test(can_view_reports)
 
 
 def calcular_idade(data_nascimento):
@@ -279,7 +275,7 @@ def filtrar_educadores_relatorio(educadores_base, search=None, curso_id=None, cu
     return qs.distinct()
 
 
-@method_decorator(staff_required, name="dispatch")
+@method_decorator(reports_required, name="dispatch")
 class ReportsCertificadosView(TemplateView):
     """Painel analítico e relatórios dos educadores solicitantes de certificados."""
 
@@ -509,7 +505,7 @@ class ReportsCertificadosView(TemplateView):
 reports_certificados = ReportsCertificadosView.as_view()
 
 
-@staff_required
+@reports_required
 def reports_certificados_participantes(request):
     """Endpoint AJAX para paginação e busca dinâmica da tabela de solicitantes."""
     try:
@@ -631,7 +627,7 @@ def extrair_dados_vinculo(vinculo, mun_res="", sigla_res=""):
     }
 
 
-@staff_required
+@reports_required
 def reports_certificados_export_csv(request):
     """Gera streaming de CSV com codificação UTF-8 BOM e baixo consumo de memória."""
     curso_id = request.GET.get("curso")

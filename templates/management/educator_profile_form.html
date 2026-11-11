@@ -13,8 +13,14 @@
     <div class="form-section">
       <h2>Dados da conta</h2>
       <div class="row g-3">
-        {% include "management/_field.html" with field=user_form.full_name column="col-12 col-md-8" %}
-        {% include "management/_field.html" with field=user_form.email column="col-12 col-md-4" %}
+        {% if user_form.groups %}
+          {% include "management/_field.html" with field=user_form.full_name column="col-12 col-md-4" %}
+          {% include "management/_field.html" with field=user_form.email column="col-12 col-md-4" %}
+          {% include "management/_field.html" with field=user_form.groups column="col-12 col-md-4" %}
+        {% else %}
+          {% include "management/_field.html" with field=user_form.full_name column="col-12 col-md-8" %}
+          {% include "management/_field.html" with field=user_form.email column="col-12 col-md-4" %}
+        {% endif %}
       </div>
     </div>
 

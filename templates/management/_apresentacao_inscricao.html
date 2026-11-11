@@ -1,4 +1,4 @@
-{% if request.user.is_staff and perms.core.change_inscricao %}
+{% if perms.core.change_inscricao %}
   <form method="post" data-apresentacao-form>
     {% csrf_token %}
     <input type="hidden" name="acao" value="definir_apresentacao">
