@@ -419,6 +419,8 @@ class InscricaoListView(ManagementPermissionMixin, InscricaoRelatoriosMixin, Sea
 
     def post(self, request, *args, **kwargs):
         """Registra as decisões administrativas sobre os inscritos nesta atividade."""
+        if request.POST.get("acao") == "cancelar_inscricao":
+            return self.cancelar_inscricao(request)
         if not (request.user.is_staff or request.user.has_perm("core.change_inscricao")):
             raise PermissionDenied
         if request.POST.get("acao") == "definir_apresentacao":
@@ -477,6 +479,23 @@ class InscricaoListView(ManagementPermissionMixin, InscricaoRelatoriosMixin, Sea
             messages.success(request, "Decisão sobre o vínculo com a Undime registrada com sucesso.")
         else:
             messages.info(request, "Este educador já possui uma confirmação.")
+        return redirect(request.get_full_path())
+
+    @transaction.atomic
+    def cancelar_inscricao(self, request):
+        try:
+            inscricao_id = int(request.POST.get("inscricao_id", ""))
+        except (ValueError, TypeError):
+            return HttpResponseBadRequest("Inscrição inválida.")
+
+        inscricao = get_object_or_404(
+            Inscricao.objects.select_for_update(), pk=inscricao_id, atividade=self.atividade,
+        )
+        if inscricao.frequencias.exists() or hasattr(inscricao, "credenciamento"):
+            messages.error(request, "Esta inscrição já possui frequência ou credenciamento registrado e não pode ser cancelada.")
+        else:
+            inscricao.delete()
+            messages.success(request, "Inscrição cancelada com sucesso.")
         return redirect(request.get_full_path())
 
     def get_queryset(self):
