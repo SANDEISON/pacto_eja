@@ -490,7 +490,7 @@ class AtividadeFlowTests(TestCase):
         self.assertContains(page, "Selecione as ATIVIDADES das quais você participará:")
         self.assertContains(
             page,
-            "Selecione pelo menos uma sala da modalidade escolhida e, no máximo, uma por turno em cada data.",
+            "Selecione pelo menos uma sala da modalidade escolhida.",
         )
         self.assertContains(page, 'class="program-card-content"', count=3)
         self.assertContains(page, 'data-descricao="Descrição da sala com &lt;conteúdo&gt; &amp; &quot;informações&quot;."')
@@ -654,7 +654,7 @@ class AtividadeFlowTests(TestCase):
         )
         self.assertFalse(Inscricao.objects.filter(atividade=self.atividade).exists())
 
-    def test_registration_rejects_two_programs_in_the_same_date_and_shift(self):
+    def test_registration_accepts_two_programs_in_the_same_date_and_shift(self):
         self.atividade.modalidade = Atividade.ModalidadeParticipacao.AMBAS
         self.atividade.save(update_fields=("modalidade",))
         online = self.create_programacao(ProgramacaoSala.Modalidade.ONLINE, "Sala virtual 4")
@@ -674,14 +674,9 @@ class AtividadeFlowTests(TestCase):
             },
         )
 
-        self.assertEqual(response.status_code, 200)
-        self.assertFormError(
-            response.context["dados_form"],
-            "programacoes",
-            "Escolha apenas uma programação por turno em cada data.",
-        )
-        self.assertEqual(response.context["active_tab"], "modalidade")
-        self.assertFalse(Inscricao.objects.filter(atividade=self.atividade).exists())
+        self.assertRedirects(response, reverse("dashboard"))
+        inscricao = Inscricao.objects.get(atividade=self.atividade)
+        self.assertCountEqual(inscricao.programacoes.all(), [online, online_dois])
 
     def test_registration_excludes_public_programs(self):
         modalidade = ProgramacaoSala.Modalidade.ONLINE

@@ -6,10 +6,31 @@
 {% block content %}
 {% include "management/_messages.html" %}
 <section class="management-card p-4 mb-4"><h2>Chamadas das salas</h2>
+<div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3 my-3" role="group" aria-label="Totais das chamadas">
+  <div class="col"><dl class="border rounded p-3 h-100 mb-0 bg-primary-subtle border-primary-subtle text-primary-emphasis"><dt>Total de inscritos</dt><dd class="fs-4 mb-0">{{ totais.inscritos }}</dd></dl></div>
+  <div class="col"><dl class="border rounded p-3 h-100 mb-0 bg-warning-subtle border-warning-subtle text-warning-emphasis"><dt>Inscritos presenciais</dt><dd class="fs-4 mb-0">{{ totais.presenciais }}</dd></dl></div>
+  <div class="col"><dl class="border rounded p-3 h-100 mb-0 bg-info-subtle border-info-subtle text-info-emphasis"><dt>Inscritos on-line</dt><dd class="fs-4 mb-0">{{ totais.online }}</dd></dl></div>
+  <div class="col"><dl class="border rounded p-3 h-100 mb-0 bg-success-subtle border-success-subtle text-success-emphasis"><dt>Total de presenças</dt><dd class="fs-4 mb-0">{{ totais.presencas }}</dd></dl></div>
+  <div class="col"><dl class="border rounded p-3 h-100 mb-0 bg-secondary-subtle border-secondary-subtle text-secondary-emphasis"><dt>Presentes on-line</dt><dd class="fs-4 mb-0">{{ totais.presencas_online }}</dd></dl></div>
+  <div class="col"><dl class="border rounded p-3 h-100 mb-0 bg-danger-subtle border-danger-subtle text-danger-emphasis"><dt>Presentes presenciais</dt><dd class="fs-4 mb-0">{{ totais.presencas_presenciais }}</dd></dl></div>
+</div>
 <p>Selecione a sala e o turno para registrar as presenças diretamente na lista de participantes.</p>
-{% for atividade, programacao in pares %}<div class="border-bottom py-3"><strong>{{ atividade.titulo }}</strong><p>{{ programacao.sala }} - {{ programacao.tematica }} - {{ programacao.get_turno_display }} ({{ programacao.dia|date:"d/m/Y" }}) - {{ programacao.get_modalidade_display }}{% include "frequencia/_vagas_programacao.html" %}Responsável: {{ programacao.responsavel.get_full_name|default:programacao.responsavel|default:"Não definido — configure na programação da sala" }}</p><a class="btn btn-primary" href="{% url 'frequencia_sala' atividade.pk programacao.pk %}">Gerenciar chamada</a>
+{% for chamada in chamadas %}
+{% with atividade=chamada.atividade programacao=chamada.programacao %}
+<div class="border-bottom py-3 d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3">
+<div><strong>{{ atividade.titulo }}</strong><p>{{ programacao.sala }} - {{ programacao.tematica }} - {{ programacao.get_turno_display }} ({{ programacao.dia|date:"d/m/Y" }}) - {{ programacao.get_modalidade_display }}{% include "frequencia/_vagas_programacao.html" %}Responsável: {{ programacao.responsavel.get_full_name|default:programacao.responsavel|default:"Não definido — configure na programação da sala" }}</p><a class="btn btn-primary" href="{% url 'frequencia_sala' atividade.pk programacao.pk %}">Gerenciar chamada</a>
 <a class="btn btn-outline-primary mt-2 mt-sm-0" href="{% url 'frequencia_inscritos_pdf' atividade.pk programacao.pk programacao.modalidade %}">Baixar inscritos (PDF)</a>
-{% if programacao.modalidade == 'presencial' %}<a class="btn btn-outline-primary mt-2 mt-sm-0" href="{% url 'frequencia_qr_pdf' atividade.pk programacao.pk %}">Baixar QR Code de frequência (PDF)</a>{% endif %}</div>{% empty %}<p>Nenhuma sala atribuída a você.</p>{% endfor %}
+{% if programacao.modalidade == 'presencial' %}<a class="btn btn-outline-primary mt-2 mt-sm-0" href="{% url 'frequencia_qr_pdf' atividade.pk programacao.pk %}">Baixar QR Code de frequência (PDF)</a>{% endif %}
+</div>
+<dl class="border rounded p-3 mb-0 flex-shrink-0 text-md-end bg-light">
+  <dt>Total de inscritos</dt>
+  <dd class="mb-2">{{ chamada.inscritos }}</dd>
+  <dt class="text-success-emphasis">Presen&ccedil;as confirmadas</dt>
+  <dd class="mb-0">{{ chamada.presencas }}</dd>
+</dl>
+</div>
+{% endwith %}
+{% empty %}<p>Nenhuma sala atribuída a você.</p>{% endfor %}
 </section>
 {% include "frequencia/_minha_participacao.html" %}
 {% endblock %}

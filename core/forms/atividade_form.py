@@ -578,10 +578,7 @@ class DadosPessoaisInscricaoForm(BootstrapFormMixin, forms.ModelForm):
         required=False,
         error_messages={"required": "Selecione pelo menos uma sala disponível."},
         widget=ProgramacaoSalaCheckboxSelectMultiple,
-        help_text=(
-            "Escolha no máximo uma sala por turno em cada data. Você pode combinar "
-            "programações presenciais e on-line quando ocorrerem em horários diferentes."
-        ),
+        help_text="Selecione pelo menos uma sala da modalidade escolhida.",
     )
     representante_estado_undime_consed = forms.TypedChoiceField(
         label="Você é representante do Estado pela Undime ou pelo Consed?",
@@ -705,7 +702,7 @@ class DadosPessoaisInscricaoForm(BootstrapFormMixin, forms.ModelForm):
         return modalidade
 
     def clean(self):
-        """Valida conflitos de horário e refeições contra a modalidade geral."""
+        """Valida vagas, programações e refeições contra a modalidade geral."""
         cleaned_data = super().clean()
         programacoes = cleaned_data.get("programacoes")
         refeicoes = cleaned_data.get("refeicoes")
@@ -722,16 +719,17 @@ class DadosPessoaisInscricaoForm(BootstrapFormMixin, forms.ModelForm):
                         f"A sala {programacao.sala} ({programacao.get_turno_display()} "
                         f"de {programacao.dia:%d/%m/%Y}) está sem vagas. Escolha outra sala.",
                     )
-            horarios = set()
-            for programacao in programacoes:
-                horario = (programacao.dia, programacao.turno)
-                if horario in horarios:
-                    self.add_error(
-                        "programacoes",
-                        "Escolha apenas uma programação por turno em cada data.",
-                    )
-                    break
-                horarios.add(horario)
+            # Limite por data e turno desativado para permitir várias salas.
+            # horarios = set()
+            # for programacao in programacoes:
+            #     horario = (programacao.dia, programacao.turno)
+            #     if horario in horarios:
+            #         self.add_error(
+            #             "programacoes",
+            #             "Escolha apenas uma programação por turno em cada data.",
+            #         )
+            #         break
+            #     horarios.add(horario)
             if any(
                 programacao.modalidade not in self._modalidades_atividade
                 for programacao in programacoes

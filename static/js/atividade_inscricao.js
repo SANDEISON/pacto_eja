@@ -214,26 +214,12 @@
     });
   }
 
-  function selectedProgramConflicts() {
-    const occupied = new Set();
-    let hasConflict = false;
-    programsSection?.querySelectorAll('[name="dados-programacoes"]:checked').forEach((field) => {
-      if (field.dataset.lotada === "true") return;
-      const slot = `${field.dataset.data}-${field.dataset.turno}`;
-      if (occupied.has(slot)) hasConflict = true;
-      occupied.add(slot);
-    });
-    return { occupied, hasConflict };
-  }
-
-  function updateProgramConflicts() {
-    if (!programsSection) return true;
-    const { occupied, hasConflict } = selectedProgramConflicts();
+  function updateProgramCapacity() {
+    if (!programsSection) return;
     programsSection.querySelectorAll('[name="dados-programacoes"]').forEach((field) => {
-      const slot = `${field.dataset.data}-${field.dataset.turno}`;
       const lotada = field.dataset.lotada === "true";
       const modalidadeLotada = modalityIsFull(field.dataset.modalidade);
-      const blocked = modalidadeLotada || lotada || (!field.checked && occupied.has(slot));
+      const blocked = modalidadeLotada || lotada;
       if (lotada || modalidadeLotada) field.checked = false;
       field.disabled = blocked;
       const option = programOptionWrapper(field);
@@ -241,16 +227,11 @@
       if (blocked) {
         field.title = modalidadeLotada
           ? "A quantidade de vagas para esta modalidade foi atingida."
-          : lotada
-            ? "Esta sala está sem vagas."
-            : "Já existe uma sala selecionada nesta data e turno.";
+          : "Esta sala está sem vagas.";
       } else {
         field.removeAttribute("title");
       }
     });
-    const message = programsSection.querySelector("[data-registration-program-conflict]");
-    if (message) message.hidden = !hasConflict;
-    return !hasConflict;
   }
 
   function programSelectionIsValid() {
@@ -274,11 +255,6 @@
     };
     if (programFields.length && !selectedPrograms.length) {
       showSelectionError("Selecione pelo menos uma sala disponível.");
-      return false;
-    }
-    if (!updateProgramConflicts()) {
-      const firstConflict = programsSection?.querySelector('[name="dados-programacoes"]:checked');
-      firstConflict?.focus();
       return false;
     }
     requiredMessage?.classList.remove("d-block");
@@ -318,7 +294,7 @@
         ? "Não há programações disponíveis para esta modalidade e os filtros selecionados."
         : "Nenhuma programação corresponde aos filtros selecionados.";
     }
-    updateProgramConflicts();
+    updateProgramCapacity();
     updateProgramSelectionCount();
   }
 
@@ -673,7 +649,7 @@
   programsSection?.addEventListener("change", (event) => {
     if (!event.target.matches('[name="dados-programacoes"]')) return;
     programsSection.querySelector("[data-registration-programs-required]")?.classList.remove("d-block");
-    updateProgramConflicts();
+    updateProgramCapacity();
     updateProgramSelectionCount();
     updateMealAvailability();
   });

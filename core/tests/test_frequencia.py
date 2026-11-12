@@ -106,7 +106,10 @@ class FrequenciaTests(TestCase):
         response = self.client.get(reverse("frequencia_index"))
         self.assertContains(response, "<strong>Vagas:</strong> 50 · <strong>Vagas disponíveis:</strong> 49")
         self.assertContains(response, "<strong>Vagas:</strong> 50 · <strong>Vagas disponíveis:</strong> 50")
-        for _atividade, programacao in response.context["pares"]:
+        for chamada in response.context["chamadas"]:
+            programacao = chamada["programacao"]
+            self.assertEqual(chamada["inscritos"], int(programacao.pk == self.presencial.pk))
+            self.assertEqual(chamada["presencas"], 0)
             with self.assertNumQueries(0):
                 self.assertIn(programacao.vagas_disponiveis, (49, 50))
         self.client.force_login(self.participante)

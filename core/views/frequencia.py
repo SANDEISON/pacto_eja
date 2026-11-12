@@ -104,11 +104,58 @@ def frequencia_inscritos_pdf(request, pk, programacao_pk, modalidade):
 @login_required
 def frequencia_index(request):
     programacoes = ProgramacaoSala.objects.select_related("sala", "responsavel", "tematica").prefetch_related("atividades").filter(atividades__isnull=False).annotate(_total_inscritos=Count("inscricoes", distinct=True)).distinct()
-    if not request.user.has_perm("core.add_frequencia"):
+    pode_ver_todas = request.user.has_perm("core.add_frequencia")
+    if not pode_ver_todas:
         programacoes = programacoes.filter(responsavel=request.user)
     pares = [(atividade, p) for p in programacoes for atividade in p.atividades.all()]
+    atividade_ids = {atividade.pk for atividade, _ in pares}
+    programacao_ids = {programacao.pk for _, programacao in pares}
+    inscricoes_visiveis = Inscricao.objects.filter(atividade_id__in=atividade_ids)
+    if not pode_ver_todas:
+        inscricoes_visiveis = inscricoes_visiveis.filter(programacoes__in=programacao_ids)
+    totais = inscricoes_visiveis.aggregate(
+        inscritos=Count("pk", distinct=True),
+        presenciais=Count("pk", filter=Q(modalidade=Inscricao.Modalidade.PRESENCIAL), distinct=True),
+        online=Count("pk", filter=Q(modalidade=Inscricao.Modalidade.ONLINE), distinct=True),
+    )
+    inscritos_por_sala = {
+        (atividade_id, programacao_id): total
+        for atividade_id, programacao_id, total in Inscricao.programacoes.through.objects.filter(
+            inscricao__atividade_id__in=atividade_ids,
+            programacaosala_id__in=programacao_ids,
+        ).order_by().values_list("inscricao__atividade_id", "programacaosala_id").annotate(total=Count("pk"))
+    }
+    presencas_por_sala = {
+        (atividade_id, programacao_id): total
+        for atividade_id, programacao_id, total in Frequencia.objects.filter(
+            inscricao__atividade_id__in=atividade_ids,
+            programacao_id__in=programacao_ids,
+        ).order_by().values_list("inscricao__atividade_id", "programacao_id").annotate(total=Count("pk"))
+    }
+    chamadas = [
+        {
+            "atividade": atividade,
+            "programacao": programacao,
+            "inscritos": inscritos_por_sala.get((atividade.pk, programacao.pk), 0),
+            "presencas": presencas_por_sala.get((atividade.pk, programacao.pk), 0),
+        }
+        for atividade, programacao in pares
+    ]
+    totais["presencas"] = sum(chamada["presencas"] for chamada in chamadas)
+    totais["presencas_presenciais"] = sum(
+        chamada["presencas"] for chamada in chamadas
+        if chamada["programacao"].modalidade == ProgramacaoSala.Modalidade.PRESENCIAL
+    )
+    totais["presencas_online"] = sum(
+        chamada["presencas"] for chamada in chamadas
+        if chamada["programacao"].modalidade == ProgramacaoSala.Modalidade.ONLINE
+    )
     inscricoes = inscricoes_com_presencas(Inscricao.objects.filter(usuario=request.user))
-    return render(request, "frequencia/index.html", {"pares": pares, "inscricoes": inscricoes})
+    return render(request, "frequencia/index.html", {
+        "chamadas": chamadas,
+        "totais": totais,
+        "inscricoes": inscricoes,
+    })
 
 
 @login_required
