@@ -510,8 +510,30 @@ class ReportsViewTests(TestCase):
         sala_o_dados = response.context["frequencia_sala_online_dados"]
         self.assertTrue(any(s["label"] == "Sala Virtual Beta" and s["qtd"] == 0 for s in sala_o_dados))
 
-        # 6. Presença no HTML
+        # 6. Por Programação (para o filtro nos relatórios de frequência)
+        prog_dados = response.context["frequencia_programacao_dados"]
+        self.assertTrue(
+            any(
+                p["id"] == prog_p.id
+                and p["inscritos"] == 2
+                and p["presentes"] == 1
+                and p["ausentes"] == 1
+                and p["taxa_presenca"] == 50.0
+                for p in prog_dados
+            )
+        )
+        part_presente = next(
+            p for p in response.context["participantes_detalhados"] if p["educador_id"] == usuario.educador.id
+        )
+        self.assertIn(prog_p.id, part_presente["frequencias_programacoes_ids"])
+        self.assertIn(prog_p.id, part_presente["frequencias_presencial_programacoes_ids"])
+
+        # 7. Presença no HTML
         self.assertContains(response, 'id="sectionFrequenciaReports"')
+        self.assertContains(response, 'id="tab-freq-programacao"')
+        self.assertContains(response, 'id="pane-freq-programacao"')
+        self.assertContains(response, 'id="searchFreqProgramacao"')
+        self.assertContains(response, 'id="frequencia-programacao-data"')
         self.assertContains(response, 'id="pane-freq-estado"')
         self.assertContains(response, 'id="pane-freq-cidade"')
         self.assertContains(response, 'id="pane-freq-sala-p"')
@@ -519,6 +541,8 @@ class ReportsViewTests(TestCase):
         self.assertContains(response, 'id="pane-freq-material"')
         self.assertContains(response, 'btnExportFreqEstadoCsv')
         self.assertContains(response, 'btnExportFreqCidadeCsv')
+        self.assertContains(response, 'btnExportFreqProgramacaoCsv')
+        self.assertContains(response, 'btnMenuExportFreqProgramacao')
         self.assertContains(response, 'btnExportFreqSalaPresencialCsv')
         self.assertContains(response, 'btnExportFreqSalaOnlineCsv')
         self.assertContains(response, 'btnExportCredenciamentoMaterialCsv')

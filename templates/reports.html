@@ -914,7 +914,7 @@
           <h5 class="fw-bold m-0 d-flex align-items-center gap-2">
             <i class="bi bi-person-check-fill text-success"></i> Relatórios de Frequência & Presença
           </h5>
-          <span class="small text-muted">Contagem e detalhamento dos participantes presentes por Estado, Cidade e Salas.</span>
+          <span class="small text-muted">Contagem e detalhamento dos participantes presentes por Estado, Cidade, Programação e Salas.</span>
         </div>
         <div class="d-flex align-items-center gap-2 flex-wrap">
           <ul class="nav nav-pills nav-pills-sm card-header-pills" id="frequenciaTabs" role="tablist">
@@ -926,6 +926,11 @@
             <li class="nav-item" role="presentation">
               <button class="nav-link fw-semibold btn-sm py-1 px-3" id="tab-freq-cidade" data-bs-toggle="pill" data-bs-target="#pane-freq-cidade" type="button" role="tab">
                 🏙️ Por Cidade
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link fw-semibold btn-sm py-1 px-3" id="tab-freq-programacao" data-bs-toggle="pill" data-bs-target="#pane-freq-programacao" type="button" role="tab">
+                📅 Por Programação
               </button>
             </li>
             <li class="nav-item" role="presentation">
@@ -1016,7 +1021,44 @@
           </div>
         </div>
 
-        <!-- 3. Presença & Ausência por Sala (Presencial) -->
+        <!-- 3. Presença & Ausência por Programação -->
+        <div class="tab-pane fade" id="pane-freq-programacao" role="tabpanel">
+          <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <div>
+              <h6 class="fw-bold mb-0 text-primary">Participantes Presentes e Ausentes por Programação (Online e Presencial)</h6>
+              <small class="text-muted">Detalhamento por programação de sala, data, turno e temática.</small>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <input type="text" id="searchFreqProgramacao" class="form-control form-control-sm" placeholder="Filtrar programação..." style="max-width: 220px;">
+              <button type="button" class="btn btn-outline-success btn-sm fw-semibold text-nowrap" id="btnExportFreqProgramacaoCsv">
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i> Exportar Programações (CSV)
+              </button>
+            </div>
+          </div>
+          <div class="table-responsive" style="max-height: 420px; overflow-y: auto;">
+            <table class="table table-sm table-hover align-middle mb-0">
+              <thead class="table-light sticky-top">
+                <tr>
+                  <th style="width: 50px;">#</th>
+                  <th>Programação (Sala / Temática)</th>
+                  <th class="text-center" style="width: 140px;">Data & Turno</th>
+                  <th class="text-center" style="width: 110px;">Modalidade</th>
+                  <th class="text-center" style="width: 100px;">Capacidade</th>
+                  <th class="text-center" style="width: 100px;">Inscritos</th>
+                  <th class="text-center" style="width: 120px;">Presentes</th>
+                  <th class="text-center" style="width: 120px;">Ausentes</th>
+                  <th style="width: 140px;">Taxa Presença</th>
+                  <th style="width: 140px;">Taxa Ausência</th>
+                </tr>
+              </thead>
+              <tbody id="tableFreqProgramacaoBody">
+                <!-- Renderizado via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 4. Presença & Ausência por Sala (Presencial) -->
         <div class="tab-pane fade" id="pane-freq-sala-p" role="tabpanel">
           <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
             <div>
@@ -1100,19 +1142,19 @@
             <div class="col-12 col-sm-4">
               <div class="p-2 border rounded bg-light text-center">
                 <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.7rem;">Inscritos Presenciais</small>
-                <h5 class="fw-bold m-0 text-primary">{{ frequencia_kpis.total_inscritos_presenciais|default:0 }}</h5>
+                <h5 class="fw-bold m-0 text-primary" id="freqMatTotalPresenciais">{{ frequencia_kpis.total_inscritos_presenciais|default:0 }}</h5>
               </div>
             </div>
             <div class="col-12 col-sm-4">
               <div class="p-2 border rounded bg-light text-center">
                 <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.7rem;">Receberam Material</small>
-                <h5 class="fw-bold m-0 text-success">{{ frequencia_kpis.total_credenciados|default:0 }} ({{ frequencia_kpis.taxa_credenciamento|default:"0.0" }}%)</h5>
+                <h5 class="fw-bold m-0 text-success" id="freqMatTotalCredenciados">{{ frequencia_kpis.total_credenciados|default:0 }} ({{ frequencia_kpis.taxa_credenciamento|default:"0.0" }}%)</h5>
               </div>
             </div>
             <div class="col-12 col-sm-4">
               <div class="p-2 border rounded bg-light text-center">
                 <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.7rem;">Pendentes de Retirada</small>
-                <h5 class="fw-bold m-0 text-warning">{{ frequencia_kpis.total_credenciamento_pendente|default:0 }}</h5>
+                <h5 class="fw-bold m-0 text-warning" id="freqMatTotalPendentes">{{ frequencia_kpis.total_credenciamento_pendente|default:0 }}</h5>
               </div>
             </div>
           </div>
@@ -1197,6 +1239,15 @@
                   <div>
                     <div>Exportar Presença por Cidade (CSV)</div>
                     <small class="text-muted font-normal">Total de participantes presentes por Município (Presencial, On-line e Total).</small>
+                  </div>
+                </button>
+              </li>
+              <li>
+                <button class="dropdown-item py-2 fw-semibold" id="btnMenuExportFreqProgramacao">
+                  <i class="bi bi-calendar-event-fill text-success me-2 fs-5"></i>
+                  <div>
+                    <div>Exportar Presença por Programação (CSV)</div>
+                    <small class="text-muted font-normal">Total de inscritos, presentes e ausentes em cada programação (sala, data, turno e temática).</small>
                   </div>
                 </button>
               </li>
@@ -1488,6 +1539,7 @@
 {{ frequencia_cidade_dados|json_script:"frequencia-cidade-data" }}
 {{ frequencia_sala_presencial_dados|json_script:"frequencia-sala-presencial-data" }}
 {{ frequencia_sala_online_dados|json_script:"frequencia-sala-online-data" }}
+{{ frequencia_programacao_dados|json_script:"frequencia-programacao-data" }}
 <script>
   // Dataset de Participantes Detalhados
   const readJsonData = (elementId) => JSON.parse(document.getElementById(elementId).textContent);
@@ -2854,6 +2906,22 @@
     downloadCSV(csv, `presenca_e_ausencia_por_cidade_pacto_eja_${new Date().toISOString().slice(0,10)}.csv`);
   }
 
+  // Exportação CSV de Presença e Ausência por Programação
+  function exportFreqProgramacaoCSV() {
+    const data = document.getElementById("frequencia-programacao-data")
+      ? (readJsonData("frequencia-programacao-data") || [])
+      : [];
+    if (!data.length) {
+      alert("Nenhum dado de presença por programação disponível para exportar.");
+      return;
+    }
+    let csv = "\uFEFFPosicao;Programacao;Sala;Tematica;Data;Turno;Modalidade;Capacidade;Inscritos;Presentes;Ausentes;Taxa Presenca (%);Taxa Ausencia (%)\n";
+    data.forEach((d, i) => {
+      csv += `${i + 1};"${(d.label || '').replace(/"/g, '""')}";"${(d.sala || '').replace(/"/g, '""')}";"${(d.tematica || '').replace(/"/g, '""')}";"${d.data || ''}";"${(d.turno || '').replace(/"/g, '""')}";"${(d.modalidade_label || d.modalidade || '').replace(/"/g, '""')}";${d.vagas || 0};${d.inscritos || 0};${d.presentes || 0};${d.ausentes || 0};${d.taxa_presenca || 0};${d.taxa_ausencia || 0}\n`;
+    });
+    downloadCSV(csv, `presenca_e_ausencia_por_programacao_pacto_eja_${new Date().toISOString().slice(0,10)}.csv`);
+  }
+
   // Exportação CSV de Presença e Ausência por Salas Presenciais
   function exportFreqSalaPresencialCSV() {
     const data = readJsonData("frequencia-sala-presencial-data") || [];
@@ -2906,8 +2974,16 @@
   function renderFrequenciaTables() {
     const freqEstadoData = readJsonData("frequencia-estado-data") || [];
     const freqCidadeData = readJsonData("frequencia-cidade-data") || [];
+    const freqProgramacaoData = document.getElementById("frequencia-programacao-data")
+      ? (readJsonData("frequencia-programacao-data") || [])
+      : [];
     const freqSalaPData = readJsonData("frequencia-sala-presencial-data") || [];
     const freqSalaOData = readJsonData("frequencia-sala-online-data") || [];
+    const presencialParts = (participantsData || []).filter(p => {
+      return (p.modalidade_inscrito_atual || '').toLowerCase() === 'presencial' ||
+        (p.atividades_modalidades || []).some(m => (m || '').toLowerCase() === 'presencial') ||
+        p.credenciado;
+    });
 
     // 1. Tabela Estado
     const tbodyEstado = document.getElementById("tableFreqEstadoBody");
@@ -3000,13 +3076,81 @@
         </tr>
       `).join('');
     };
-    renderCidadeRows();
     const searchCidadeInput = document.getElementById("searchFreqCidade");
-    if (searchCidadeInput) {
-      searchCidadeInput.addEventListener("input", (e) => renderCidadeRows(e.target.value));
+    renderCidadeRows(searchCidadeInput ? searchCidadeInput.value : '');
+    if (searchCidadeInput && !searchCidadeInput.dataset.boundListener) {
+      searchCidadeInput.addEventListener("input", () => renderFrequenciaTables());
+      searchCidadeInput.dataset.boundListener = "true";
     }
 
-    // 3. Tabela Sala Presencial
+    // 3. Tabela Programação
+    const renderProgramacaoRows = (filter = '') => {
+      const tbodyProg = document.getElementById("tableFreqProgramacaoBody");
+      if (!tbodyProg) return;
+      const term = (filter || '').toLowerCase().trim();
+      const filtered = freqProgramacaoData.filter(d => {
+        if (!term) return true;
+        return (d.label || '').toLowerCase().includes(term) ||
+          (d.sala || '').toLowerCase().includes(term) ||
+          (d.tematica || '').toLowerCase().includes(term) ||
+          (d.data || '').toLowerCase().includes(term) ||
+          (d.turno || '').toLowerCase().includes(term) ||
+          (d.modalidade_label || '').toLowerCase().includes(term);
+      });
+      if (!filtered.length) {
+        tbodyProg.innerHTML = '<tr><td colspan="10" class="text-center py-3 text-muted">Nenhuma programação encontrada.</td></tr>';
+        return;
+      }
+      tbodyProg.innerHTML = filtered.map((d, i) => `
+        <tr>
+          <td class="text-muted fw-bold">${i + 1}</td>
+          <td>
+            <div class="fw-semibold text-dark">
+              <i class="bi ${d.modalidade === 'online' ? 'bi-laptop text-info' : 'bi-door-open-fill text-primary'} me-1"></i>${escapeHTML(d.sala || d.label)}
+            </div>
+            ${d.tematica ? `<div class="small text-muted"><i class="bi bi-bookmark-star me-1"></i>${escapeHTML(d.tematica)}</div>` : ''}
+          </td>
+          <td class="text-center">
+            <span class="badge bg-light text-dark border px-2 py-1">${escapeHTML(d.data || '—')}</span>
+            <div class="small text-muted mt-1" style="font-size: 0.72rem;">${escapeHTML(d.turno || '')}</div>
+          </td>
+          <td class="text-center">
+            ${d.modalidade === 'online'
+              ? '<span class="badge bg-info-subtle text-info border px-2 py-1"><i class="bi bi-laptop me-1"></i>On-line</span>'
+              : '<span class="badge bg-primary-subtle text-primary border px-2 py-1"><i class="bi bi-geo-alt-fill me-1"></i>Presencial</span>'
+            }
+          </td>
+          <td class="text-center"><span class="badge bg-light text-dark border px-2 py-1">${d.vagas}</span></td>
+          <td class="text-center"><span class="badge bg-light text-dark border px-2 py-1">${d.inscritos}</span></td>
+          <td class="text-center fw-bold"><span class="badge bg-success-subtle text-success px-3 py-1 fs-6">${d.presentes}</span></td>
+          <td class="text-center fw-bold"><span class="badge bg-danger-subtle text-danger px-3 py-1 fs-6">${d.ausentes}</span></td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="progress flex-grow-1" style="height: 6px;">
+                <div class="progress-bar bg-success" role="progressbar" style="width: ${d.taxa_presenca}%"></div>
+              </div>
+              <small class="text-success fw-bold" style="min-width: 45px;">${d.taxa_presenca}%</small>
+            </div>
+          </td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="progress flex-grow-1" style="height: 6px;">
+                <div class="progress-bar bg-danger" role="progressbar" style="width: ${d.taxa_ausencia}%"></div>
+              </div>
+              <small class="text-danger fw-bold" style="min-width: 45px;">${d.taxa_ausencia}%</small>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    };
+    const searchProgInput = document.getElementById("searchFreqProgramacao");
+    renderProgramacaoRows(searchProgInput ? searchProgInput.value : '');
+    if (searchProgInput && !searchProgInput.dataset.boundListener) {
+      searchProgInput.addEventListener("input", (e) => renderProgramacaoRows(e.target.value));
+      searchProgInput.dataset.boundListener = "true";
+    }
+
+    // 4. Tabela Sala Presencial
     const tbodySalaP = document.getElementById("tableFreqSalaPresencialBody");
     if (tbodySalaP) {
       if (!freqSalaPData.length) {
@@ -3081,11 +3225,6 @@
       const tbodyMat = document.getElementById("tableCredenciamentoBody");
       if (!tbodyMat) return;
       const term = (filter || '').toLowerCase().trim();
-      const presencialParts = (participantsData || []).filter(p => {
-        return (p.modalidade_inscrito_atual || '').toLowerCase() === 'presencial' ||
-          (p.atividades_modalidades || []).some(m => (m || '').toLowerCase() === 'presencial') ||
-          p.credenciado;
-      });
       const filtered = presencialParts.filter(p => {
         if (!term) return true;
         const matchName = (p.nome || '').toLowerCase().includes(term);
@@ -3120,10 +3259,11 @@
         </tr>
       `).join('');
     };
-    renderCredenciamentoRows();
     const searchCredInput = document.getElementById("searchCredenciamento");
-    if (searchCredInput) {
-      searchCredInput.addEventListener("input", (e) => renderCredenciamentoRows(e.target.value));
+    renderCredenciamentoRows(searchCredInput ? searchCredInput.value : '');
+    if (searchCredInput && !searchCredInput.dataset.boundListener) {
+      searchCredInput.addEventListener("input", () => renderFrequenciaTables());
+      searchCredInput.dataset.boundListener = "true";
     }
   }
 
@@ -3324,6 +3464,7 @@
   // Botões de Exportação CSV das Tabelas de Frequência & Presença
   document.getElementById('btnExportFreqEstadoCsv')?.addEventListener('click', exportFreqEstadoCSV);
   document.getElementById('btnExportFreqCidadeCsv')?.addEventListener('click', exportFreqCidadeCSV);
+  document.getElementById('btnExportFreqProgramacaoCsv')?.addEventListener('click', exportFreqProgramacaoCSV);
   document.getElementById('btnExportFreqSalaPresencialCsv')?.addEventListener('click', exportFreqSalaPresencialCSV);
   document.getElementById('btnExportFreqSalaOnlineCsv')?.addEventListener('click', exportFreqSalaOnlineCSV);
   document.getElementById('btnExportCredenciamentoMaterialCsv')?.addEventListener('click', exportCredenciamentoMaterialCSV);
@@ -3331,6 +3472,7 @@
   // Itens do Menu Dropdown de Exportação
   document.getElementById('btnMenuExportFreqEstado')?.addEventListener('click', exportFreqEstadoCSV);
   document.getElementById('btnMenuExportFreqCidade')?.addEventListener('click', exportFreqCidadeCSV);
+  document.getElementById('btnMenuExportFreqProgramacao')?.addEventListener('click', exportFreqProgramacaoCSV);
   document.getElementById('btnMenuExportFreqSalaP')?.addEventListener('click', exportFreqSalaPresencialCSV);
   document.getElementById('btnMenuExportFreqSalaO')?.addEventListener('click', exportFreqSalaOnlineCSV);
   document.getElementById('btnMenuExportCredenciamentoMaterial')?.addEventListener('click', exportCredenciamentoMaterialCSV);

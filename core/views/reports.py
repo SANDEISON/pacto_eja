@@ -416,6 +416,9 @@ def listar_participantes_detalhados(educadores_qs=None, atividade_selecionada_id
             "total_frequencias": len(freqs_relevantes),
             "total_frequencias_presencial": len(freq_presenciais),
             "total_frequencias_online": len(freq_online),
+            "frequencias_programacoes_ids": sorted(list({f.programacao_id for f in freqs_relevantes})),
+            "frequencias_presencial_programacoes_ids": sorted(list({f.programacao_id for f in freq_presenciais})),
+            "frequencias_online_programacoes_ids": sorted(list({f.programacao_id for f in freq_online})),
             "salas_presente_presencial": ", ".join(salas_presencial) if salas_presencial else "",
             "salas_presente_online": ", ".join(salas_online) if salas_online else "",
             "status_presenca": "Presente" if presente else "Ausente",
@@ -974,6 +977,56 @@ class ReportsView(TemplateView):
             })
         frequencia_sala_online_dados.sort(key=lambda x: x["qtd"], reverse=True)
 
+        # 5. Presença e Ausência por Programação Individual
+        progs_freq_map = {}
+        for prog in progs_qs:
+            prog_label = f"{prog.sala.nome} — {prog.get_turno_display()} ({prog.dia.strftime('%d/%m/%Y')})"
+            if prog.tematica:
+                prog_label += f" ({prog.tematica.nome})"
+            progs_freq_map[prog.id] = {
+                "id": prog.id,
+                "label": prog_label,
+                "sala": prog.sala.nome,
+                "turno": prog.get_turno_display(),
+                "data": prog.dia.strftime("%d/%m/%Y"),
+                "tematica": prog.tematica.nome if prog.tematica else "",
+                "modalidade": prog.modalidade,
+                "modalidade_label": prog.get_modalidade_display(),
+                "vagas": prog.quantidade_max_participantes,
+                "_users_inscritos": set(prog.inscricoes.values_list("usuario_id", flat=True)),
+                "_users_presentes": set(),
+            }
+
+        for f in list(freq_presencial_qs) + list(freq_online_qs):
+            if f.programacao_id in progs_freq_map:
+                progs_freq_map[f.programacao_id]["_users_presentes"].add(f.inscricao.usuario_id)
+
+        frequencia_programacao_dados = []
+        for p_id, d in progs_freq_map.items():
+            insc = len(d["_users_inscritos"])
+            pres = len(d["_users_presentes"])
+            aus = max(0, insc - pres)
+            tx_p = round(pres / insc * 100, 1) if insc else 0.0
+            tx_a = round(aus / insc * 100, 1) if insc else 0.0
+            frequencia_programacao_dados.append({
+                "id": d["id"],
+                "label": d["label"],
+                "sala": d["sala"],
+                "turno": d["turno"],
+                "data": d["data"],
+                "tematica": d["tematica"],
+                "modalidade": d["modalidade"],
+                "modalidade_label": d["modalidade_label"],
+                "vagas": d["vagas"],
+                "inscritos": insc,
+                "qtd": pres,
+                "presentes": pres,
+                "ausentes": aus,
+                "taxa_presenca": tx_p,
+                "taxa_ausencia": tx_a,
+            })
+        frequencia_programacao_dados.sort(key=lambda x: (x["qtd"], x["inscritos"]), reverse=True)
+
         context.update(
             exibir_dashboard=exibir_dashboard,
             visao_geral=visao_geral,
@@ -1022,6 +1075,7 @@ class ReportsView(TemplateView):
             frequencia_cidade_dados=frequencia_cidade_dados,
             frequencia_sala_presencial_dados=frequencia_sala_presencial_dados,
             frequencia_sala_online_dados=frequencia_sala_online_dados,
+            frequencia_programacao_dados=frequencia_programacao_dados,
         )
         return context
 
