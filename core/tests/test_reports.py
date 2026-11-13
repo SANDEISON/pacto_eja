@@ -326,9 +326,10 @@ class ReportsViewTests(TestCase):
         self.assertIn(prog.id, participantes[0]["programacoes_ids"])
         self.assertEqual(len(participantes[0]["programacoes"]), 1)
         self.assertEqual(participantes[0]["programacoes"][0]["id"], prog.id)
-        self.assertEqual(participantes[0]["atividades"][0]["datas"], [prog.dia.isoformat()])
+        dia_iso = prog.dia.date().isoformat() if hasattr(prog.dia, "date") else prog.dia.isoformat()
+        self.assertEqual(participantes[0]["atividades"][0]["datas"], [dia_iso])
         self.assertEqual(participantes[0]["atividades"][0]["refeicoes_ids"], [refeicao.id])
-        self.assertEqual(response.context["atividade_selecionada"]["datas"], [prog.dia.isoformat()])
+        self.assertEqual(response.context["atividade_selecionada"]["datas"], [dia_iso])
         self.assertEqual(response.context["atividade_selecionada"]["refeicoes"][0]["id"], refeicao.id)
         vagas = response.context["atividade_selecionada"]
         self.assertEqual(vagas["vagas_totais"], 50)
@@ -548,6 +549,10 @@ class ReportsViewTests(TestCase):
         self.assertContains(response, 'btnExportCredenciamentoMaterialCsv')
         self.assertContains(response, 'btnMenuExportCredenciamentoMaterial')
         self.assertContains(response, 'id="filterPresenca"')
+        self.assertContains(response, 'value="ausente_presencial"')
+        self.assertContains(response, 'value="ausente_online"')
+        self.assertContains(response, 'id="filterMaterial"')
+        self.assertNotContains(response, 'value="material_sim"')
 
 
 
