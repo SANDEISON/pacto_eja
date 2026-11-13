@@ -1379,8 +1379,17 @@
               <option value="ausente">Apenas Ausentes</option>
               <option value="presencial">Presente no Presencial</option>
               <option value="online">Presente no On-line</option>
-              <option value="material_sim">Recebeu Material</option>
-              <option value="material_nao">Material Pendente</option>
+              <option value="ausente_presencial">Ausente no Presencial</option>
+              <option value="ausente_online">Ausente no On-line</option>
+            </select>
+          </div>
+
+          <div class="dark-filter-field">
+            <label for="filterMaterial" class="dark-filter-label">🎒 Material</label>
+            <select id="filterMaterial" class="dark-filter-select">
+              <option value="">Todos</option>
+              <option value="sim">Recebeu Material</option>
+              <option value="nao">Material Pendente</option>
             </select>
           </div>
         </div>
@@ -2169,6 +2178,15 @@
     const apresentacao = document.getElementById('filterApresentacao')?.value || '';
     const genero = filterGeneroEl ? filterGeneroEl.value : '';
     const presenca = filterPresencaEl ? filterPresencaEl.value : '';
+    const material = document.getElementById('filterMaterial')?.value || '';
+    const isInscritoPresencial = (p) =>
+      (p.modalidade_inscrito_atual || '').toLowerCase() === 'presencial' ||
+      (p.atividades_modalidades || []).some(m => (m || '').toLowerCase() === 'presencial');
+    const isInscritoOnline = (p) => {
+      const mod = (p.modalidade_inscrito_atual || '').toLowerCase();
+      return mod.includes('online') || mod.includes('remoto') ||
+        (p.atividades_modalidades || []).some(m => (m || '').toLowerCase().includes('online'));
+    };
     const searchTerm = searchInputEl ? searchInputEl.value.toLowerCase().trim() : '';
 
     currentFilteredParticipants = participantsData.filter(p => {
@@ -2176,8 +2194,10 @@
       if (presenca === 'ausente' && p.presente) return false;
       if (presenca === 'presencial' && !p.presente_presencial) return false;
       if (presenca === 'online' && !p.presente_online) return false;
-      if (presenca === 'material_sim' && !p.credenciado) return false;
-      if (presenca === 'material_nao' && (p.credenciado || p.recebeu_material === 'Não se aplica (On-line)')) return false;
+      if (presenca === 'ausente_presencial' && !(isInscritoPresencial(p) && !p.presente_presencial)) return false;
+      if (presenca === 'ausente_online' && !(isInscritoOnline(p) && !p.presente_online)) return false;
+      if (material === 'sim' && !p.credenciado) return false;
+      if (material === 'nao' && (p.credenciado || p.recebeu_material === 'Não se aplica (On-line)')) return false;
       if (apresentacao && !apresentacoesDoParticipante(p).some(a => a.vai_apresentar_trabalho === (apresentacao === 'sim'))) return false;
       if (programacaoValue && !(p.programacoes_ids || []).some(id => String(id) === programacaoValue)) return false;
       if (dateValue) {
@@ -2287,10 +2307,13 @@
       else if (presenca === 'ausente') pText = 'Ausentes';
       else if (presenca === 'presencial') pText = 'Presente Presencial';
       else if (presenca === 'online') pText = 'Presente On-line';
-      else if (presenca === 'material_sim') pText = 'Recebeu Material';
-      else if (presenca === 'material_nao') pText = 'Material Pendente';
+      else if (presenca === 'ausente_presencial') pText = 'Ausente Presencial';
+      else if (presenca === 'ausente_online') pText = 'Ausente On-line';
       chips.push({ label: `Presença: ${pText}`, id: 'filterPresenca' });
     }
+
+    const materialVal = getVal('filterMaterial');
+    if (materialVal) chips.push({ label: `Material: ${materialVal === 'sim' ? 'Recebeu' : 'Pendente'}`, id: 'filterMaterial' });
 
     const dataAtiv = getVal('filterDataAtividade');
     if (dataAtiv) {
@@ -3383,6 +3406,9 @@
   const filterPresenca = document.getElementById('filterPresenca');
   if (filterPresenca) filterPresenca.addEventListener('change', applyParticipantFilters);
 
+  const filterMaterial = document.getElementById('filterMaterial');
+  if (filterMaterial) filterMaterial.addEventListener('change', applyParticipantFilters);
+
   const participantSearchInput = document.getElementById('participantSearchInput');
   if (participantSearchInput) participantSearchInput.addEventListener('input', applyParticipantFilters);
 
@@ -3404,6 +3430,7 @@
     if (document.getElementById('filterRepresentante')) document.getElementById('filterRepresentante').value = '';
     if (document.getElementById('filterGenero')) document.getElementById('filterGenero').value = '';
     if (document.getElementById('filterPresenca')) document.getElementById('filterPresenca').value = '';
+    if (document.getElementById('filterMaterial')) document.getElementById('filterMaterial').value = '';
     if (document.getElementById('filterDataAtividade')) document.getElementById('filterDataAtividade').value = '';
     if (document.getElementById('filterRefeicao')) document.getElementById('filterRefeicao').value = '';
     if (document.getElementById('filterProgramacao')) document.getElementById('filterProgramacao').value = '';
